@@ -102,12 +102,18 @@
       <form id="trade-form" onsubmit="salvarTransacao(event)">
         <input type="hidden" id="trade-type" value="buy">
 
-        <!-- Recurso -->
-        <div class="mb-3">
+        <!-- Recurso - Searchable Dropdown -->
+        <div class="mb-3 relative">
           <label class="block text-xs text-slate-400 mb-1">Recurso (Resource)</label>
-          <input type="text" id="trade-resource" list="resources-list" placeholder="ex: Tomato, Leather, Wood" required
-                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 capitalize">
-          <datalist id="resources-list"></datalist>
+          <input type="hidden" id="trade-resource" required>
+          <input type="text" id="trade-resource-search" placeholder="Selecione ou digite para buscar..." autocomplete="off"
+                 onfocus="mostrarDropdownRecursos()" oninput="filtrarDropdownRecursos()"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+          
+          <!-- Lista Flutuante de Seleção -->
+          <div id="resource-dropdown-list" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl max-h-48 overflow-y-auto hidden z-20 shadow-xl border-t-0">
+            <!-- Itens inseridos via JS -->
+          </div>
         </div>
 
         <!-- Quantidade -->
@@ -145,6 +151,19 @@
   </div>
 
   <script>
+    // Lista base fixa com os recursos do SFL
+    const listaRecursosFixa = [
+      "Apple", "Artichoke", "Banana", "Barley", "Beetroot", "Blueberry", "Broccoli", 
+      "Bumpkin Emblem", "Cabbage", "Capsule Bait", "Carrot", "Cauliflower", "Celestine", 
+      "Chewed Bone", "Crimson Baitfish", "Crimstone", "Dewberry", "Duskberry", "Egg", 
+      "Eggplant", "Feather", "Frost Pebble", "Goblin Emblem", "Gold", "Grape", "Heart Leaf", 
+      "Honey", "Iron", "Kale", "Leather", "Lemon", "Lunara", "Merino Wool", "Milk", 
+      "Moonfur", "Nightshade Emblem", "Obsidian", "Onion", "Orange", "Parsnip", "Pepper", 
+      "Potato", "Pumpkin", "Radish", "Rhubarb", "Ribbon", "Rice", "Ruffroot", "Salt", 
+      "Saltwort", "Soybean", "Stone", "Sunflower", "Sunflorian Emblem", "Tomato", "Turnip", 
+      "Umbrella Bait", "Wheat", "Wild Grass", "Wood", "Wool", "Yam", "Zucchini"
+    ];
+
     let dadosPrecos = {};
     let sflUsd = 0;
     let taxaVenda = parseFloat(localStorage.getItem('sfl_tax_rate')) || 0.075;
@@ -155,26 +174,82 @@
 
     async function carregarDados() {
       try {
-        // Cotação SFL
         const resExchange = await fetch('https://sfl.world/api/v1.1/exchange');
         const dataExchange = await resExchange.json();
         sflUsd = dataExchange.sfl || 0;
         document.getElementById('sfl-price').innerText = `$ ${sflUsd.toFixed(4)} USD`;
 
-        // Preços do P2P
         const resPrices = await fetch('https://sfl.world/api/v1/prices');
         const dataPrices = await resPrices.json();
         dadosPrecos = dataPrices.p2p || {};
 
-        preencherDatalist();
         renderizarCardsMercado();
         renderizarPortfolio();
       } catch (err) {
         console.error("Erro na API:", err);
-        // Garante que o portfólio renderiza mesmo se a API der timeout
         renderizarPortfolio();
       }
     }
+
+    function obterTodosRecursos() {
+      const setRecursos = new Set([...listaRecursosFixa, ...Object.keys(dadosPrecos)]);
+      return Array.from(setRecursos).sort();
+    }
+
+    function mostrarDropdownRecursos() {
+      filtrarDropdownRecursos();
+      document.getElementById('resource-dropdown-list').classList.remove('hidden');
+    }
+
+    function filtrarDropdownRecursos() {
+      const termo = document.getElementById('trade-resource-search').value.toLowerCase();
+      const listDiv = document.getElementById('resource-dropdown-list');
+      listDiv.innerHTML = '';
+
+      const recursos = obterTodosRecursos();
+      const filtrados = recursos.filter(r => r.toLowerCase().includes(termo));
+
+      if (filtrados.length === 0) {
+        listDiv.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">Nenhum recurso encontrado</div>`;
+      } else {
+        filtrados.forEach(rec => {
+          const preco = dadosPrecos[rec] ? `${dadosPrecos[rec].toFixed(4)} SFL` : '';
+          const itemDiv = document.createElement('div');
+          itemDiv.className = "px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 cursor-pointer flex justify-between items-center transition border-b border-slate-800/50 last:border-0";
+          itemDiv.innerHTML = `
+            <span class="font-bold">${rec}</span>
+            <span class="text-amber-400 font-mono text-[11px]">${preco}</span>
+          `;
+          itemDiv.onmousedown = (e) => {
+            e.preventDefault();
+            selecionarRecurso(rec);
+          };
+          listDiv.appendChild(itemDiv);
+        });
+      }
+      listDiv.classList.remove('hidden');
+    }
+
+    function selecionarRecurso(nomeRecurso) {
+      document.getElementById('trade-resource').value = nomeRecurso;
+      document.getElementById('trade-resource-search').value = nomeRecurso;
+      document.getElementById('resource-dropdown-list').classList.add('hidden');
+
+      // Preenche o preço unitário automaticamente caso ainda não tenha digitado
+      const unitInput = document.getElementById('trade-unit-price');
+      if (!unitInput.value && dadosPrecos[nomeRecurso]) {
+        unitInput.value = dadosPrecos[nomeRecurso].toFixed(4);
+        calcTotal();
+      }
+    }
+
+    // Fecha a lista suspensa se o usuário clicar fora do campo
+    document.addEventListener('click', (e) => {
+      const container = document.getElementById('trade-resource-search').parentElement;
+      if (!container.contains(e.target)) {
+        document.getElementById('resource-dropdown-list').classList.add('hidden');
+      }
+    });
 
     function alterarTaxa(novaTaxa) {
       taxaVenda = parseFloat(novaTaxa);
@@ -187,13 +262,18 @@
       document.getElementById('tax-display').innerText = `${(taxaVenda * 100).toFixed(1)}%`;
     }
 
-    // Modal & Cálculo Refletido
     function abrirModal(tipo, recurso = '') {
       document.getElementById('trade-type').value = tipo;
-      document.getElementById('trade-resource').value = recurso;
       document.getElementById('trade-qty').value = '';
       document.getElementById('trade-unit-price').value = '';
       document.getElementById('trade-total-price').value = '';
+
+      if (recurso) {
+        selecionarRecurso(recurso);
+      } else {
+        document.getElementById('trade-resource').value = '';
+        document.getElementById('trade-resource-search').value = '';
+      }
 
       const title = document.getElementById('modal-title');
       const btn = document.getElementById('modal-submit-btn');
@@ -236,10 +316,15 @@
     function salvarTransacao(e) {
       e.preventDefault();
       const tipo = document.getElementById('trade-type').value;
-      const recurso = document.getElementById('trade-resource').value.trim();
+      const recurso = document.getElementById('trade-resource').value.trim() || document.getElementById('trade-resource-search').value.trim();
       const qty = parseFloat(document.getElementById('trade-qty').value);
       const unitPrice = parseFloat(document.getElementById('trade-unit-price').value);
       const totalPrice = parseFloat(document.getElementById('trade-total-price').value);
+
+      if (!recurso) {
+        alert("Por favor, selecione um recurso.");
+        return;
+      }
 
       transacoes.push({
         id: Date.now(),
@@ -256,27 +341,26 @@
       renderizarPortfolio();
     }
 
-    // Lógica do Portfólio (Cálculos de Preço Médio e Lucro)
     function renderizarPortfolio() {
       const tbody = document.getElementById('table-portfolio');
       tbody.innerHTML = '';
 
-      // Agrupa transações por recurso
       const estoque = {};
 
       transacoes.forEach(t => {
-        const item = t.recurso.toLowerCase();
-        if (!estoque[item]) {
-          estoque[item] = { nome: t.recurso, qty: 0, custoTotal: 0 };
+        const item = t.recurso;
+        const key = item.toLowerCase();
+        if (!estoque[key]) {
+          estoque[key] = { nome: item, qty: 0, custoTotal: 0 };
         }
 
         if (t.tipo === 'buy') {
-          estoque[item].qty += t.qty;
-          estoque[item].custoTotal += t.totalPrice;
+          estoque[key].qty += t.qty;
+          estoque[key].custoTotal += t.totalPrice;
         } else if (t.tipo === 'sell') {
-          const precoMedioAntes = estoque[item].qty > 0 ? (estoque[item].custoTotal / estoque[item].qty) : 0;
-          estoque[item].qty -= t.qty;
-          estoque[item].custoTotal -= (t.qty * precoMedioAntes); // Abate proporcional do custo
+          const precoMedioAntes = estoque[key].qty > 0 ? (estoque[key].custoTotal / estoque[key].qty) : 0;
+          estoque[key].qty -= t.qty;
+          estoque[key].custoTotal -= (t.qty * precoMedioAntes);
         }
       });
 
@@ -291,14 +375,11 @@
         const item = estoque[key];
         const precoMedio = item.custoTotal / item.qty;
         
-        // Busca preço P2P atual
-        const precoAtualP2P = dadosPrecos[item.nome] || dadosPrecos[key] || 0;
+        const precoAtualP2P = dadosPrecos[item.nome] || 0;
         
-        // Preço de venda considerando a taxa selecionada
         const precoVendaLiquidoUnitario = precoAtualP2P * (1 - taxaVenda);
         const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
         
-        // Lucro ou Prejuízo absoluto e %
         const lucroAbsoluto = valorVendaLiquidoTotal - item.custoTotal;
         const lucroPercentual = item.custoTotal > 0 ? (lucroAbsoluto / item.custoTotal) * 100 : 0;
 
@@ -307,7 +388,7 @@
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-800 hover:bg-slate-800/30 transition";
         tr.innerHTML = `
-          <td class="p-3 font-bold capitalize text-slate-200">${item.nome}</td>
+          <td class="p-3 font-bold text-slate-200">${item.nome}</td>
           <td class="p-3">${item.qty.toFixed(2)}</td>
           <td class="p-3 font-semibold">${item.custoTotal.toFixed(2)} SFL</td>
           <td class="p-3 text-slate-400">${precoMedio.toFixed(4)} SFL</td>
@@ -321,7 +402,6 @@
       });
     }
 
-    // Renderização dos cards P2P
     function renderizarCardsMercado() {
       const grid = document.getElementById('grid-recursos');
       grid.innerHTML = '';
@@ -335,7 +415,7 @@
         
         card.innerHTML = `
           <div>
-            <div class="text-sm font-bold capitalize text-slate-200">${item}</div>
+            <div class="text-sm font-bold text-slate-200">${item}</div>
             <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${precoAtual.toFixed(4)} SFL</span></div>
           </div>
           <button onclick="abrirModal('buy', '${item}')" class="bg-slate-800 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
@@ -343,16 +423,6 @@
           </button>
         `;
         grid.appendChild(card);
-      });
-    }
-
-    function preencherDatalist() {
-      const datalist = document.getElementById('resources-list');
-      datalist.innerHTML = '';
-      Object.keys(dadosPrecos).forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        datalist.appendChild(option);
       });
     }
 
@@ -364,7 +434,6 @@
       });
     }
 
-    // Inicialização
     carregarDados();
   </script>
 </body>
