@@ -1,4 +1,4 @@
-// Base de preços de contingência (carrega instantaneamente)
+// Base de preços de contingência
 let dadosPrecos = {
   "Sunflower":0.0003666, "Potato":0.0004439, "Pumpkin":0.0010799, "Carrot":0.002097, 
   "Cabbage":0.00195, "Beetroot":0.0059949, "Cauliflower":0.00848357, "Parsnip":0.013094, 
@@ -19,16 +19,28 @@ let dadosPrecos = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-// Cotação SFL em USD (valor padrão de contingência)
+// Formata preços mantendo no máximo 3 algarismos significativos para decimais pequenos
+function formatarPreco(valor) {
+  if (valor === undefined || valor === null || isNaN(valor)) return '0';
+  const num = Number(valor);
+  if (num === 0) return '0';
+  
+  if (num >= 10) return num.toFixed(2);
+  if (num >= 1) return num.toFixed(3);
+  
+  // Arredonda para 3 algarismos significativos (ex: 0.301345 -> 0.301 | 0.0001457 -> 0.000146)
+  return parseFloat(num.toPrecision(3)).toString();
+}
+
 let sflUsd = 0.0679;
 let taxaVenda = parseFloat(localStorage.getItem('sfl_tax_rate')) || 0.075;
 let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
 
-// Inicialização de UI
-document.getElementById('tax-select').value = taxaVenda.toString();
+// Inicialização da interface
+const elTaxSelect = document.getElementById('tax-select');
+if (elTaxSelect) elTaxSelect.value = taxaVenda.toString();
 atualizarDisplayTaxa();
 
-// Requisições API isoladas
 async function carregarDados() {
   // 1. Cotação SFL USD
   try {
@@ -40,13 +52,15 @@ async function carregarDados() {
       }
     }
   } catch (err) {
-    console.warn("API de cotação SFL/USD bloqueada ou indisponível (usando contingência):", err);
+    console.warn("API de cotação SFL/USD bloqueada/indisponível:", err);
   } finally {
     const elPrice = document.getElementById('sfl-price');
     if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
   }
 
   // 2. Preços P2P + Tempo de Atualização
+  let textoHoraAtualizacao = '';
+
   try {
     const resPrices = await fetch('https://sfl.world/api/v1/prices');
     if (resPrices.ok) {
@@ -57,16 +71,24 @@ async function carregarDados() {
         dadosPrecos = { ...dadosPrecos, ...p2pData };
       }
 
-      // Exibe o tempo de atualização da API na UI
       const updatedText = dataPrices.updated_text || (dataPrices.data && dataPrices.data.updated_text);
-      const elUpdated = document.getElementById('updated-time');
-      if (elUpdated && updatedText) {
-        elUpdated.innerText = `• ${updatedText}`;
+      if (updatedText) {
+        textoHoraAtualizacao = `• ${updatedText}`;
       }
     }
   } catch (err) {
     console.warn("API P2P indisponível (usando contingência):", err);
   } finally {
+    if (!textoHoraAtualizacao) {
+      const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      textoHoraAtualizacao = `• Atualizado às ${horaAtual}`;
+    }
+
+    const elUpdated = document.getElementById('updated-time');
+    if (elUpdated) {
+      elUpdated.innerText = textoHoraAtualizacao;
+    }
+
     renderizarCardsMercado();
     renderizarPortfolio();
   }
@@ -93,7 +115,7 @@ function filtrarDropdownRecursos() {
     listDiv.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">Nenhum recurso encontrado</div>`;
   } else {
     filtrados.forEach(rec => {
-      const preco = dadosPrecos[rec] !== undefined ? `${dadosPrecos[rec]} SFL` : '';
+      const preco = dadosPrecos[rec] !== undefined ? `${formatarPreco(dadosPrecos[rec])} SFL` : '';
       const itemDiv = document.createElement('div');
       itemDiv.className = "px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 cursor-pointer flex justify-between items-center transition border-b border-slate-800/50 last:border-0";
       itemDiv.innerHTML = `
@@ -110,7 +132,6 @@ function filtrarDropdownRecursos() {
   listDiv.classList.remove('hidden');
 }
 
-// Ao digitar diretamente no campo de busca
 function aoDigitarRecurso() {
   filtrarDropdownRecursos();
   const termo = document.getElementById('trade-resource-search').value.trim();
@@ -145,7 +166,6 @@ function selecionarRecurso(nomeRecurso) {
   calcTotal();
 }
 
-// Evento para fechar dropdown ao clicar fora
 document.addEventListener('click', (e) => {
   const container = document.getElementById('trade-resource-search')?.parentElement;
   if (container && !container.contains(e.target)) {
@@ -156,15 +176,19 @@ document.addEventListener('click', (e) => {
 function alterarTaxa(novaTaxa) {
   taxaVenda = parseFloat(novaTaxa);
   localStorage.setItem('sfl_tax_rate', taxaVenda);
-  document.getElementById('tax-select').value = taxaVenda.toString();
+  const elTaxSelect = document.getElementById('tax-select');
+  if (elTaxSelect) elTaxSelect.value = taxaVenda.toString();
   atualizarDisplayTaxa();
   atualizarPreviewVenda();
   renderizarPortfolio();
 }
 
 function atualizarDisplayTaxa() {
-  document.getElementById('tax-display').innerText = `${(taxaVenda * 100).toFixed(1)}%`;
-  document.getElementById('preview-taxa-percent').innerText = `${(taxaVenda * 100).toFixed(1)}%`;
+  const elTaxDisplay = document.getElementById('tax-display');
+  if (elTaxDisplay) elTaxDisplay.innerText = `${(taxaVenda * 100).toFixed(1)}%`;
+  
+  const elPreviewPercent = document.getElementById('preview-taxa-percent');
+  if (elPreviewPercent) elPreviewPercent.innerText = `${(taxaVenda * 100).toFixed(1)}%`;
 }
 
 function abrirModal(tipo, recurso = '') {
@@ -238,9 +262,9 @@ function atualizarPreviewVenda() {
   const valorTaxa = bruto * taxaVenda;
   const liquido = bruto - valorTaxa;
 
-  document.getElementById('preview-bruto').innerText = `${bruto.toFixed(4)} SFL`;
-  document.getElementById('preview-taxa-valor').innerText = `-${valorTaxa.toFixed(4)} SFL`;
-  document.getElementById('preview-liquido').innerText = `${liquido.toFixed(4)} SFL`;
+  document.getElementById('preview-bruto').innerText = `${formatarPreco(bruto)} SFL`;
+  document.getElementById('preview-taxa-valor').innerText = `-${formatarPreco(valorTaxa)} SFL`;
+  document.getElementById('preview-liquido').innerText = `${formatarPreco(liquido)} SFL`;
 
   const taxBtns = document.querySelectorAll('#modal-tax-buttons .tax-btn');
   const taxasValores = [0.20, 0.15, 0.10, 0.075];
@@ -330,12 +354,12 @@ function renderizarPortfolio() {
     tr.innerHTML = `
       <td class="p-3 font-bold text-slate-200">${item.nome}</td>
       <td class="p-3">${item.qty.toFixed(2)}</td>
-      <td class="p-3 font-semibold">${item.custoTotal.toFixed(2)} SFL</td>
-      <td class="p-3 text-slate-400">${precoMedio.toFixed(4)} SFL</td>
-      <td class="p-3 text-amber-400 font-semibold">${precoAtualP2P > 0 ? precoAtualP2P + ' SFL' : 'N/A'}</td>
-      <td class="p-3 text-slate-300">${precoVendaLiquidoUnitario.toFixed(4)} SFL</td>
+      <td class="p-3 font-semibold">${formatarPreco(item.custoTotal)} SFL</td>
+      <td class="p-3 text-slate-400">${formatarPreco(precoMedio)} SFL</td>
+      <td class="p-3 text-amber-400 font-semibold">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</td>
+      <td class="p-3 text-slate-300">${formatarPreco(precoVendaLiquidoUnitario)} SFL</td>
       <td class="p-3 text-right font-bold ${corLucro}">
-        ${lucroAbsoluto >= 0 ? '+' : ''}${lucroAbsoluto.toFixed(2)} SFL (${lucroPercentual.toFixed(1)}%)
+        ${lucroAbsoluto >= 0 ? '+' : ''}${formatarPreco(lucroAbsoluto)} SFL (${lucroPercentual.toFixed(1)}%)
       </td>
     `;
     tbody.appendChild(tr);
@@ -356,7 +380,7 @@ function renderizarCardsMercado() {
     card.innerHTML = `
       <div>
         <div class="text-sm font-bold text-slate-200">${item}</div>
-        <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${precoAtual} SFL</span></div>
+        <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${formatarPreco(precoAtual)} SFL</span></div>
       </div>
       <div class="flex gap-1">
         <button onclick="abrirModal('buy', '${item}')" class="bg-slate-800 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
@@ -379,5 +403,4 @@ function filtrarRecursos() {
   });
 }
 
-// Execução inicial
 carregarDados();
