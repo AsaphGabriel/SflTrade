@@ -1,4 +1,4 @@
-// Base de preços de contingência (usada apenas se a rede/API estiver totalmente offline)
+// Base de preços de contingência
 let dadosPrecos = {
   "Sunflower":0.0003666, "Potato":0.0004439, "Pumpkin":0.0010799, "Carrot":0.002097, 
   "Cabbage":0.00195, "Beetroot":0.0059949, "Cauliflower":0.00848357, "Parsnip":0.013094, 
@@ -19,58 +19,72 @@ let dadosPrecos = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-// Função para buscar JSON contornando bloqueios de CORS do navegador/GitHub Pages
+// Contorna bloqueios de CORS
 async function fetchJsonSmart(url) {
   try {
     const res = await fetch(url);
     if (res.ok) return await res.json();
   } catch (e) {
-    console.warn(`[CORS/Direct Fetch Failed] Tentando via proxy para: ${url}`);
+    console.warn(`[CORS Direct Failed] Tentando via proxy: ${url}`);
   }
 
-  // Se o fetch direto for bloqueado, passa pelo proxy de CORS
   try {
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
     const resProxy = await fetch(proxyUrl);
     if (resProxy.ok) return await resProxy.json();
-  } catch (e) {
-    console.warn(`[Proxy 1 Failed] Tentando proxy de contingência...`);
-  }
+  } catch (e) {}
 
   try {
     const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
     const resProxy2 = await fetch(proxyUrl2);
     if (resProxy2.ok) return await resProxy2.json();
-  } catch (e) {
-    console.error(`[API Error] Não foi possível carregar os dados de: ${url}`);
-  }
+  } catch (e) {}
 
   return null;
 }
 
-// Formata preços mantendo no máximo 3 algarismos significativos para decimais pequenos
+// Formatação inteligente mantendo 3 algarismos significativos
 function formatarPreco(valor) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
-  
   if (num >= 10) return num.toFixed(2);
   if (num >= 1) return num.toFixed(3);
-  
   return parseFloat(num.toPrecision(3)).toString();
 }
 
 let sflUsd = 0.0679;
 let taxaVenda = parseFloat(localStorage.getItem('sfl_tax_rate')) || 0.075;
 let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
+let valorQtdMaxAtual = 0;
 
-// Inicialização da interface
+// Calcula estoque em tempo real
+function obterEstoqueAtual() {
+  const estoque = {};
+  transacoes.forEach(t => {
+    const item = t.recurso;
+    const key = item.toLowerCase();
+    if (!estoque[key]) {
+      estoque[key] = { nome: item, qty: 0, custoTotal: 0 };
+    }
+    if (t.tipo === 'buy') {
+      estoque[key].qty += t.qty;
+      estoque[key].custoTotal += t.totalPrice;
+    } else if (t.tipo === 'sell') {
+      const precoMedioAntes = estoque[key].qty > 0 ? (estoque[key].custoTotal / estoque[key].qty) : 0;
+      estoque[key].qty -= t.qty;
+      estoque[key].custoTotal -= (t.qty * precoMedioAntes);
+    }
+  });
+  return estoque;
+}
+
 const elTaxSelect = document.getElementById('tax-select');
 if (elTaxSelect) elTaxSelect.value = taxaVenda.toString();
 atualizarDisplayTaxa();
 
 async function carregarDados() {
-  // 1. Cotação SFL USD
+  // Cotação SFL
   const dataExchange = await fetchJsonSmart('https://sfl.world/api/v1.1/exchange');
   if (dataExchange && dataExchange.sfl && dataExchange.sfl.usd) {
     sflUsd = dataExchange.sfl.usd;
@@ -78,18 +92,16 @@ async function carregarDados() {
   const elPrice = document.getElementById('sfl-price');
   if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
 
-  // 2. Preços P2P + Tempo de Atualização da API
+  // Preços P2P + Tempo
   const dataPrices = await fetchJsonSmart('https://sfl.world/api/v1/prices');
   let textoHoraAtualizacao = '';
 
   if (dataPrices) {
-    // Extrai o objeto P2P (lida com estruturas com ou sem wrapper .data)
     const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
     if (p2pData) {
       dadosPrecos = { ...dadosPrecos, ...p2pData };
     }
 
-    // Puxa o updated_text vindo direto do servidor (ex: "9 minutes ago")
     const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
     if (updatedText) {
       textoHoraAtualizacao = `• Atualizado ${updatedText}`;
@@ -105,9 +117,7 @@ async function carregarDados() {
   }
 
   const elUpdated = document.getElementById('updated-time');
-  if (elUpdated) {
-    elUpdated.innerText = textoHoraAtualizacao;
-  }
+  if (elUpdated) elUpdated.innerText = textoHoraAtualizacao;
 
   renderizarCardsMercado();
   renderizarPortfolio();
@@ -125,13 +135,27 @@ function mostrarDropdownRecursos() {
 function filtrarDropdownRecursos() {
   const termo = document.getElementById('trade-resource-search').value.toLowerCase();
   const listDiv = document.getElementById('resource-dropdown-list');
+  const tipo = document.getElementById('trade-type').value;
   listDiv.innerHTML = '';
 
-  const recursos = obterTodosRecursos();
+  let recursos = [];
+
+  // Se for VENDA, exibe SOMENTE os itens que possui em estoque
+  if (tipo === 'sell') {
+    const estoque = obterEstoqueAtual();
+    recursos = Object.keys(estoque)
+      .filter(k => estoque[k].qty > 0.0001)
+      .map(k => estoque[k].nome)
+      .sort();
+  } else {
+    recursos = obterTodosRecursos();
+  }
+
   const filtrados = recursos.filter(r => r.toLowerCase().includes(termo));
 
   if (filtrados.length === 0) {
-    listDiv.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">Nenhum recurso encontrado</div>`;
+    const msg = tipo === 'sell' ? 'Nenhum recurso em estoque para venda' : 'Nenhum recurso encontrado';
+    listDiv.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">${msg}</div>`;
   } else {
     filtrados.forEach(rec => {
       const preco = dadosPrecos[rec] !== undefined ? `${formatarPreco(dadosPrecos[rec])} SFL` : '';
@@ -154,14 +178,10 @@ function filtrarDropdownRecursos() {
 function aoDigitarRecurso() {
   filtrarDropdownRecursos();
   const termo = document.getElementById('trade-resource-search').value.trim();
-  
   const chaveCorrespondente = Object.keys(dadosPrecos).find(k => k.toLowerCase() === termo.toLowerCase());
 
   if (chaveCorrespondente) {
-    document.getElementById('trade-resource').value = chaveCorrespondente;
-    document.getElementById('trade-unit-price').value = dadosPrecos[chaveCorrespondente];
-    document.getElementById('api-price-hint').classList.remove('hidden');
-    calcTotal();
+    selecionarRecurso(chaveCorrespondente);
   } else {
     document.getElementById('trade-resource').value = termo;
   }
@@ -174,6 +194,7 @@ function selecionarRecurso(nomeRecurso) {
 
   const unitInput = document.getElementById('trade-unit-price');
   const hint = document.getElementById('api-price-hint');
+  const tipo = document.getElementById('trade-type').value;
 
   if (dadosPrecos[nomeRecurso] !== undefined) {
     unitInput.value = dadosPrecos[nomeRecurso];
@@ -182,7 +203,31 @@ function selecionarRecurso(nomeRecurso) {
     hint.classList.add('hidden');
   }
 
+  // Se for venda, preenche e sugere a quantidade máxima que você possui
+  const stockHint = document.getElementById('qty-stock-hint');
+  if (tipo === 'sell') {
+    const estoque = obterEstoqueAtual();
+    const itemEstoque = estoque[nomeRecurso.toLowerCase()];
+    if (itemEstoque && itemEstoque.qty > 0) {
+      valorQtdMaxAtual = itemEstoque.qty;
+      stockHint.innerText = `Disponível: ${formatarPreco(itemEstoque.qty)} (Usar Máx)`;
+      stockHint.classList.remove('hidden');
+      document.getElementById('trade-qty').value = itemEstoque.qty;
+    } else {
+      stockHint.classList.add('hidden');
+    }
+  } else {
+    stockHint.classList.add('hidden');
+  }
+
   calcTotal();
+}
+
+function preencherQtdMax() {
+  if (valorQtdMaxAtual > 0) {
+    document.getElementById('trade-qty').value = valorQtdMaxAtual;
+    calcTotal();
+  }
 }
 
 document.addEventListener('click', (e) => {
@@ -215,6 +260,7 @@ function abrirModal(tipo, recurso = '') {
   document.getElementById('trade-qty').value = '';
   document.getElementById('trade-unit-price').value = '';
   document.getElementById('trade-total-price').value = '';
+  document.getElementById('qty-stock-hint').classList.add('hidden');
 
   const title = document.getElementById('modal-title');
   const btn = document.getElementById('modal-submit-btn');
@@ -328,29 +374,11 @@ function renderizarPortfolio() {
   const tbody = document.getElementById('table-portfolio');
   tbody.innerHTML = '';
 
-  const estoque = {};
-
-  transacoes.forEach(t => {
-    const item = t.recurso;
-    const key = item.toLowerCase();
-    if (!estoque[key]) {
-      estoque[key] = { nome: item, qty: 0, custoTotal: 0 };
-    }
-
-    if (t.tipo === 'buy') {
-      estoque[key].qty += t.qty;
-      estoque[key].custoTotal += t.totalPrice;
-    } else if (t.tipo === 'sell') {
-      const precoMedioAntes = estoque[key].qty > 0 ? (estoque[key].custoTotal / estoque[key].qty) : 0;
-      estoque[key].qty -= t.qty;
-      estoque[key].custoTotal -= (t.qty * precoMedioAntes);
-    }
-  });
-
+  const estoque = obterEstoqueAtual();
   const itensComEstoque = Object.keys(estoque).filter(key => estoque[key].qty > 0.0001);
 
   if (itensComEstoque.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">Nenhum recurso em estoque. Registre uma compra acima.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">Nenhum recurso em estoque. Registre uma compra acima.</td></tr>`;
     return;
   }
 
@@ -360,6 +388,7 @@ function renderizarPortfolio() {
     
     const precoAtualP2P = dadosPrecos[item.nome] || dadosPrecos[Object.keys(dadosPrecos).find(k => k.toLowerCase() === key)] || 0;
     
+    // Cálculos de valor atual e lucro
     const precoVendaLiquidoUnitario = precoAtualP2P * (1 - taxaVenda);
     const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
     
@@ -372,13 +401,21 @@ function renderizarPortfolio() {
     tr.className = "border-b border-slate-800 hover:bg-slate-800/30 transition";
     tr.innerHTML = `
       <td class="p-3 font-bold text-slate-200">${item.nome}</td>
-      <td class="p-3">${item.qty.toFixed(2)}</td>
+      <td class="p-3">${formatarPreco(item.qty)}</td>
       <td class="p-3 font-semibold">${formatarPreco(item.custoTotal)} SFL</td>
       <td class="p-3 text-slate-400">${formatarPreco(precoMedio)} SFL</td>
       <td class="p-3 text-amber-400 font-semibold">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</td>
-      <td class="p-3 text-slate-300">${formatarPreco(precoVendaLiquidoUnitario)} SFL</td>
+      <td class="p-3 font-bold text-slate-100">
+        ${formatarPreco(valorVendaLiquidoTotal)} SFL
+        <div class="text-[10px] text-slate-400 font-normal">(${formatarPreco(precoVendaLiquidoUnitario)} SFL/un)</div>
+      </td>
       <td class="p-3 text-right font-bold ${corLucro}">
         ${lucroAbsoluto >= 0 ? '+' : ''}${formatarPreco(lucroAbsoluto)} SFL (${lucroPercentual.toFixed(1)}%)
+      </td>
+      <td class="p-3 text-center">
+        <button onclick="abrirModal('sell', '${item.nome}')" class="bg-rose-950/60 hover:bg-rose-600/30 text-rose-400 text-xs px-2.5 py-1 rounded-lg border border-rose-800/50 transition">
+          🔴 Vender
+        </button>
       </td>
     `;
     tbody.appendChild(tr);
