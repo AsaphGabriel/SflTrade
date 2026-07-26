@@ -1,364 +1,206 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SFL Trade Tracker</title>
-    <!-- Configurações de PWA / App para Celular -->
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#0f172a" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
-    <meta name="apple-mobile-web-app-title" content="SFL Tracker" />
-    <link
-      rel="apple-touch-icon"
-      href="https://cdn-icons-png.flaticon.com/512/869/869869.png"
-    />
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              darkbg: "#0f172a",
-              cardbg: "#1e293b",
-              modalbg: "#1e293b",
-            },
-          },
-        },
-      };
-    </script>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SFL Trade Tracker</title>
+  
+  <!-- Configurações de PWA / App para Celular -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SFL Tracker">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/869/869869.png">
 
-    <!-- Estilos Customizados -->
-    <link rel="stylesheet" href="CSS/style.css?v=0.8" />
-  </head>
-  <body
-    class="bg-darkbg text-slate-100 min-h-screen p-4 md:p-8 font-sans pb-20"
-  >
-    <!-- Header -->
-    <header
-      class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-800"
-    >
-      <div>
-        <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
-          🌻 SFL Trade Tracker
-        </h1>
-        <div class="flex flex-wrap items-center gap-2 mt-0.5">
-          <p class="text-xs text-slate-400">Cotação e P2P via sfl.world</p>
-          <span
-            id="updated-time"
-            class="text-[11px] text-slate-500 font-mono italic"
-          ></span>
-        </div>
-      </div>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { darkbg: '#0f172a', cardbg: '#1e293b', modalbg: '#1e293b' } } }
+    }
+  </script>
+  
+  <!-- Estilos Customizados -->
+  <link rel="stylesheet" href="CSS/style.css?v=1.0">
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen p-4 md:p-8 font-sans pb-20">
 
-      <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-        <!-- Seletor Global de Taxa -->
-        <div
-          class="flex items-center gap-2 bg-cardbg px-3 py-2 rounded-xl border border-slate-700"
-        >
-          <label for="tax-select" class="text-xs text-slate-400 font-semibold"
-            >Taxa de Venda:</label
-          >
-          <select
-            id="tax-select"
-            onchange="alterarTaxa(this.value)"
-            class="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer"
-          >
-            <option value="0.20" class="bg-slate-900 text-white">20%</option>
-            <option value="0.15" class="bg-slate-900 text-white">15%</option>
-            <option value="0.10" class="bg-slate-900 text-white">10%</option>
-            <option value="0.075" class="bg-slate-900 text-white" selected>
-              7.5%
-            </option>
-          </select>
-        </div>
-
-        <!-- Botões de Ação -->
-        <button
-          onclick="abrirModal('buy')"
-          class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20"
-        >
-          🟢 Compra
-        </button>
-        <button
-          onclick="abrirModal('sell')"
-          class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-4 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20"
-        >
-          🔴 Venda
-        </button>
-        <button
-          onclick="carregarDados()"
-          class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl text-xs transition"
-        >
-          🔄 Atualizar
-        </button>
-      </div>
-    </header>
-
-    <!-- Cotação SFL USD -->
-    <div
-      class="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800 flex justify-between items-center"
-    >
-      <div>
-        <div class="text-xs text-slate-400 uppercase font-semibold">
-          Cotação SFL
-        </div>
-        <div
-          class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1"
-          id="sfl-price"
-        >
-          Carregando...
-        </div>
-      </div>
-      <div class="text-right text-xs text-slate-500">
-        Taxa Ativa:
-        <span id="tax-display" class="text-amber-400 font-bold">7.5%</span>
+  <!-- Header -->
+  <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
+    <div>
+      <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">🌻 SFL Trade Tracker</h1>
+      <div class="flex flex-wrap items-center gap-2 mt-0.5">
+        <p class="text-xs text-slate-400">Cotação e P2P via sfl.world</p>
+        <span id="updated-time" class="text-[11px] text-slate-500 font-mono italic"></span>
       </div>
     </div>
 
-    <!-- Seção 1: Meu Portfólio / Posições Ativas -->
-    <section class="mb-8">
-      <h2 class="text-lg font-bold text-slate-200 mb-3 flex items-center gap-2">
-        📦 Minhas Posições (Portfólio)
-      </h2>
-      <div
-        class="overflow-x-auto bg-cardbg rounded-2xl border border-slate-800 shadow-lg"
-      >
-        <table class="w-full text-left border-collapse text-xs md:text-sm">
-          <thead>
-            <tr
-              class="border-b border-slate-800 text-slate-400 uppercase font-semibold bg-slate-900/50"
-            >
-              <th class="p-3">Recurso</th>
-              <th class="p-3">Qtde</th>
-              <th class="p-3">Custo Total</th>
-              <th class="p-3">Preço Médio</th>
-              <th class="p-3">Preço Atual (P2P)</th>
-              <th class="p-3">Venda Líquida (c/ taxa)</th>
-              <th class="p-3 text-right">Lucro / Prejuízo Est.</th>
-            </tr>
-          </thead>
-          <tbody id="table-portfolio">
-            <tr>
-              <td colspan="7" class="p-4 text-center text-slate-500">
-                Nenhum recurso em estoque. Registre uma compra acima.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+      <!-- Seletor Global de Taxa -->
+      <div class="flex items-center gap-2 bg-cardbg px-3 py-2 rounded-xl border border-slate-700">
+        <label for="tax-select" class="text-xs text-slate-400 font-semibold">Taxa de Venda:</label>
+        <select id="tax-select" onchange="alterarTaxa(this.value)" class="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer">
+          <option value="0.20" class="bg-slate-900 text-white">20%</option>
+          <option value="0.15" class="bg-slate-900 text-white">15%</option>
+          <option value="0.10" class="bg-slate-900 text-white">10%</option>
+          <option value="0.075" class="bg-slate-900 text-white" selected>7.5%</option>
+        </select>
       </div>
-    </section>
 
-    <!-- Seção 2: Cotação Geral do Mercado -->
-    <section>
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-bold text-slate-200">
-          🛒 Preços P2P do Mercado
-        </h2>
-        <input
-          type="text"
-          id="search"
-          placeholder="Buscar recurso..."
-          onkeyup="filtrarRecursos()"
-          class="bg-cardbg border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-48"
-        />
-      </div>
-      <div
-        id="grid-recursos"
-        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
-      >
-        <!-- Cards do P2P -->
-      </div>
-    </section>
-
-    <!-- Modal de Transação (Compra / Venda) -->
-    <div
-      id="trade-modal"
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50"
-    >
-      <div
-        class="bg-modalbg border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative"
-      >
-        <h3 id="modal-title" class="text-xl font-bold mb-4">Nova Transação</h3>
-
-        <form id="trade-form" onsubmit="salvarTransacao(event)">
-          <input type="hidden" id="trade-type" value="buy" />
-
-          <!-- Recurso - Dropdown Pesquisável -->
-          <div class="mb-3 relative">
-            <label class="block text-xs text-slate-400 mb-1"
-              >Recurso (Resource)</label
-            >
-            <input type="hidden" id="trade-resource" required />
-            <input
-              type="text"
-              id="trade-resource-search"
-              placeholder="Selecione ou digite para buscar..."
-              autocomplete="off"
-              onfocus="mostrarDropdownRecursos()"
-              oninput="aoDigitarRecurso()"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-            />
-
-            <!-- Lista Flutuante de Seleção -->
-            <div
-              id="resource-dropdown-list"
-              class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl max-h-48 overflow-y-auto hidden z-20 shadow-xl border-t-0"
-            >
-              <!-- Itens inseridos via JS -->
-            </div>
-          </div>
-
-          <!-- Quantidade -->
-          <div class="mb-3">
-            <label class="block text-xs text-slate-400 mb-1"
-              >Quantidade (Quantity)</label
-            >
-            <input
-              type="number"
-              step="any"
-              id="trade-qty"
-              placeholder="0.00"
-              required
-              oninput="calcTotal()"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-            />
-          </div>
-
-          <!-- Preço Unitário -->
-          <div class="mb-3">
-            <div class="flex justify-between items-center mb-1">
-              <label class="block text-xs text-slate-400"
-                >Preço Unitário em SFL (Unit Price)</label
-              >
-              <span
-                id="api-price-hint"
-                class="text-[10px] text-amber-400 font-mono hidden"
-                >Puxado da API</span
-              >
-            </div>
-            <input
-              type="number"
-              step="any"
-              id="trade-unit-price"
-              placeholder="0.0000"
-              required
-              oninput="calcTotal()"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-            />
-          </div>
-
-          <!-- Preço Total -->
-          <div class="mb-4">
-            <label class="block text-xs text-slate-400 mb-1"
-              >Preço Total Bruto em SFL (Total Price)</label
-            >
-            <input
-              type="number"
-              step="any"
-              id="trade-total-price"
-              placeholder="0.0000"
-              required
-              oninput="calcUnit()"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-            />
-          </div>
-
-          <!-- Painel de Detalhes da Taxa (Apenas para Venda) -->
-          <div
-            id="sell-tax-preview"
-            class="hidden mb-5 p-3 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs"
-          >
-            <div
-              class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800"
-            >
-              <span class="text-slate-400 font-semibold"
-                >Alterar Taxa de Venda:</span
-              >
-              <div class="flex gap-1" id="modal-tax-buttons">
-                <button
-                  type="button"
-                  onclick="alterarTaxa(0.2)"
-                  class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition"
-                >
-                  20%
-                </button>
-                <button
-                  type="button"
-                  onclick="alterarTaxa(0.15)"
-                  class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition"
-                >
-                  15%
-                </button>
-                <button
-                  type="button"
-                  onclick="alterarTaxa(0.1)"
-                  class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition"
-                >
-                  10%
-                </button>
-                <button
-                  type="button"
-                  onclick="alterarTaxa(0.075)"
-                  class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition"
-                >
-                  7.5%
-                </button>
-              </div>
-            </div>
-            <div class="space-y-1.5 pt-1">
-              <div class="flex justify-between text-slate-400">
-                <span>Sem Taxa (Bruto):</span>
-                <span id="preview-bruto" class="font-mono text-slate-200"
-                  >0.0000 SFL</span
-                >
-              </div>
-              <div class="flex justify-between text-rose-400">
-                <span
-                  >Desconto Taxa (<span id="preview-taxa-percent">7.5%</span
-                  >):</span
-                >
-                <span id="preview-taxa-valor" class="font-mono"
-                  >-0.0000 SFL</span
-                >
-              </div>
-              <div
-                class="flex justify-between font-bold text-emerald-400 pt-1 border-t border-slate-800/80 text-xs md:text-sm"
-              >
-                <span>Líquido a Receber:</span>
-                <span id="preview-liquido" class="font-mono">0.0000 SFL</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Botões -->
-          <div class="flex justify-end gap-2">
-            <button
-              type="button"
-              onclick="fecharModal()"
-              class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              id="modal-submit-btn"
-              class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold text-white"
-            >
-              Confirmar
-            </button>
-          </div>
-        </form>
-      </div>
+      <!-- Botões de Ação -->
+      <button onclick="abrirModal('buy')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
+        🟢 Compra
+      </button>
+      <button onclick="abrirModal('sell')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-4 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
+        🔴 Venda
+      </button>
+      <button onclick="carregarDados()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl text-xs transition">
+        🔄 Atualizar
+      </button>
     </div>
+  </header>
 
-    <!-- Lógica da Aplicação -->
-    <script src="JavaScript/script.js?v=0.9"></script>
-  </body>
+  <!-- Cotação SFL USD -->
+  <div class="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800 flex justify-between items-center">
+    <div>
+      <div class="text-xs text-slate-400 uppercase font-semibold">Cotação SFL</div>
+      <div class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1" id="sfl-price">Carregando...</div>
+    </div>
+    <div class="text-right text-xs text-slate-500">
+      Taxa Ativa: <span id="tax-display" class="text-amber-400 font-bold">7.5%</span>
+    </div>
+  </div>
+
+  <!-- Seção 1: Meu Portfólio / Posições Ativas -->
+  <section class="mb-8">
+    <h2 class="text-lg font-bold text-slate-200 mb-3 flex items-center gap-2">📦 Minhas Posições (Portfólio)</h2>
+    <div class="overflow-x-auto bg-cardbg rounded-2xl border border-slate-800 shadow-lg">
+      <table class="w-full text-left border-collapse text-xs md:text-sm">
+        <thead>
+          <tr class="border-b border-slate-800 text-slate-400 uppercase font-semibold bg-slate-900/50">
+            <th class="p-3">Recurso</th>
+            <th class="p-3">Qtde</th>
+            <th class="p-3">Custo Total</th>
+            <th class="p-3">Preço Médio</th>
+            <th class="p-3">Preço Atual (P2P)</th>
+            <th class="p-3">Valor Atual Total (c/ taxa)</th>
+            <th class="p-3 text-right">Lucro / Prejuízo Est.</th>
+            <th class="p-3 text-center">Ação</th>
+          </tr>
+        </thead>
+        <tbody id="table-portfolio">
+          <tr>
+            <td colspan="8" class="p-4 text-center text-slate-500">Nenhum recurso em estoque. Registre uma compra acima.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Seção 2: Cotação Geral do Mercado -->
+  <section>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-lg font-bold text-slate-200">🛒 Preços P2P do Mercado</h2>
+      <input type="text" id="search" placeholder="Buscar recurso..." onkeyup="filtrarRecursos()" 
+             class="bg-cardbg border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-48">
+    </div>
+    <div id="grid-recursos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <!-- Cards do P2P -->
+    </div>
+  </section>
+
+  <!-- Modal de Transação (Compra / Venda) -->
+  <div id="trade-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-modalbg border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+      <h3 id="modal-title" class="text-xl font-bold mb-4">Nova Transação</h3>
+      
+      <form id="trade-form" onsubmit="salvarTransacao(event)">
+        <input type="hidden" id="trade-type" value="buy">
+
+        <!-- Recurso - Dropdown Pesquisável -->
+        <div class="mb-3 relative">
+          <label class="block text-xs text-slate-400 mb-1">Recurso (Resource)</label>
+          <input type="hidden" id="trade-resource" required>
+          <input type="text" id="trade-resource-search" placeholder="Selecione ou digite para buscar..." autocomplete="off"
+                 onfocus="mostrarDropdownRecursos()" oninput="aoDigitarRecurso()"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+          
+          <!-- Lista Flutuante de Seleção -->
+          <div id="resource-dropdown-list" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl max-h-48 overflow-y-auto hidden z-20 shadow-xl border-t-0">
+            <!-- Itens inseridos via JS -->
+          </div>
+        </div>
+
+        <!-- Quantidade com Hint de Estoque -->
+        <div class="mb-3">
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs text-slate-400">Quantidade (Quantity)</label>
+            <span id="qty-stock-hint" onclick="preencherQtdMax()" class="text-[10px] text-amber-400 font-mono hover:underline cursor-pointer hidden"></span>
+          </div>
+          <input type="number" step="any" id="trade-qty" placeholder="0.00" required oninput="calcTotal()"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <!-- Preço Unitário -->
+        <div class="mb-3">
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs text-slate-400">Preço Unitário em SFL (Unit Price)</label>
+            <span id="api-price-hint" class="text-[10px] text-amber-400 font-mono hidden">Puxado da API</span>
+          </div>
+          <input type="number" step="any" id="trade-unit-price" placeholder="0.0000" required oninput="calcTotal()"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <!-- Preço Total -->
+        <div class="mb-4">
+          <label class="block text-xs text-slate-400 mb-1">Preço Total Bruto em SFL (Total Price)</label>
+          <input type="number" step="any" id="trade-total-price" placeholder="0.0000" required oninput="calcUnit()"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <!-- Painel de Detalhes da Taxa (Apenas para Venda) -->
+        <div id="sell-tax-preview" class="hidden mb-5 p-3 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs">
+          <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
+            <span class="text-slate-400 font-semibold">Alterar Taxa de Venda:</span>
+            <div class="flex gap-1" id="modal-tax-buttons">
+              <button type="button" onclick="alterarTaxa(0.20)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">20%</button>
+              <button type="button" onclick="alterarTaxa(0.15)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">15%</button>
+              <button type="button" onclick="alterarTaxa(0.10)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">10%</button>
+              <button type="button" onclick="alterarTaxa(0.075)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">7.5%</button>
+            </div>
+          </div>
+          <div class="space-y-1.5 pt-1">
+            <div class="flex justify-between text-slate-400">
+              <span>Sem Taxa (Bruto):</span>
+              <span id="preview-bruto" class="font-mono text-slate-200">0.0000 SFL</span>
+            </div>
+            <div class="flex justify-between text-rose-400">
+              <span>Desconto Taxa (<span id="preview-taxa-percent">7.5%</span>):</span>
+              <span id="preview-taxa-valor" class="font-mono">-0.0000 SFL</span>
+            </div>
+            <div class="flex justify-between font-bold text-emerald-400 pt-1 border-t border-slate-800/80 text-xs md:text-sm">
+              <span>Líquido a Receber:</span>
+              <span id="preview-liquido" class="font-mono">0.0000 SFL</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botões -->
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick="fecharModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300">
+            Cancelar
+          </button>
+          <button type="submit" id="modal-submit-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold text-white">
+            Confirmar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lógica da Aplicação -->
+  <script src="JavaScript/script.js?v=1.0"></script>
+</body>
 </html>
