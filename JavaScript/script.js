@@ -19,7 +19,8 @@ let dadosPrecos = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-let sflUsd = 0;
+// Cotação SFL em USD (valor padrão de contingência)
+let sflUsd = 0.0679;
 let taxaVenda = parseFloat(localStorage.getItem('sfl_tax_rate')) || 0.075;
 let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
 
@@ -27,23 +28,35 @@ let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
 document.getElementById('tax-select').value = taxaVenda.toString();
 atualizarDisplayTaxa();
 
-// Requisições API
+// Requisições API isoladas
 async function carregarDados() {
+  // 1. Cotação SFL USD
   try {
-    // 1. Cotação do SFL (Acessando .sfl.usd)
     const resExchange = await fetch('https://sfl.world/api/v1.1/exchange');
-    const dataExchange = await resExchange.json();
-    sflUsd = dataExchange.sfl?.usd || 0; 
-    document.getElementById('sfl-price').innerText = `$ ${sflUsd.toFixed(4)} USD`;
-
-    // 2. Preços P2P
-    const resPrices = await fetch('https://sfl.world/api/v1/prices');
-    const dataPrices = await resPrices.json();
-    if (dataPrices.p2p) {
-      dadosPrecos = { ...dadosPrecos, ...dataPrices.p2p };
+    if (resExchange.ok) {
+      const dataExchange = await resExchange.json();
+      if (dataExchange.sfl && dataExchange.sfl.usd) {
+        sflUsd = dataExchange.sfl.usd;
+      }
     }
   } catch (err) {
-    console.warn("Usando preços locais de contingência:", err);
+    console.warn("API de cotação SFL/USD bloqueada ou indisponível (usando contingência):", err);
+  } finally {
+    const elPrice = document.getElementById('sfl-price');
+    if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
+  }
+
+  // 2. Preços P2P
+  try {
+    const resPrices = await fetch('https://sfl.world/api/v1/prices');
+    if (resPrices.ok) {
+      const dataPrices = await resPrices.json();
+      if (dataPrices.p2p) {
+        dadosPrecos = { ...dadosPrecos, ...dataPrices.p2p };
+      }
+    }
+  } catch (err) {
+    console.warn("API P2P indisponível (usando contingência):", err);
   } finally {
     renderizarCardsMercado();
     renderizarPortfolio();
@@ -93,7 +106,6 @@ function aoDigitarRecurso() {
   filtrarDropdownRecursos();
   const termo = document.getElementById('trade-resource-search').value.trim();
   
-  // Busca exata sem diferenciar maiúsculas/minúsculas
   const chaveCorrespondente = Object.keys(dadosPrecos).find(k => k.toLowerCase() === termo.toLowerCase());
 
   if (chaveCorrespondente) {
