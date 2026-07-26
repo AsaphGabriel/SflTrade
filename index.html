@@ -22,9 +22,9 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-      <!-- Seletor de Taxa -->
+      <!-- Seletor Global de Taxa -->
       <div class="flex items-center gap-2 bg-cardbg px-3 py-2 rounded-xl border border-slate-700">
-        <label for="tax-select" class="text-xs text-slate-400 font-semibold">Taxa:</label>
+        <label for="tax-select" class="text-xs text-slate-400 font-semibold">Taxa de Venda:</label>
         <select id="tax-select" onchange="alterarTaxa(this.value)" class="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer">
           <option value="0.20" class="bg-slate-900 text-white">20%</option>
           <option value="0.15" class="bg-slate-900 text-white">15%</option>
@@ -125,16 +125,46 @@
 
         <!-- Preço Unitário -->
         <div class="mb-3">
-          <label class="block text-xs text-slate-400 mb-1">Preço Unitário em SFL (Unit Price)</label>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs text-slate-400">Preço Unitário em SFL (Unit Price)</label>
+            <span id="api-price-hint" class="text-[10px] text-amber-400 font-mono hidden">Puxado da API</span>
+          </div>
           <input type="number" step="any" id="trade-unit-price" placeholder="0.0000" required oninput="calcTotal()"
                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
         </div>
 
         <!-- Preço Total -->
-        <div class="mb-5">
-          <label class="block text-xs text-slate-400 mb-1">Preço Total em SFL (Total Price)</label>
+        <div class="mb-4">
+          <label class="block text-xs text-slate-400 mb-1">Preço Total Bruto em SFL (Total Price)</label>
           <input type="number" step="any" id="trade-total-price" placeholder="0.0000" required oninput="calcUnit()"
                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <!-- Painel de Detalhes da Taxa (Apenas para Venda) -->
+        <div id="sell-tax-preview" class="hidden mb-5 p-3 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs">
+          <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
+            <span class="text-slate-400 font-semibold">Alterar Taxa de Venda:</span>
+            <div class="flex gap-1" id="modal-tax-buttons">
+              <button type="button" onclick="alterarTaxa(0.20)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">20%</button>
+              <button type="button" onclick="alterarTaxa(0.15)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">15%</button>
+              <button type="button" onclick="alterarTaxa(0.10)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">10%</button>
+              <button type="button" onclick="alterarTaxa(0.075)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-900 font-bold transition">7.5%</button>
+            </div>
+          </div>
+          <div class="space-y-1.5 pt-1">
+            <div class="flex justify-between text-slate-400">
+              <span>Sem Taxa (Bruto):</span>
+              <span id="preview-bruto" class="font-mono text-slate-200">0.0000 SFL</span>
+            </div>
+            <div class="flex justify-between text-rose-400">
+              <span>Desconto Taxa (<span id="preview-taxa-percent">7.5%</span>):</span>
+              <span id="preview-taxa-valor" class="font-mono">-0.0000 SFL</span>
+            </div>
+            <div class="flex justify-between font-bold text-emerald-400 pt-1 border-t border-slate-800/80 text-xs md:text-sm">
+              <span>Líquido a Receber:</span>
+              <span id="preview-liquido" class="font-mono">0.0000 SFL</span>
+            </div>
+          </div>
         </div>
 
         <!-- Botões -->
@@ -230,20 +260,26 @@
       listDiv.classList.remove('hidden');
     }
 
+    // Puxa o preço direto da API ao selecionar recurso
     function selecionarRecurso(nomeRecurso) {
       document.getElementById('trade-resource').value = nomeRecurso;
       document.getElementById('trade-resource-search').value = nomeRecurso;
       document.getElementById('resource-dropdown-list').classList.add('hidden');
 
-      // Preenche o preço unitário automaticamente caso ainda não tenha digitado
       const unitInput = document.getElementById('trade-unit-price');
-      if (!unitInput.value && dadosPrecos[nomeRecurso]) {
-        unitInput.value = dadosPrecos[nomeRecurso].toFixed(4);
-        calcTotal();
+      const hint = document.getElementById('api-price-hint');
+
+      if (dadosPrecos[nomeRecurso] !== undefined) {
+        unitInput.value = dadosPrecos[nomeRecurso];
+        hint.classList.remove('hidden');
+      } else {
+        hint.classList.add('hidden');
       }
+
+      calcTotal();
     }
 
-    // Fecha a lista suspensa se o usuário clicar fora do campo
+    // Fecha a lista suspensa ao clicar fora
     document.addEventListener('click', (e) => {
       const container = document.getElementById('trade-resource-search').parentElement;
       if (!container.contains(e.target)) {
@@ -254,12 +290,15 @@
     function alterarTaxa(novaTaxa) {
       taxaVenda = parseFloat(novaTaxa);
       localStorage.setItem('sfl_tax_rate', taxaVenda);
+      document.getElementById('tax-select').value = taxaVenda.toString();
       atualizarDisplayTaxa();
+      atualizarPreviewVenda();
       renderizarPortfolio();
     }
 
     function atualizarDisplayTaxa() {
       document.getElementById('tax-display').innerText = `${(taxaVenda * 100).toFixed(1)}%`;
+      document.getElementById('preview-taxa-percent').innerText = `${(taxaVenda * 100).toFixed(1)}%`;
     }
 
     function abrirModal(tipo, recurso = '') {
@@ -268,28 +307,34 @@
       document.getElementById('trade-unit-price').value = '';
       document.getElementById('trade-total-price').value = '';
 
-      if (recurso) {
-        selecionarRecurso(recurso);
-      } else {
-        document.getElementById('trade-resource').value = '';
-        document.getElementById('trade-resource-search').value = '';
-      }
-
       const title = document.getElementById('modal-title');
       const btn = document.getElementById('modal-submit-btn');
+      const sellPreview = document.getElementById('sell-tax-preview');
 
       if (tipo === 'buy') {
         title.innerText = '🟢 Registrar Compra';
         title.className = 'text-xl font-bold mb-4 text-emerald-400';
         btn.className = 'px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold text-white';
+        sellPreview.classList.add('hidden');
       } else {
         title.innerText = '🔴 Registrar Venda';
         title.className = 'text-xl font-bold mb-4 text-rose-400';
         btn.className = 'px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl text-xs font-bold text-white';
+        sellPreview.classList.remove('hidden');
+      }
+
+      if (recurso) {
+        selecionarRecurso(recurso);
+      } else {
+        document.getElementById('trade-resource').value = '';
+        document.getElementById('trade-resource-search').value = '';
+        document.getElementById('api-price-hint').classList.add('hidden');
       }
 
       document.getElementById('trade-modal').classList.remove('hidden');
       document.getElementById('trade-modal').classList.add('flex');
+      
+      atualizarPreviewVenda();
     }
 
     function fecharModal() {
@@ -303,6 +348,7 @@
       if (qty > 0 && unit > 0) {
         document.getElementById('trade-total-price').value = (qty * unit).toFixed(4);
       }
+      atualizarPreviewVenda();
     }
 
     function calcUnit() {
@@ -311,6 +357,34 @@
       if (qty > 0 && total > 0) {
         document.getElementById('trade-unit-price').value = (total / qty).toFixed(4);
       }
+      atualizarPreviewVenda();
+    }
+
+    function atualizarPreviewVenda() {
+      const tipo = document.getElementById('trade-type').value;
+      if (tipo !== 'sell') return;
+
+      const qty = parseFloat(document.getElementById('trade-qty').value) || 0;
+      const unit = parseFloat(document.getElementById('trade-unit-price').value) || 0;
+      
+      const bruto = qty * unit;
+      const valorTaxa = bruto * taxaVenda;
+      const liquido = bruto - valorTaxa;
+
+      document.getElementById('preview-bruto').innerText = `${bruto.toFixed(4)} SFL`;
+      document.getElementById('preview-taxa-valor').innerText = `-${valorTaxa.toFixed(4)} SFL`;
+      document.getElementById('preview-liquido').innerText = `${liquido.toFixed(4)} SFL`;
+
+      // Destaca botão de taxa ativo dentro do modal
+      const taxBtns = document.querySelectorAll('#modal-tax-buttons .tax-btn');
+      const taxasValores = [0.20, 0.15, 0.10, 0.075];
+      taxBtns.forEach((btn, index) => {
+        if (taxasValores[index] === taxaVenda) {
+          btn.className = "tax-btn px-2 py-1 rounded-lg bg-amber-500 text-slate-900 font-extrabold shadow transition";
+        } else {
+          btn.className = "tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold transition";
+        }
+      });
     }
 
     function salvarTransacao(e) {
@@ -418,9 +492,14 @@
             <div class="text-sm font-bold text-slate-200">${item}</div>
             <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${precoAtual.toFixed(4)} SFL</span></div>
           </div>
-          <button onclick="abrirModal('buy', '${item}')" class="bg-slate-800 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
-            + Comprar
-          </button>
+          <div class="flex gap-1">
+            <button onclick="abrirModal('buy', '${item}')" class="bg-slate-800 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
+              + Compra
+            </button>
+            <button onclick="abrirModal('sell', '${item}')" class="bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
+              - Venda
+            </button>
+          </div>
         `;
         grid.appendChild(card);
       });
