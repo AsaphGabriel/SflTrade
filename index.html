@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SFL Trade Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { darkbg: '#0f172a', cardbg: '#1e293b' } } }
+    }
+  </script>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen p-4 font-sans pb-20">
+
+  <!-- Header -->
+  <header class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-amber-400">🌻 SFL Tracker</h1>
+      <p class="text-xs text-slate-400">Dados ao vivo via sfl.world</p>
+    </div>
+    <button onclick="carregarDados()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl text-xs transition">
+      🔄 Atualizar
+    </button>
+  </header>
+
+  <!-- Card do SFL / Cotação -->
+  <div class="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">
+    <div class="text-xs text-slate-400 uppercase font-semibold">Cotação SFL</div>
+    <div class="text-3xl font-extrabold text-green-400 mt-1" id="sfl-price">Carregando...</div>
+  </div>
+
+  <!-- Campo de Busca -->
+  <input type="text" id="search" placeholder="Buscar recurso (ex: Tomato, Leather)..." 
+         onkeyup="filtrarRecursos()" 
+         class="w-full bg-cardbg border border-slate-700 text-white rounded-xl px-4 py-3 text-sm mb-4 focus:outline-none focus:border-amber-400">
+
+  <!-- Lista de Recursos -->
+  <div id="grid-recursos" class="grid grid-cols-1 gap-3">
+    <!-- Os cards entram aqui via JS -->
+  </div>
+
+  <script>
+    let dadosPrecos = {};
+    let sflUsd = 0;
+
+    async function carregarDados() {
+      try {
+        // 1. Puxa Cotação do SFL
+        const resExchange = await fetch('https://sfl.world/api/v1.1/exchange');
+        const dataExchange = await resExchange.json();
+        sflUsd = dataExchange.sfl || 0;
+        document.getElementById('sfl-price').innerText = `$ ${sflUsd.toFixed(4)} USD`;
+
+        // 2. Puxa Preços dos Recursos (P2P Plaza)
+        const resPrices = await fetch('https://sfl.world/api/v1/prices');
+        const dataPrices = await resPrices.json();
+        dadosPrecos = dataPrices.p2p || {};
+
+        renderizarCards();
+      } catch (err) {
+        alert('Erro ao carregar dados da API sfl.world');
+      }
+    }
+
+    function renderizarCards() {
+      const grid = document.getElementById('grid-recursos');
+      grid.innerHTML = '';
+
+      Object.keys(dadosPrecos).sort().forEach(item => {
+        const precoAtual = dadosPrecos[item];
+        const minBuyPrice = localStorage.getItem(`buy_${item}`) || '';
+
+        let %lucroHtml = '';
+        if (minBuyPrice && minBuyPrice > 0) {
+          const lucro = ((precoAtual - minBuyPrice) / minBuyPrice) * 100;
+          const corLucro = lucro >= 0 ? 'text-green-400' : 'text-red-400';
+          %lucroHtml = `<span class="text-xs font-bold ${corLucro}">${lucro > 0 ? '+' : ''}${lucro.toFixed(2)}%</span>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = "bg-cardbg rounded-xl p-4 border border-slate-800 flex justify-between items-center item-card";
+        card.setAttribute('data-name', item.toLowerCase());
+        
+        card.innerHTML = `
+          <div>
+            <div class="text-base font-bold capitalize text-slate-200">${item}</div>
+            <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${precoAtual.toFixed(4)} SFL</span></div>
+          </div>
+          <div class="flex items-center gap-3">
+            ${%lucroHtml}
+            <input type="number" step="any" placeholder="Pago" value="${minBuyPrice}"
+                   onchange="salvarPrecoPago('${item}', this.value)"
+                   class="w-20 bg-slate-900 border border-slate-700 text-center text-xs py-2 rounded-lg text-white focus:outline-none focus:border-amber-400">
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function salvarPrecoPago(item, valor) {
+      if (valor) {
+        localStorage.setItem(`buy_${item}`, valor);
+      } else {
+        localStorage.removeItem(`buy_${item}`);
+      }
+      renderizarCards();
+    }
+
+    function filtrarRecursos() {
+      const termo = document.getElementById('search').value.toLowerCase();
+      document.querySelectorAll('.item-card').forEach(card => {
+        const nome = card.getAttribute('data-name');
+        card.style.display = nome.includes(termo) ? 'flex' : 'none';
+      });
+    }
+
+    // Carrega ao abrir a página
+    carregarDados();
+  </script>
+</body>
+</html>
