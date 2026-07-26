@@ -46,13 +46,22 @@ async function carregarDados() {
     if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
   }
 
-  // 2. Preços P2P
+  // 2. Preços P2P + Tempo de Atualização
   try {
     const resPrices = await fetch('https://sfl.world/api/v1/prices');
     if (resPrices.ok) {
       const dataPrices = await resPrices.json();
-      if (dataPrices.p2p) {
-        dadosPrecos = { ...dadosPrecos, ...dataPrices.p2p };
+      
+      const p2pData = dataPrices.p2p || (dataPrices.data && dataPrices.data.p2p);
+      if (p2pData) {
+        dadosPrecos = { ...dadosPrecos, ...p2pData };
+      }
+
+      // Exibe o tempo de atualização da API na UI
+      const updatedText = dataPrices.updated_text || (dataPrices.data && dataPrices.data.updated_text);
+      const elUpdated = document.getElementById('updated-time');
+      if (elUpdated && updatedText) {
+        elUpdated.innerText = `• ${updatedText}`;
       }
     }
   } catch (err) {

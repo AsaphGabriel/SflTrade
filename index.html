@@ -14,7 +14,7 @@
     }
   </script>
   
-  <!-- Estilos Customizados (Caminho para a pasta CSS) -->
+  <!-- Estilos Customizados -->
   <link rel="stylesheet" href="CSS/style.css">
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen p-4 md:p-8 font-sans pb-20">
@@ -23,7 +23,10 @@
   <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
     <div>
       <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">🌻 SFL Trade Tracker</h1>
-      <p class="text-xs text-slate-400">Cotação e P2P em tempo real via sfl.world</p>
+      <div class="flex flex-wrap items-center gap-2 mt-0.5">
+        <p class="text-xs text-slate-400">Cotação e P2P via sfl.world</p>
+        <span id="updated-time" class="text-[11px] text-slate-500 font-mono italic"></span>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -185,7 +188,7 @@
     </div>
   </div>
 
-  <!-- Lógica da Aplicação (Caminho para a pasta JavaScript) -->
+  <!-- Lógica da Aplicação -->
   <script src="JavaScript/script.js"></script>
 </body>
 </html>
