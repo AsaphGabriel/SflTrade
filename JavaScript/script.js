@@ -25,7 +25,7 @@ async function fetchJsonSmart(url) {
     const res = await fetch(url);
     if (res.ok) return await res.json();
   } catch (e) {
-    console.warn(`[CORS Direct Failed] Tentando via proxy: ${url}`);
+    console.warn(`[CORS Direct Failed] Proxying: ${url}`);
   }
 
   try {
@@ -58,7 +58,6 @@ let taxaVenda = parseFloat(localStorage.getItem('sfl_tax_rate')) || 0.075;
 let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
 let valorQtdMaxAtual = 0;
 
-// Calcula estoque em tempo real
 function obterEstoqueAtual() {
   const estoque = {};
   transacoes.forEach(t => {
@@ -79,12 +78,16 @@ function obterEstoqueAtual() {
   return estoque;
 }
 
+// Inicializa select de taxa e de idioma
 const elTaxSelect = document.getElementById('tax-select');
 if (elTaxSelect) elTaxSelect.value = taxaVenda.toString();
+
+const elLangSelect = document.getElementById('lang-select');
+if (elLangSelect) elLangSelect.value = currentLang;
+
 atualizarDisplayTaxa();
 
 async function carregarDados() {
-  // Cotação SFL
   const dataExchange = await fetchJsonSmart('https://sfl.world/api/v1.1/exchange');
   if (dataExchange && dataExchange.sfl && dataExchange.sfl.usd) {
     sflUsd = dataExchange.sfl.usd;
@@ -92,7 +95,6 @@ async function carregarDados() {
   const elPrice = document.getElementById('sfl-price');
   if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
 
-  // Preços P2P + Tempo
   const dataPrices = await fetchJsonSmart('https://sfl.world/api/v1/prices');
   let textoHoraAtualizacao = '';
 
@@ -104,16 +106,16 @@ async function carregarDados() {
 
     const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
     if (updatedText) {
-      textoHoraAtualizacao = `• Atualizado ${updatedText}`;
+      textoHoraAtualizacao = `• ${updatedText}`;
     } else if (dataPrices.updatedAt) {
       const diffMin = Math.floor((Date.now() - dataPrices.updatedAt) / 60000);
-      textoHoraAtualizacao = diffMin > 0 ? `• Atualizado há ${diffMin} min` : `• Atualizado agora`;
+      textoHoraAtualizacao = diffMin > 0 ? t('updatedMinAgo', { min: diffMin }) : t('updatedNow');
     }
   }
 
   if (!textoHoraAtualizacao) {
     const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    textoHoraAtualizacao = `• Atualizado às ${horaAtual} (Local)`;
+    textoHoraAtualizacao = t('updatedAt', { time: horaAtual });
   }
 
   const elUpdated = document.getElementById('updated-time');
@@ -140,7 +142,6 @@ function filtrarDropdownRecursos() {
 
   let recursos = [];
 
-  // Se for VENDA, exibe SOMENTE os itens que possui em estoque
   if (tipo === 'sell') {
     const estoque = obterEstoqueAtual();
     recursos = Object.keys(estoque)
@@ -154,7 +155,7 @@ function filtrarDropdownRecursos() {
   const filtrados = recursos.filter(r => r.toLowerCase().includes(termo));
 
   if (filtrados.length === 0) {
-    const msg = tipo === 'sell' ? 'Nenhum recurso em estoque para venda' : 'Nenhum recurso encontrado';
+    const msg = tipo === 'sell' ? t('noStockSell') : t('noItemFound');
     listDiv.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">${msg}</div>`;
   } else {
     filtrados.forEach(rec => {
@@ -203,14 +204,13 @@ function selecionarRecurso(nomeRecurso) {
     hint.classList.add('hidden');
   }
 
-  // Se for venda, preenche e sugere a quantidade máxima que você possui
   const stockHint = document.getElementById('qty-stock-hint');
   if (tipo === 'sell') {
     const estoque = obterEstoqueAtual();
     const itemEstoque = estoque[nomeRecurso.toLowerCase()];
     if (itemEstoque && itemEstoque.qty > 0) {
       valorQtdMaxAtual = itemEstoque.qty;
-      stockHint.innerText = `Disponível: ${formatarPreco(itemEstoque.qty)} (Usar Máx)`;
+      stockHint.innerText = t('hintStockMax', { qty: formatarPreco(itemEstoque.qty) });
       stockHint.classList.remove('hidden');
       document.getElementById('trade-qty').value = itemEstoque.qty;
     } else {
@@ -250,7 +250,7 @@ function alterarTaxa(novaTaxa) {
 function atualizarDisplayTaxa() {
   const elTaxDisplay = document.getElementById('tax-display');
   if (elTaxDisplay) elTaxDisplay.innerText = `${(taxaVenda * 100).toFixed(1)}%`;
-  
+
   const elPreviewPercent = document.getElementById('preview-taxa-percent');
   if (elPreviewPercent) elPreviewPercent.innerText = `${(taxaVenda * 100).toFixed(1)}%`;
 }
@@ -267,12 +267,12 @@ function abrirModal(tipo, recurso = '') {
   const sellPreview = document.getElementById('sell-tax-preview');
 
   if (tipo === 'buy') {
-    title.innerText = '🟢 Registrar Compra';
+    title.innerText = t('modalTitleBuy');
     title.className = 'text-xl font-bold mb-4 text-emerald-400';
     btn.className = 'px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold text-white';
     sellPreview.classList.add('hidden');
   } else {
-    title.innerText = '🔴 Registrar Venda';
+    title.innerText = t('modalTitleSell');
     title.className = 'text-xl font-bold mb-4 text-rose-400';
     btn.className = 'px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl text-xs font-bold text-white';
     sellPreview.classList.remove('hidden');
@@ -289,7 +289,7 @@ function abrirModal(tipo, recurso = '') {
 
   document.getElementById('trade-modal').classList.remove('hidden');
   document.getElementById('trade-modal').classList.add('flex');
-  
+
   atualizarPreviewVenda();
 }
 
@@ -322,7 +322,7 @@ function atualizarPreviewVenda() {
 
   const qty = parseFloat(document.getElementById('trade-qty').value) || 0;
   const unit = parseFloat(document.getElementById('trade-unit-price').value) || 0;
-  
+
   const bruto = qty * unit;
   const valorTaxa = bruto * taxaVenda;
   const liquido = bruto - valorTaxa;
@@ -351,7 +351,7 @@ function salvarTransacao(e) {
   const totalPrice = parseFloat(document.getElementById('trade-total-price').value);
 
   if (!recurso) {
-    alert("Por favor, selecione um recurso.");
+    alert(t('alertSelectResource'));
     return;
   }
 
@@ -370,55 +370,101 @@ function salvarTransacao(e) {
   renderizarPortfolio();
 }
 
+// Renderização Híbrida: Cards no Mobile e Tabela na Desktop
 function renderizarPortfolio() {
   const tbody = document.getElementById('table-portfolio');
+  const mobileContainer = document.getElementById('portfolio-mobile-cards');
+
   tbody.innerHTML = '';
+  mobileContainer.innerHTML = '';
 
   const estoque = obterEstoqueAtual();
   const itensComEstoque = Object.keys(estoque).filter(key => estoque[key].qty > 0.0001);
 
   if (itensComEstoque.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">Nenhum recurso em estoque. Registre uma compra acima.</td></tr>`;
+    const emptyHtml = `<div class="p-4 text-center text-slate-500 text-xs">${t('emptyPortfolio')}</div>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">${t('emptyPortfolio')}</td></tr>`;
+    mobileContainer.innerHTML = emptyHtml;
     return;
   }
 
   itensComEstoque.forEach(key => {
     const item = estoque[key];
     const precoMedio = item.custoTotal / item.qty;
-    
     const precoAtualP2P = dadosPrecos[item.nome] || dadosPrecos[Object.keys(dadosPrecos).find(k => k.toLowerCase() === key)] || 0;
-    
-    // Cálculos de valor atual e lucro
+
     const precoVendaLiquidoUnitario = precoAtualP2P * (1 - taxaVenda);
     const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
-    
+
     const lucroAbsoluto = valorVendaLiquidoTotal - item.custoTotal;
     const lucroPercentual = item.custoTotal > 0 ? (lucroAbsoluto / item.custoTotal) * 100 : 0;
-
     const corLucro = lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
 
+    // 1. Renderiza Linha da Tabela Desktop
     const tr = document.createElement('tr');
     tr.className = "border-b border-slate-800 hover:bg-slate-800/30 transition";
     tr.innerHTML = `
       <td class="p-3 font-bold text-slate-200">${item.nome}</td>
-      <td class="p-3">${formatarPreco(item.qty)}</td>
-      <td class="p-3 font-semibold">${formatarPreco(item.custoTotal)} SFL</td>
-      <td class="p-3 text-slate-400">${formatarPreco(precoMedio)} SFL</td>
-      <td class="p-3 text-amber-400 font-semibold">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</td>
-      <td class="p-3 font-bold text-slate-100">
+      <td class="p-3 font-mono">${formatarPreco(item.qty)}</td>
+      <td class="p-3 font-semibold font-mono">${formatarPreco(item.custoTotal)} SFL</td>
+      <td class="p-3 text-slate-400 font-mono">${formatarPreco(precoMedio)} SFL</td>
+      <td class="p-3 text-amber-400 font-semibold font-mono">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</td>
+      <td class="p-3 font-bold text-slate-100 font-mono">
         ${formatarPreco(valorVendaLiquidoTotal)} SFL
-        <div class="text-[10px] text-slate-400 font-normal">(${formatarPreco(precoVendaLiquidoUnitario)} SFL/un)</div>
+        <div class="text-[10px] text-slate-400 font-normal">(${formatarPreco(precoVendaLiquidoUnitario)} ${t('perUnit')})</div>
       </td>
-      <td class="p-3 text-right font-bold ${corLucro}">
+      <td class="p-3 text-right font-bold font-mono ${corLucro}">
         ${lucroAbsoluto >= 0 ? '+' : ''}${formatarPreco(lucroAbsoluto)} SFL (${lucroPercentual.toFixed(1)}%)
       </td>
       <td class="p-3 text-center">
         <button onclick="abrirModal('sell', '${item.nome}')" class="bg-rose-950/60 hover:bg-rose-600/30 text-rose-400 text-xs px-2.5 py-1 rounded-lg border border-rose-800/50 transition">
-          🔴 Vender
+          🔴 ${t('cardSell')}
         </button>
       </td>
     `;
     tbody.appendChild(tr);
+
+    // 2. Renderiza Card Otimizado para Mobile
+    const card = document.createElement('div');
+    card.className = "bg-cardbg rounded-xl p-3.5 border border-slate-800 shadow-md flex flex-col gap-2.5";
+    card.innerHTML = `
+      <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+        <div>
+          <span class="text-sm font-bold text-slate-100">${item.nome}</span>
+          <span class="text-xs text-slate-400 font-mono block">x${formatarPreco(item.qty)}</span>
+        </div>
+        <button onclick="abrirModal('sell', '${item.nome}')" class="bg-rose-950/80 hover:bg-rose-600/30 text-rose-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-800/60 transition">
+          🔴 ${t('cardSell')}
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thTotalCost')}</span>
+          <span class="font-mono text-slate-200">${formatarPreco(item.custoTotal)} SFL</span>
+        </div>
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thAvgPrice')}</span>
+          <span class="font-mono text-slate-300">${formatarPreco(precoMedio)} SFL</span>
+        </div>
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thP2pPrice')}</span>
+          <span class="font-mono text-amber-400 font-semibold">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</span>
+        </div>
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thNetValue')}</span>
+          <span class="font-mono text-slate-100 font-semibold">${formatarPreco(valorVendaLiquidoTotal)} SFL</span>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+        <span class="text-slate-400 font-semibold">${t('thEstPl')}:</span>
+        <span class="font-mono font-bold ${corLucro}">
+          ${lucroAbsoluto >= 0 ? '+' : ''}${formatarPreco(lucroAbsoluto)} SFL (${lucroPercentual.toFixed(1)}%)
+        </span>
+      </div>
+    `;
+    mobileContainer.appendChild(card);
   });
 }
 
@@ -432,7 +478,7 @@ function renderizarCardsMercado() {
     const card = document.createElement('div');
     card.className = "bg-cardbg rounded-xl p-3 border border-slate-800 flex justify-between items-center item-card";
     card.setAttribute('data-name', item.toLowerCase());
-    
+
     card.innerHTML = `
       <div>
         <div class="text-sm font-bold text-slate-200">${item}</div>
@@ -440,23 +486,24 @@ function renderizarCardsMercado() {
       </div>
       <div class="flex gap-1">
         <button onclick="abrirModal('buy', '${item}')" class="bg-slate-800 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
-          + Compra
+          ${t('cardBuy')}
         </button>
         <button onclick="abrirModal('sell', '${item}')" class="bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
-          - Venda
+          ${t('cardSell')}
         </button>
       </div>
     `;
-    grid.appendChild(card);
-  });
-}
+        grid.appendChild(card);
+      });
+    }
 
-function filtrarRecursos() {
-  const termo = document.getElementById('search').value.toLowerCase();
-  document.querySelectorAll('.item-card').forEach(card => {
-    const nome = card.getAttribute('data-name');
-    card.style.display = nome.includes(termo) ? 'flex' : 'none';
-  });
-}
+    function filtrarRecursos() {
+      const termo = document.getElementById('search').value.toLowerCase();
+      document.querySelectorAll('.item-card').forEach(card => {
+        const nome = card.getAttribute('data-name');
+        card.style.display = nome.includes(termo) ? 'flex' : 'none';
+      });
+    }
 
-carregarDados();
+    // Inicialização da aplicação com suporte a i18n
+    alterarIdioma(currentLang);
