@@ -107,7 +107,7 @@
           <label class="block text-xs text-slate-400 mb-1">Recurso (Resource)</label>
           <input type="hidden" id="trade-resource" required>
           <input type="text" id="trade-resource-search" placeholder="Selecione ou digite para buscar..." autocomplete="off"
-                 onfocus="mostrarDropdownRecursos()" oninput="filtrarDropdownRecursos()"
+                 onfocus="mostrarDropdownRecursos()" oninput="aoDigitarRecurso()"
                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
           
           <!-- Lista Flutuante de Seleção -->
@@ -181,20 +181,27 @@
   </div>
 
   <script>
-    // Lista base fixa com os recursos do SFL
-    const listaRecursosFixa = [
-      "Apple", "Artichoke", "Banana", "Barley", "Beetroot", "Blueberry", "Broccoli", 
-      "Bumpkin Emblem", "Cabbage", "Capsule Bait", "Carrot", "Cauliflower", "Celestine", 
-      "Chewed Bone", "Crimson Baitfish", "Crimstone", "Dewberry", "Duskberry", "Egg", 
-      "Eggplant", "Feather", "Frost Pebble", "Goblin Emblem", "Gold", "Grape", "Heart Leaf", 
-      "Honey", "Iron", "Kale", "Leather", "Lemon", "Lunara", "Merino Wool", "Milk", 
-      "Moonfur", "Nightshade Emblem", "Obsidian", "Onion", "Orange", "Parsnip", "Pepper", 
-      "Potato", "Pumpkin", "Radish", "Rhubarb", "Ribbon", "Rice", "Ruffroot", "Salt", 
-      "Saltwort", "Soybean", "Stone", "Sunflower", "Sunflorian Emblem", "Tomato", "Turnip", 
-      "Umbrella Bait", "Wheat", "Wild Grass", "Wood", "Wool", "Yam", "Zucchini"
-    ];
+    // Tabela de fallback pré-carregada para garantir dados imediatos
+    let dadosPrecos = {
+      "Sunflower":0.0003666, "Potato":0.0004439, "Pumpkin":0.0010799, "Carrot":0.002097, 
+      "Cabbage":0.00195, "Beetroot":0.0059949, "Cauliflower":0.00848357, "Parsnip":0.013094, 
+      "Radish":0.00952, "Wheat":0.015444, "Kale":0.01795937, "Apple":0.0226, 
+      "Blueberry":0.018295, "Orange":0.01775, "Eggplant":0.01, "Corn":0.015394, 
+      "Banana":0.02304286, "Soybean":0.002496, "Grape":0.24942, "Rice":0.3114, 
+      "Olive":0.392, "Tomato":0.00499, "Lemon":0.009264, "Barley":0.027574, 
+      "Rhubarb":0.00091667, "Zucchini":0.000704, "Yam":0.003516, "Broccoli":0.004376, 
+      "Pepper":0.00618, "Onion":0.01431164, "Turnip":0.014473, "Artichoke":0.0119989, 
+      "Duskberry":0.999, "Lunara":0.48742, "Celestine":0.18872, "Wood":0.01228153, 
+      "Stone":0.0264, "Iron":0.104495, "Gold":0.3647, "Egg":0.02153077, 
+      "Honey":0.11294, "Crimstone":0.7899, "Leather":0.09798, "Wool":0.04218, 
+      "Merino Wool":0.013588, "Feather":0.00857083, "Milk":0.1122, "Obsidian":21.5898, 
+      "Salt":0.00423867, "Goblin Emblem":0.08, "Bumpkin Emblem":0.0898, 
+      "Sunflorian Emblem":0.0869, "Nightshade Emblem":0.067399, "Ruffroot":0.4173, 
+      "Chewed Bone":0.4069, "Heart Leaf":0.4048, "Moonfur":3.799, "Ribbon":0.4094, 
+      "Dewberry":0.445, "Wild Grass":0.4248, "Frost Pebble":0.4151, "Capsule Bait":0.01675, 
+      "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
+    };
 
-    let dadosPrecos = {};
     let sflUsd = 0;
     let taxaVenda = parseFloat(localStorage.getItem('sfl_tax_rate')) || 0.075;
     let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
@@ -211,19 +218,19 @@
 
         const resPrices = await fetch('https://sfl.world/api/v1/prices');
         const dataPrices = await resPrices.json();
-        dadosPrecos = dataPrices.p2p || {};
-
-        renderizarCardsMercado();
-        renderizarPortfolio();
+        if (dataPrices.p2p) {
+          dadosPrecos = { ...dadosPrecos, ...dataPrices.p2p };
+        }
       } catch (err) {
-        console.error("Erro na API:", err);
+        console.warn("Usando precos de contingencia locais:", err);
+      } finally {
+        renderizarCardsMercado();
         renderizarPortfolio();
       }
     }
 
     function obterTodosRecursos() {
-      const setRecursos = new Set([...listaRecursosFixa, ...Object.keys(dadosPrecos)]);
-      return Array.from(setRecursos).sort();
+      return Object.keys(dadosPrecos).sort();
     }
 
     function mostrarDropdownRecursos() {
@@ -243,7 +250,7 @@
         listDiv.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">Nenhum recurso encontrado</div>`;
       } else {
         filtrados.forEach(rec => {
-          const preco = dadosPrecos[rec] ? `${dadosPrecos[rec].toFixed(4)} SFL` : '';
+          const preco = dadosPrecos[rec] !== undefined ? `${dadosPrecos[rec]} SFL` : '';
           const itemDiv = document.createElement('div');
           itemDiv.className = "px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 cursor-pointer flex justify-between items-center transition border-b border-slate-800/50 last:border-0";
           itemDiv.innerHTML = `
@@ -260,7 +267,24 @@
       listDiv.classList.remove('hidden');
     }
 
-    // Puxa o preço direto da API ao selecionar recurso
+    // Chamado ao digitar no campo de recurso
+    function aoDigitarRecurso() {
+      filtrarDropdownRecursos();
+      const termo = document.getElementById('trade-resource-search').value.trim();
+      
+      // Busca exata (sem diferenciar maiúsculas/minúsculas)
+      const chaveCorrespondente = Object.keys(dadosPrecos).find(k => k.toLowerCase() === termo.toLowerCase());
+
+      if (chaveCorrespondente) {
+        document.getElementById('trade-resource').value = chaveCorrespondente;
+        document.getElementById('trade-unit-price').value = dadosPrecos[chaveCorrespondente];
+        document.getElementById('api-price-hint').classList.remove('hidden');
+        calcTotal();
+      } else {
+        document.getElementById('trade-resource').value = termo;
+      }
+    }
+
     function selecionarRecurso(nomeRecurso) {
       document.getElementById('trade-resource').value = nomeRecurso;
       document.getElementById('trade-resource-search').value = nomeRecurso;
@@ -325,6 +349,7 @@
 
       if (recurso) {
         selecionarRecurso(recurso);
+        setTimeout(() => document.getElementById('trade-qty').focus(), 100);
       } else {
         document.getElementById('trade-resource').value = '';
         document.getElementById('trade-resource-search').value = '';
@@ -375,7 +400,6 @@
       document.getElementById('preview-taxa-valor').innerText = `-${valorTaxa.toFixed(4)} SFL`;
       document.getElementById('preview-liquido').innerText = `${liquido.toFixed(4)} SFL`;
 
-      // Destaca botão de taxa ativo dentro do modal
       const taxBtns = document.querySelectorAll('#modal-tax-buttons .tax-btn');
       const taxasValores = [0.20, 0.15, 0.10, 0.075];
       taxBtns.forEach((btn, index) => {
@@ -449,7 +473,7 @@
         const item = estoque[key];
         const precoMedio = item.custoTotal / item.qty;
         
-        const precoAtualP2P = dadosPrecos[item.nome] || 0;
+        const precoAtualP2P = dadosPrecos[item.nome] || dadosPrecos[Object.keys(dadosPrecos).find(k => k.toLowerCase() === key)] || 0;
         
         const precoVendaLiquidoUnitario = precoAtualP2P * (1 - taxaVenda);
         const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
@@ -466,7 +490,7 @@
           <td class="p-3">${item.qty.toFixed(2)}</td>
           <td class="p-3 font-semibold">${item.custoTotal.toFixed(2)} SFL</td>
           <td class="p-3 text-slate-400">${precoMedio.toFixed(4)} SFL</td>
-          <td class="p-3 text-amber-400 font-semibold">${precoAtualP2P > 0 ? precoAtualP2P.toFixed(4) + ' SFL' : 'N/A'}</td>
+          <td class="p-3 text-amber-400 font-semibold">${precoAtualP2P > 0 ? precoAtualP2P + ' SFL' : 'N/A'}</td>
           <td class="p-3 text-slate-300">${precoVendaLiquidoUnitario.toFixed(4)} SFL</td>
           <td class="p-3 text-right font-bold ${corLucro}">
             ${lucroAbsoluto >= 0 ? '+' : ''}${lucroAbsoluto.toFixed(2)} SFL (${lucroPercentual.toFixed(1)}%)
@@ -490,7 +514,7 @@
         card.innerHTML = `
           <div>
             <div class="text-sm font-bold text-slate-200">${item}</div>
-            <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${precoAtual.toFixed(4)} SFL</span></div>
+            <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${precoAtual} SFL</span></div>
           </div>
           <div class="flex gap-1">
             <button onclick="abrirModal('buy', '${item}')" class="bg-slate-800 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
