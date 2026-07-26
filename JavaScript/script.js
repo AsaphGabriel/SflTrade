@@ -1,4 +1,4 @@
-// Base de preços de contingência
+// Base de preços de contingência (usada apenas se a rede/API estiver totalmente offline)
 let dadosPrecos = {
   "Sunflower":0.0003666, "Potato":0.0004439, "Pumpkin":0.0010799, "Carrot":0.002097, 
   "Cabbage":0.00195, "Beetroot":0.0059949, "Cauliflower":0.00848357, "Parsnip":0.013094, 
@@ -19,6 +19,35 @@ let dadosPrecos = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
+// Função para buscar JSON contornando bloqueios de CORS do navegador/GitHub Pages
+async function fetchJsonSmart(url) {
+  try {
+    const res = await fetch(url);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.warn(`[CORS/Direct Fetch Failed] Tentando via proxy para: ${url}`);
+  }
+
+  // Se o fetch direto for bloqueado, passa pelo proxy de CORS
+  try {
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const resProxy = await fetch(proxyUrl);
+    if (resProxy.ok) return await resProxy.json();
+  } catch (e) {
+    console.warn(`[Proxy 1 Failed] Tentando proxy de contingência...`);
+  }
+
+  try {
+    const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const resProxy2 = await fetch(proxyUrl2);
+    if (resProxy2.ok) return await resProxy2.json();
+  } catch (e) {
+    console.error(`[API Error] Não foi possível carregar os dados de: ${url}`);
+  }
+
+  return null;
+}
+
 // Formata preços mantendo no máximo 3 algarismos significativos para decimais pequenos
 function formatarPreco(valor) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
@@ -28,7 +57,6 @@ function formatarPreco(valor) {
   if (num >= 10) return num.toFixed(2);
   if (num >= 1) return num.toFixed(3);
   
-  // Arredonda para 3 algarismos significativos (ex: 0.301345 -> 0.301 | 0.0001457 -> 0.000146)
   return parseFloat(num.toPrecision(3)).toString();
 }
 
@@ -43,55 +71,46 @@ atualizarDisplayTaxa();
 
 async function carregarDados() {
   // 1. Cotação SFL USD
-  try {
-    const resExchange = await fetch('https://sfl.world/api/v1.1/exchange');
-    if (resExchange.ok) {
-      const dataExchange = await resExchange.json();
-      if (dataExchange.sfl && dataExchange.sfl.usd) {
-        sflUsd = dataExchange.sfl.usd;
-      }
-    }
-  } catch (err) {
-    console.warn("API de cotação SFL/USD bloqueada/indisponível:", err);
-  } finally {
-    const elPrice = document.getElementById('sfl-price');
-    if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
+  const dataExchange = await fetchJsonSmart('https://sfl.world/api/v1.1/exchange');
+  if (dataExchange && dataExchange.sfl && dataExchange.sfl.usd) {
+    sflUsd = dataExchange.sfl.usd;
   }
+  const elPrice = document.getElementById('sfl-price');
+  if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
 
-  // 2. Preços P2P + Tempo de Atualização
+  // 2. Preços P2P + Tempo de Atualização da API
+  const dataPrices = await fetchJsonSmart('https://sfl.world/api/v1/prices');
   let textoHoraAtualizacao = '';
 
-  try {
-    const resPrices = await fetch('https://sfl.world/api/v1/prices');
-    if (resPrices.ok) {
-      const dataPrices = await resPrices.json();
-      
-      const p2pData = dataPrices.p2p || (dataPrices.data && dataPrices.data.p2p);
-      if (p2pData) {
-        dadosPrecos = { ...dadosPrecos, ...p2pData };
-      }
-
-      const updatedText = dataPrices.updated_text || (dataPrices.data && dataPrices.data.updated_text);
-      if (updatedText) {
-        textoHoraAtualizacao = `• ${updatedText}`;
-      }
-    }
-  } catch (err) {
-    console.warn("API P2P indisponível (usando contingência):", err);
-  } finally {
-    if (!textoHoraAtualizacao) {
-      const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      textoHoraAtualizacao = `• Atualizado às ${horaAtual}`;
+  if (dataPrices) {
+    // Extrai o objeto P2P (lida com estruturas com ou sem wrapper .data)
+    const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
+    if (p2pData) {
+      dadosPrecos = { ...dadosPrecos, ...p2pData };
     }
 
-    const elUpdated = document.getElementById('updated-time');
-    if (elUpdated) {
-      elUpdated.innerText = textoHoraAtualizacao;
+    // Puxa o updated_text vindo direto do servidor (ex: "9 minutes ago")
+    const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
+    if (updatedText) {
+      textoHoraAtualizacao = `• Atualizado ${updatedText}`;
+    } else if (dataPrices.updatedAt) {
+      const diffMin = Math.floor((Date.now() - dataPrices.updatedAt) / 60000);
+      textoHoraAtualizacao = diffMin > 0 ? `• Atualizado há ${diffMin} min` : `• Atualizado agora`;
     }
-
-    renderizarCardsMercado();
-    renderizarPortfolio();
   }
+
+  if (!textoHoraAtualizacao) {
+    const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    textoHoraAtualizacao = `• Atualizado às ${horaAtual} (Local)`;
+  }
+
+  const elUpdated = document.getElementById('updated-time');
+  if (elUpdated) {
+    elUpdated.innerText = textoHoraAtualizacao;
+  }
+
+  renderizarCardsMercado();
+  renderizarPortfolio();
 }
 
 function obterTodosRecursos() {
