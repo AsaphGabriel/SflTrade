@@ -1,0 +1,23 @@
+/* Customização de Scrollbar para o tema dark */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Transição suave em cartões e botões */
+.item-card, .tax-btn, button {
+  transition: all 0.2s ease-in-out;
+}
