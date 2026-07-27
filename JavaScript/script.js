@@ -19,7 +19,7 @@ let dadosPrecos = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-// Contorna bloqueios de CORS
+// Requisição com bypass de CORS
 async function fetchJsonSmart(url) {
   try {
     const res = await fetch(url);
@@ -43,7 +43,7 @@ async function fetchJsonSmart(url) {
   return null;
 }
 
-// Formatação inteligente mantendo 3 algarismos significativos
+// Formatação inteligente
 function formatarPreco(valor) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
@@ -53,10 +53,98 @@ function formatarPreco(valor) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
+// Estados Globais de Taxa
 let sflUsd = 0.0679;
-let taxaVenda = parseFloat(localStorage.getItem('sfl_tax_rate')) || 0.075;
+let ilhaSelecionada = localStorage.getItem('sfl_island') || 'volcano';
+let isVip = localStorage.getItem('sfl_vip') === 'true';
+let hasShrine = localStorage.getItem('sfl_shrine') === 'true';
+
 let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
 let valorQtdMaxAtual = 0;
+
+// Calcula a Taxa Efetiva Final (Ilha -> VIP -> Shrine)
+function calcularTaxaEfetiva() {
+  if (ilhaSelecionada === 'basic') return 0;
+
+  const taxasBase = {
+    petal: 0.50,
+    desert: 0.20,
+    volcano: 0.15
+  };
+
+  let taxa = taxasBase[ilhaSelecionada] || 0.15;
+
+  // VIP corta a taxa base pela metade
+  if (isVip) {
+    taxa = taxa / 2;
+  }
+
+  // Shrine reduz 2.5% adicionais
+  if (hasShrine) {
+    taxa = Math.max(0, taxa - 0.025);
+  }
+
+  return taxa;
+}
+
+function atualizarIlha(novaIlha) {
+  ilhaSelecionada = novaIlha;
+  localStorage.setItem('sfl_island', ilhaSelecionada);
+  atualizarEstadosTaxa();
+}
+
+function atualizarVip(vipAtivo) {
+  isVip = vipAtivo;
+  localStorage.setItem('sfl_vip', isVip);
+  atualizarEstadosTaxa();
+}
+
+function atualizarShrine(shrineAtivo) {
+  hasShrine = shrineAtivo;
+  localStorage.setItem('sfl_shrine', hasShrine);
+  atualizarEstadosTaxa();
+}
+
+function atualizarEstadosTaxa() {
+  atualizarDisplayTaxa();
+  atualizarPreviewVenda();
+  renderizarPortfolio();
+}
+
+function atualizarDisplayTaxa() {
+  const taxaEfetiva = calcularTaxaEfetiva();
+  const elTaxDisplay = document.getElementById('tax-display');
+  
+  if (elTaxDisplay) {
+    if (ilhaSelecionada === 'basic') {
+      elTaxDisplay.innerText = "N/A (No Market)";
+      elTaxDisplay.className = "text-slate-400 font-bold text-xs";
+    } else {
+      elTaxDisplay.innerText = `${(taxaEfetiva * 100).toFixed(1)}%`;
+      elTaxDisplay.className = "text-amber-400 font-bold text-sm block md:inline font-mono";
+    }
+  }
+
+  const elPreviewPercent = document.getElementById('preview-taxa-percent');
+  if (elPreviewPercent) elPreviewPercent.innerText = `${(taxaEfetiva * 100).toFixed(1)}%`;
+}
+
+// Inicializa Controles do Header com valores salvos
+function sincronizarControlesHeader() {
+  const elIsland = document.getElementById('island-select');
+  if (elIsland) elIsland.value = ilhaSelecionada;
+
+  const elVip = document.getElementById('vip-checkbox');
+  if (elVip) elVip.checked = isVip;
+
+  const elShrine = document.getElementById('shrine-checkbox');
+  if (elShrine) elShrine.checked = hasShrine;
+
+  const elLang = document.getElementById('lang-select');
+  if (elLang) elLang.value = currentLang;
+
+  atualizarDisplayTaxa();
+}
 
 function obterEstoqueAtual() {
   const estoque = {};
@@ -78,15 +166,6 @@ function obterEstoqueAtual() {
   return estoque;
 }
 
-// Inicializa select de taxa e de idioma
-const elTaxSelect = document.getElementById('tax-select');
-if (elTaxSelect) elTaxSelect.value = taxaVenda.toString();
-
-const elLangSelect = document.getElementById('lang-select');
-if (elLangSelect) elLangSelect.value = currentLang;
-
-atualizarDisplayTaxa();
-
 async function carregarDados() {
   const dataExchange = await fetchJsonSmart('https://sfl.world/api/v1.1/exchange');
   if (dataExchange && dataExchange.sfl && dataExchange.sfl.usd) {
@@ -106,7 +185,16 @@ async function carregarDados() {
 
     const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
     if (updatedText) {
-      textoHoraAtualizacao = `• ${updatedText}`;
+      let textoFormatado = updatedText;
+      if (currentLang === 'pt') {
+        textoFormatado = textoFormatado
+          .replace('minutes ago', 'min atrás')
+          .replace('minute ago', 'min atrás')
+          .replace('mins ago', 'min atrás');
+        textoHoraAtualizacao = `• Atualizado ${textoFormatado}`;
+      } else {
+        textoHoraAtualizacao = `• Updated ${textoFormatado}`;
+      }
     } else if (dataPrices.updatedAt) {
       const diffMin = Math.floor((Date.now() - dataPrices.updatedAt) / 60000);
       textoHoraAtualizacao = diffMin > 0 ? t('updatedMinAgo', { min: diffMin }) : t('updatedNow');
@@ -237,24 +325,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function alterarTaxa(novaTaxa) {
-  taxaVenda = parseFloat(novaTaxa);
-  localStorage.setItem('sfl_tax_rate', taxaVenda);
-  const elTaxSelect = document.getElementById('tax-select');
-  if (elTaxSelect) elTaxSelect.value = taxaVenda.toString();
-  atualizarDisplayTaxa();
-  atualizarPreviewVenda();
-  renderizarPortfolio();
-}
-
-function atualizarDisplayTaxa() {
-  const elTaxDisplay = document.getElementById('tax-display');
-  if (elTaxDisplay) elTaxDisplay.innerText = `${(taxaVenda * 100).toFixed(1)}%`;
-
-  const elPreviewPercent = document.getElementById('preview-taxa-percent');
-  if (elPreviewPercent) elPreviewPercent.innerText = `${(taxaVenda * 100).toFixed(1)}%`;
-}
-
 function abrirModal(tipo, recurso = '') {
   document.getElementById('trade-type').value = tipo;
   document.getElementById('trade-qty').value = '';
@@ -323,23 +393,14 @@ function atualizarPreviewVenda() {
   const qty = parseFloat(document.getElementById('trade-qty').value) || 0;
   const unit = parseFloat(document.getElementById('trade-unit-price').value) || 0;
 
+  const taxaEfetiva = calcularTaxaEfetiva();
   const bruto = qty * unit;
-  const valorTaxa = bruto * taxaVenda;
+  const valorTaxa = bruto * taxaEfetiva;
   const liquido = bruto - valorTaxa;
 
   document.getElementById('preview-bruto').innerText = `${formatarPreco(bruto)} SFL`;
   document.getElementById('preview-taxa-valor').innerText = `-${formatarPreco(valorTaxa)} SFL`;
   document.getElementById('preview-liquido').innerText = `${formatarPreco(liquido)} SFL`;
-
-  const taxBtns = document.querySelectorAll('#modal-tax-buttons .tax-btn');
-  const taxasValores = [0.20, 0.15, 0.10, 0.075];
-  taxBtns.forEach((btn, index) => {
-    if (taxasValores[index] === taxaVenda) {
-      btn.className = "tax-btn px-2 py-1 rounded-lg bg-amber-500 text-slate-900 font-extrabold shadow transition";
-    } else {
-      btn.className = "tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold transition";
-    }
-  });
 }
 
 function salvarTransacao(e) {
@@ -370,7 +431,7 @@ function salvarTransacao(e) {
   renderizarPortfolio();
 }
 
-// Renderização Híbrida: Cards no Mobile e Tabela na Desktop
+// Renderiza Portfólio (Tabela no Desktop / Cards Organizados no Mobile)
 function renderizarPortfolio() {
   const tbody = document.getElementById('table-portfolio');
   const mobileContainer = document.getElementById('portfolio-mobile-cards');
@@ -388,19 +449,21 @@ function renderizarPortfolio() {
     return;
   }
 
+  const taxaEfetiva = calcularTaxaEfetiva();
+
   itensComEstoque.forEach(key => {
     const item = estoque[key];
     const precoMedio = item.custoTotal / item.qty;
     const precoAtualP2P = dadosPrecos[item.nome] || dadosPrecos[Object.keys(dadosPrecos).find(k => k.toLowerCase() === key)] || 0;
 
-    const precoVendaLiquidoUnitario = precoAtualP2P * (1 - taxaVenda);
+    const precoVendaLiquidoUnitario = precoAtualP2P * (1 - taxaEfetiva);
     const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
 
     const lucroAbsoluto = valorVendaLiquidoTotal - item.custoTotal;
     const lucroPercentual = item.custoTotal > 0 ? (lucroAbsoluto / item.custoTotal) * 100 : 0;
     const corLucro = lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
 
-    // 1. Renderiza Linha da Tabela Desktop
+    // 1. Linha Tabela Desktop
     const tr = document.createElement('tr');
     tr.className = "border-b border-slate-800 hover:bg-slate-800/30 transition";
     tr.innerHTML = `
@@ -424,7 +487,7 @@ function renderizarPortfolio() {
     `;
     tbody.appendChild(tr);
 
-    // 2. Renderiza Card Otimizado para Mobile
+    // 2. Card Mobile (Coluna 1 = Totais | Coluna 2 = Unitários)
     const card = document.createElement('div');
     card.className = "bg-cardbg rounded-xl p-3.5 border border-slate-800 shadow-md flex flex-col gap-2.5";
     card.innerHTML = `
@@ -439,21 +502,28 @@ function renderizarPortfolio() {
       </div>
 
       <div class="grid grid-cols-2 gap-2 text-xs">
+        <!-- Coluna 1: TOTAL (Custo Total) -->
         <div>
           <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thTotalCost')}</span>
           <span class="font-mono text-slate-200">${formatarPreco(item.custoTotal)} SFL</span>
         </div>
+
+        <!-- Coluna 2: UNITÁRIO (Preço Médio) -->
         <div>
           <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thAvgPrice')}</span>
           <span class="font-mono text-slate-300">${formatarPreco(precoMedio)} SFL</span>
         </div>
-        <div>
-          <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thP2pPrice')}</span>
-          <span class="font-mono text-amber-400 font-semibold">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</span>
-        </div>
+
+        <!-- Coluna 1: TOTAL (Valor Líquido) -->
         <div>
           <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thNetValue')}</span>
           <span class="font-mono text-slate-100 font-semibold">${formatarPreco(valorVendaLiquidoTotal)} SFL</span>
+        </div>
+
+        <!-- Coluna 2: UNITÁRIO (Preço P2P) -->
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thP2pPrice')}</span>
+          <span class="font-mono text-amber-400 font-semibold">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</span>
         </div>
       </div>
 
@@ -493,17 +563,18 @@ function renderizarCardsMercado() {
         </button>
       </div>
     `;
-        grid.appendChild(card);
-      });
-    }
+    grid.appendChild(card);
+  });
+}
 
-    function filtrarRecursos() {
-      const termo = document.getElementById('search').value.toLowerCase();
-      document.querySelectorAll('.item-card').forEach(card => {
-        const nome = card.getAttribute('data-name');
-        card.style.display = nome.includes(termo) ? 'flex' : 'none';
-      });
-    }
+function filtrarRecursos() {
+  const termo = document.getElementById('search').value.toLowerCase();
+  document.querySelectorAll('.item-card').forEach(card => {
+    const nome = card.getAttribute('data-name');
+    card.style.display = nome.includes(termo) ? 'flex' : 'none';
+  });
+}
 
-    // Inicialização da aplicação com suporte a i18n
-    alterarIdioma(currentLang);
+// Inicialização
+sincronizarControlesHeader();
+alterarIdioma(currentLang);

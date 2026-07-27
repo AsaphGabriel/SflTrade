@@ -1,9 +1,8 @@
-// Dicionário de Idiomas
+// Dicionário de Idiomas (EN / PT)
 const translations = {
   en: {
     // Header
     subTitle: "SFL & P2P Quotes via sfl.world",
-    sellTaxLabel: "Sell Tax:",
     btnBuy: "🟢 Buy",
     btnSell: "🔴 Sell",
     btnRefresh: "🔄 Refresh",
@@ -11,9 +10,19 @@ const translations = {
     updatedMinAgo: "• Updated {min}m ago",
     updatedAt: "• Updated at {time}",
 
+    // Island & Tax Selectors
+    islandLabel: "Island:",
+    islandPetal: "Petal (50%)",
+    islandDesert: "Desert (20%)",
+    islandVolcano: "Volcano (15%)",
+    islandBasic: "Basic (No Market)",
+    islandAscension: "Ascension (Soon)",
+    labelVip: "VIP (-50%)",
+    labelShrine: "Shrine (-2.5%)",
+
     // Cards Top
     sflQuoteTitle: "SFL PRICE",
-    activeTaxLabel: "Active Tax:",
+    activeTaxLabel: "Effective Tax:",
 
     // Portfolio
     portfolioTitle: "📦 My Positions (Portfolio)",
@@ -23,7 +32,7 @@ const translations = {
     thTotalCost: "Total Cost",
     thAvgPrice: "Avg Price",
     thP2pPrice: "P2P Price",
-    thNetValue: "Net Value (w/ tax)",
+    thNetValue: "Net Value",
     thEstPl: "Est. P/L",
     thAction: "Action",
     perUnit: "/ unit",
@@ -46,7 +55,6 @@ const translations = {
     hintStockMax: "Available: {qty} (Use Max)",
     noStockSell: "No stock available to sell",
     noItemFound: "No resource found",
-    modalChangeTax: "Change Sell Tax:",
     grossTotal: "Gross Total:",
     taxFee: "Tax Fee ({tax}):",
     netAmount: "Net Amount:",
@@ -58,7 +66,6 @@ const translations = {
   pt: {
     // Header
     subTitle: "Cotação e P2P via sfl.world",
-    sellTaxLabel: "Taxa de Venda:",
     btnBuy: "🟢 Compra",
     btnSell: "🔴 Venda",
     btnRefresh: "🔄 Atualizar",
@@ -66,9 +73,19 @@ const translations = {
     updatedMinAgo: "• Atualizado há {min} min",
     updatedAt: "• Atualizado às {time}",
 
+    // Island & Tax Selectors
+    islandLabel: "Ilha:",
+    islandPetal: "Petal (50%)",
+    islandDesert: "Desert (20%)",
+    islandVolcano: "Volcano (15%)",
+    islandBasic: "Basic (Sem Mercado)",
+    islandAscension: "Ascension (Em breve)",
+    labelVip: "VIP (-50%)",
+    labelShrine: "Shrine (-2.5%)",
+
     // Cards Top
     sflQuoteTitle: "COTAÇÃO SFL",
-    activeTaxLabel: "Taxa Ativa:",
+    activeTaxLabel: "Taxa Efetiva:",
 
     // Portfolio
     portfolioTitle: "📦 Minhas Posições (Portfólio)",
@@ -78,7 +95,7 @@ const translations = {
     thTotalCost: "Custo Total",
     thAvgPrice: "Preço Médio",
     thP2pPrice: "Preço P2P",
-    thNetValue: "Valor Líq. (c/ taxa)",
+    thNetValue: "Valor Líquido",
     thEstPl: "Lucro/Prej. Est.",
     thAction: "Ação",
     perUnit: "/ un",
@@ -101,7 +118,6 @@ const translations = {
     hintStockMax: "Disponível: {qty} (Usar Máx)",
     noStockSell: "Nenhum recurso em estoque para venda",
     noItemFound: "Nenhum recurso encontrado",
-    modalChangeTax: "Alterar Taxa de Venda:",
     grossTotal: "Sem Taxa (Bruto):",
     taxFee: "Desconto Taxa ({tax}):",
     netAmount: "Líquido a Receber:",
@@ -113,7 +129,6 @@ const translations = {
 
 let currentLang = localStorage.getItem('sfl_lang') || 'en';
 
-// Retorna o texto traduzido
 function t(key, params = {}) {
   let text = translations[currentLang]?.[key] || translations['en']?.[key] || key;
   Object.keys(params).forEach(p => {
@@ -122,7 +137,6 @@ function t(key, params = {}) {
   return text;
 }
 
-// Altera o idioma globalmente
 function alterarIdioma(novoIdioma) {
   currentLang = novoIdioma;
   localStorage.setItem('sfl_lang', currentLang);
@@ -130,7 +144,6 @@ function alterarIdioma(novoIdioma) {
   const elSelect = document.getElementById('lang-select');
   if (elSelect) elSelect.value = currentLang;
 
-  // Atualiza elementos estáticos que possuem data-i18n
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.getAttribute('data-i18n');
     if (k) el.innerText = t(k);
@@ -141,6 +154,5 @@ function alterarIdioma(novoIdioma) {
     if (k) el.placeholder = t(k);
   });
 
-  // Recarrega renderizações dinâmicas
   if (typeof carregarDados === 'function') carregarDados();
 }

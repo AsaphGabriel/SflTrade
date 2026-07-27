@@ -23,12 +23,12 @@
   </script>
 
   <!-- Estilos Customizados -->
-  <link rel="stylesheet" href="CSS/style.css?v=1.1">
+  <link rel="stylesheet" href="CSS/style.css?v=1.2">
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen p-4 md:p-8 font-sans pb-20">
 
   <!-- Header -->
-  <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
+  <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
     <div>
       <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">🌻 SFL Trade Tracker</h1>
       <div class="flex flex-wrap items-center gap-2 mt-0.5">
@@ -37,7 +37,9 @@
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+    <!-- Controles do Header -->
+    <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+      
       <!-- Seletor de Idioma -->
       <div class="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
         <span class="text-xs">🌐</span>
@@ -47,27 +49,43 @@
         </select>
       </div>
 
-      <!-- Seletor Global de Taxa -->
-      <div class="flex items-center gap-2 bg-cardbg px-3 py-2 rounded-xl border border-slate-700">
-        <label for="tax-select" class="text-xs text-slate-400 font-semibold" data-i18n="sellTaxLabel">Sell Tax:</label>
-        <select id="tax-select" onchange="alterarTaxa(this.value)" class="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer">
-          <option value="0.20" class="bg-slate-900 text-white">20%</option>
-          <option value="0.15" class="bg-slate-900 text-white">15%</option>
-          <option value="0.10" class="bg-slate-900 text-white">10%</option>
-          <option value="0.075" class="bg-slate-900 text-white" selected>7.5%</option>
+      <!-- Seletor de Ilha -->
+      <div class="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
+        <span class="text-xs">🏝️</span>
+        <select id="island-select" onchange="atualizarIlha(this.value)" class="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer">
+          <option value="basic" class="bg-slate-900 text-slate-400" data-i18n="islandBasic">Basic (No Market)</option>
+          <option value="petal" class="bg-slate-900 text-white" data-i18n="islandPetal">Petal (50%)</option>
+          <option value="desert" class="bg-slate-900 text-white" data-i18n="islandDesert">Desert (20%)</option>
+          <option value="volcano" class="bg-slate-900 text-white" selected data-i18n="islandVolcano">Volcano (15%)</option>
+          <option value="ascension" class="bg-slate-900 text-slate-500" disabled data-i18n="islandAscension">Ascension (Soon)</option>
         </select>
       </div>
 
+      <!-- Tag VIP Checkbox -->
+      <label class="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 cursor-pointer select-none hover:border-amber-500/50 transition">
+        <input type="checkbox" id="vip-checkbox" onchange="atualizarVip(this.checked)" class="accent-amber-400 rounded cursor-pointer">
+        <span class="text-xs font-bold text-amber-300 flex items-center gap-1">👑 <span data-i18n="labelVip">VIP (-50%)</span></span>
+      </label>
+
+      <!-- Tag Trading Shrine Checkbox -->
+      <label class="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 cursor-pointer select-none hover:border-emerald-500/50 transition">
+        <input type="checkbox" id="shrine-checkbox" onchange="atualizarShrine(this.checked)" class="accent-emerald-400 rounded cursor-pointer">
+        <span class="text-xs font-bold text-emerald-400 flex items-center gap-1">⛩️ <span data-i18n="labelShrine">Shrine (-2.5%)</span></span>
+      </label>
+
       <!-- Botões de Ação -->
-      <button onclick="abrirModal('buy')" data-i18n="btnBuy" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3.5 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
-        🟢 Buy
-      </button>
-      <button onclick="abrirModal('sell')" data-i18n="btnSell" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3.5 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
-        🔴 Sell
-      </button>
-      <button onclick="carregarDados()" data-i18n="btnRefresh" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-3.5 rounded-xl text-xs transition">
-        🔄 Refresh
-      </button>
+      <div class="flex items-center gap-1.5 ml-auto lg:ml-0">
+        <button onclick="abrirModal('buy')" data-i18n="btnBuy" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
+          🟢 Buy
+        </button>
+        <button onclick="abrirModal('sell')" data-i18n="btnSell" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
+          🔴 Sell
+        </button>
+        <button onclick="carregarDados()" data-i18n="btnRefresh" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-3 rounded-xl text-xs transition">
+          🔄 Refresh
+        </button>
+      </div>
+
     </div>
   </header>
 
@@ -77,23 +95,20 @@
       <div class="text-xs text-slate-400 uppercase font-semibold tracking-wider" data-i18n="sflQuoteTitle">SFL PRICE</div>
       <div class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1" id="sfl-price">Loading...</div>
     </div>
-    <div class="text-right text-xs text-slate-500">
-      <span data-i18n="activeTaxLabel">Active Tax:</span> <span id="tax-display" class="text-amber-400 font-bold">7.5%</span>
+    <div class="text-right text-xs text-slate-400">
+      <span data-i18n="activeTaxLabel">Effective Tax:</span> 
+      <span id="tax-display" class="text-amber-400 font-bold text-sm block md:inline font-mono">7.5%</span>
     </div>
   </div>
 
-  <!-- Seção 1: Meu Portfólio / Posições Ativas -->
+  <!-- Seção 1: Portfólio -->
   <section class="mb-8">
     <h2 class="text-lg font-bold text-slate-200 mb-3 flex items-center gap-2" data-i18n="portfolioTitle">
       📦 My Positions (Portfolio)
     </h2>
 
-    <!-- Visualização Híbrida (Cards em telas pequenas / Tabela em telas médias e grandes) -->
-    
     <!-- Mobile Cards (< md) -->
-    <div id="portfolio-mobile-cards" class="grid grid-cols-1 gap-3 md:hidden">
-      <!-- Inserido dinamicamente via JS -->
-    </div>
+    <div id="portfolio-mobile-cards" class="grid grid-cols-1 gap-3 md:hidden"></div>
 
     <!-- Desktop Table (>= md) -->
     <div class="hidden md:block overflow-x-auto bg-cardbg rounded-2xl border border-slate-800 shadow-lg">
@@ -105,31 +120,27 @@
             <th class="p-3" data-i18n="thTotalCost">Total Cost</th>
             <th class="p-3" data-i18n="thAvgPrice">Avg Price</th>
             <th class="p-3" data-i18n="thP2pPrice">P2P Price</th>
-            <th class="p-3" data-i18n="thNetValue">Net Value (w/ tax)</th>
+            <th class="p-3" data-i18n="thNetValue">Net Value</th>
             <th class="p-3 text-right" data-i18n="thEstPl">Est. P/L</th>
             <th class="p-3 text-center" data-i18n="thAction">Action</th>
           </tr>
         </thead>
-        <tbody id="table-portfolio">
-          <!-- Inserido via JS -->
-        </tbody>
+        <tbody id="table-portfolio"></tbody>
       </table>
     </div>
   </section>
 
-  <!-- Seção 2: Cotação Geral do Mercado -->
+  <!-- Seção 2: Mercado -->
   <section>
     <div class="flex justify-between items-center mb-3">
       <h2 class="text-lg font-bold text-slate-200" data-i18n="marketTitle">🛒 Market P2P Prices</h2>
       <input type="text" id="search" placeholder="Search resource..." data-i18n-placeholder="searchPlaceholder" onkeyup="filtrarRecursos()" 
              class="bg-cardbg border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-44 md:w-56">
     </div>
-    <div id="grid-recursos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      <!-- Cards P2P inseridos via JS -->
-    </div>
+    <div id="grid-recursos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
   </section>
 
-  <!-- Modal de Transação (Compra / Venda) -->
+  <!-- Modal de Transação -->
   <div id="trade-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="bg-modalbg border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
       <h3 id="modal-title" class="text-xl font-bold mb-4">Transaction</h3>
@@ -145,8 +156,7 @@
                  onfocus="mostrarDropdownRecursos()" oninput="aoDigitarRecurso()"
                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
 
-          <div id="resource-dropdown-list" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl max-h-48 overflow-y-auto hidden z-20 shadow-xl border-t-0">
-          </div>
+          <div id="resource-dropdown-list" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl max-h-48 overflow-y-auto hidden z-20 shadow-xl border-t-0"></div>
         </div>
 
         <!-- Quantidade -->
@@ -176,18 +186,9 @@
                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
         </div>
 
-        <!-- Painel de Detalhes da Taxa (Venda) -->
+        <!-- Painel de Preview da Taxa -->
         <div id="sell-tax-preview" class="hidden mb-5 p-3 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs">
-          <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
-            <span class="text-slate-400 font-semibold" data-i18n="modalChangeTax">Change Sell Tax:</span>
-            <div class="flex gap-1" id="modal-tax-buttons">
-              <button type="button" onclick="alterarTaxa(0.20)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 font-bold transition">20%</button>
-              <button type="button" onclick="alterarTaxa(0.15)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 font-bold transition">15%</button>
-              <button type="button" onclick="alterarTaxa(0.10)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 font-bold transition">10%</button>
-              <button type="button" onclick="alterarTaxa(0.075)" class="tax-btn px-2 py-1 rounded-lg bg-slate-800 text-slate-300 font-bold transition">7.5%</button>
-            </div>
-          </div>
-          <div class="space-y-1.5 pt-1">
+          <div class="space-y-1.5">
             <div class="flex justify-between text-slate-400">
               <span data-i18n="grossTotal">Gross Total:</span>
               <span id="preview-bruto" class="font-mono text-slate-200">0.0000 SFL</span>
@@ -196,7 +197,7 @@
               <span><span data-i18n="taxFee">Tax Fee</span> (<span id="preview-taxa-percent">7.5%</span>):</span>
               <span id="preview-taxa-valor" class="font-mono">-0.0000 SFL</span>
             </div>
-            <div class="flex justify-between font-bold text-emerald-400 pt-1 border-t border-slate-800/80 text-xs md:text-sm">
+            <div class="flex justify-between font-bold text-emerald-400 pt-1.5 border-t border-slate-800/80 text-xs md:text-sm">
               <span data-i18n="netAmount">Net Amount:</span>
               <span id="preview-liquido" class="font-mono">0.0000 SFL</span>
             </div>
@@ -217,7 +218,7 @@
   </div>
 
   <!-- Scripts -->
-  <script src="JavaScript/i18n.js?v=1.1"></script>
-  <script src="JavaScript/script.js?v=1.1"></script>
+  <script src="JavaScript/i18n.js?v=1.2"></script>
+  <script src="JavaScript/script.js?v=1.2"></script>
 </body>
 </html>
