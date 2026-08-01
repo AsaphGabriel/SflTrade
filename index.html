@@ -23,7 +23,7 @@
   </script>
 
   <!-- Estilos Customizados -->
-  <link rel="stylesheet" href="CSS/style.css?v=1.2">
+  <link rel="stylesheet" href="CSS/style.css?v=1.5">
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen p-4 md:p-8 font-sans pb-20">
 
@@ -137,7 +137,7 @@
       <input type="text" id="search" placeholder="Search resource..." data-i18n-placeholder="searchPlaceholder" onkeyup="filtrarRecursos()" 
              class="bg-cardbg border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-44 md:w-56">
     </div>
-    <div id="grid-recursos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+    <div id="grid-recursos" style="display: flex; flex-direction: column; gap: 32px; width: 100%;"></div>
   </section>
 
   <!-- Modal de Transação -->
@@ -218,7 +218,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="JavaScript/i18n.js?v=1.2"></script>
-  <script src="JavaScript/script.js?v=1.2"></script>
+  <script src="JavaScript/script.js?v=1.9"></script>
 </body>
 </html>

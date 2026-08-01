@@ -21,3 +21,149 @@
 .item-card, .tax-btn, button {
   transition: all 0.2s ease-in-out;
 }
+
+/* ===== Container Principal: Categorias empilhadas verticalmente ===== */
+.market-categories-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+}
+
+/* ===== Bloco de Categoria (largura total, horizontal) ===== */
+.category-block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Cabeçalho de Categoria em destaque ocupando toda a largura */
+.category-block .market-category-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fbbf24;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ===== Grade de Cards (preenchimento horizontal responsivo) ===== */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+/* Compatibilidade: seção legada ainda presente no JS */
+.market-category-section {
+  width: 100%;
+  margin-bottom: 28px;
+}
+
+.market-category-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fbbf24;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Card vertical estilo Sunflower Land (Dark Blue) */
+.market-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.market-card:hover {
+  transform: translateY(-3px);
+  border-color: #fbbf24;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.15);
+}
+
+/* Topo: Container da imagem destacada e maior */
+.market-card-img-wrap {
+  height: 72px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.market-card-img-wrap img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* Meio: Informações centralizadas */
+.market-card-info {
+  text-align: center;
+  width: 100%;
+}
+
+.market-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.market-card-price {
+  font-size: 12px;
+  font-family: monospace;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+/* Base: Botões de ação lado a lado */
+.market-card-actions {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.market-card-actions button {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.market-card-actions button:hover {
+  filter: brightness(1.15);
+}
+
+.btn-buy-card {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.btn-sell-card {
+  background: #dc2626;
+  color: #ffffff;
+}

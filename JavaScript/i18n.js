@@ -60,7 +60,12 @@ const translations = {
     netAmount: "Net Amount:",
     btnCancel: "Cancel",
     btnConfirm: "Confirm",
-    alertSelectResource: "Please select a resource."
+    alertSelectResource: "Please select a resource.",
+    cat_crops: "🌾 Crops",
+    cat_fruits: "🍎 Fruits",
+    cat_animals: "🐔 Animal Production",
+    cat_minerals: "⛏️ Minerals & Resources",
+    cat_misc: "📦 Misc & Badges"
   },
 
   pt: {
@@ -123,7 +128,12 @@ const translations = {
     netAmount: "Líquido a Receber:",
     btnCancel: "Cancelar",
     btnConfirm: "Confirmar",
-    alertSelectResource: "Por favor, selecione um recurso."
+    alertSelectResource: "Por favor, selecione um recurso.",
+    cat_crops: "🌾 Plantações",
+    cat_fruits: "🍎 Frutas",
+    cat_animals: "🐔 Produção Animal",
+    cat_minerals: "⛏️ Minérios e Recursos",
+    cat_misc: "📦 Diversos e Emblemas"
   }
 };
 

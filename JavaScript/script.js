@@ -1,3 +1,177 @@
+// Dicionário de Idiomas (EN / PT)
+const translations = {
+  en: {
+    // Header
+    subTitle: "SFL & P2P Quotes via sfl.world",
+    btnBuy: "🟢 Buy",
+    btnSell: "🔴 Sell",
+    btnRefresh: "🔄 Refresh",
+    updatedNow: "• Updated just now",
+    updatedMinAgo: "• Updated {min}m ago",
+    updatedAt: "• Updated at {time}",
+
+    // Island & Tax Selectors
+    islandLabel: "Island:",
+    islandPetal: "Petal (50%)",
+    islandDesert: "Desert (20%)",
+    islandVolcano: "Volcano (15%)",
+    islandBasic: "Basic (No Market)",
+    islandAscension: "Ascension (Soon)",
+    labelVip: "VIP (-50%)",
+    labelShrine: "Shrine (-2.5%)",
+
+    // Cards Top
+    sflQuoteTitle: "SFL PRICE",
+    activeTaxLabel: "Effective Tax:",
+
+    // Portfolio
+    portfolioTitle: "📦 My Positions (Portfolio)",
+    emptyPortfolio: "No items in stock. Register a buy transaction above.",
+    thResource: "Resource",
+    thQty: "Qty",
+    thTotalCost: "Total Cost",
+    thAvgPrice: "Avg Price",
+    thP2pPrice: "P2P Price",
+    thNetValue: "Net Value",
+    thEstPl: "Est. P/L",
+    thAction: "Action",
+    perUnit: "/ unit",
+
+    // Market
+    marketTitle: "🛒 Market P2P Prices",
+    searchPlaceholder: "Search resource...",
+    cardBuy: "+ Buy",
+    cardSell: "- Sell",
+
+    // Modal
+    modalTitleBuy: "🟢 Register Purchase",
+    modalTitleSell: "🔴 Register Sale",
+    labelResource: "Resource",
+    placeholderResource: "Select or type to search...",
+    labelQty: "Quantity",
+    labelUnitPrice: "Unit Price in SFL",
+    labelTotalPrice: "Gross Total Price in SFL",
+    hintApiPrice: "API Price",
+    hintStockMax: "Available: {qty} (Use Max)",
+    noStockSell: "No stock available to sell",
+    noItemFound: "No resource found",
+    grossTotal: "Gross Total:",
+    taxFee: "Tax Fee ({tax}):",
+    netAmount: "Net Amount:",
+    btnCancel: "Cancel",
+    btnConfirm: "Confirm",
+    alertSelectResource: "Please select a resource.",
+
+    // Categorias do Mercado
+    cat_crops: "🌾 Crops",
+    cat_fruits: "🍎 Fruits",
+    cat_animals: "🐔 Animal Production",
+    cat_minerals: "⛏️ Minerals & Resources",
+    cat_misc: "📦 Misc & Badges"
+  },
+
+  pt: {
+    // Header
+    subTitle: "Cotação e P2P via sfl.world",
+    btnBuy: "🟢 Compra",
+    btnSell: "🔴 Venda",
+    btnRefresh: "🔄 Atualizar",
+    updatedNow: "• Atualizado agora",
+    updatedMinAgo: "• Atualizado há {min} min",
+    updatedAt: "• Atualizado às {time}",
+
+    // Island & Tax Selectors
+    islandLabel: "Ilha:",
+    islandPetal: "Petal (50%)",
+    islandDesert: "Desert (20%)",
+    islandVolcano: "Volcano (15%)",
+    islandBasic: "Basic (Sem Mercado)",
+    islandAscension: "Ascension (Em breve)",
+    labelVip: "VIP (-50%)",
+    labelShrine: "Shrine (-2.5%)",
+
+    // Cards Top
+    sflQuoteTitle: "COTAÇÃO SFL",
+    activeTaxLabel: "Taxa Efetiva:",
+
+    // Portfolio
+    portfolioTitle: "📦 Minhas Posições (Portfólio)",
+    emptyPortfolio: "Nenhum recurso em estoque. Registre uma compra acima.",
+    thResource: "Recurso",
+    thQty: "Qtde",
+    thTotalCost: "Custo Total",
+    thAvgPrice: "Preço Médio",
+    thP2pPrice: "Preço P2P",
+    thNetValue: "Valor Líquido",
+    thEstPl: "Lucro/Prej. Est.",
+    thAction: "Ação",
+    perUnit: "/ un",
+
+    // Market
+    marketTitle: "🛒 Preços P2P do Mercado",
+    searchPlaceholder: "Buscar recurso...",
+    cardBuy: "+ Compra",
+    cardSell: "- Venda",
+
+    // Modal
+    modalTitleBuy: "🟢 Registrar Compra",
+    modalTitleSell: "🔴 Registrar Venda",
+    labelResource: "Recurso",
+    placeholderResource: "Selecione ou digite para buscar...",
+    labelQty: "Quantidade",
+    labelUnitPrice: "Preço Unitário em SFL",
+    labelTotalPrice: "Preço Total Bruto em SFL",
+    hintApiPrice: "Puxado da API",
+    hintStockMax: "Disponível: {qty} (Usar Máx)",
+    noStockSell: "Nenhum recurso em estoque para venda",
+    noItemFound: "Nenhum recurso encontrado",
+    grossTotal: "Sem Taxa (Bruto):",
+    taxFee: "Desconto Taxa ({tax}):",
+    netAmount: "Líquido a Receber:",
+    btnCancel: "Cancelar",
+    btnConfirm: "Confirmar",
+    alertSelectResource: "Por favor, selecione um recurso.",
+
+    // Categorias do Mercado
+    cat_crops: "🌾 Plantações",
+    cat_fruits: "🍎 Frutas",
+    cat_animals: "🐔 Produção Animal",
+    cat_minerals: "⛏️ Minérios e Recursos",
+    cat_misc: "📦 Diversos e Emblemas"
+  }
+};
+
+let currentLang = localStorage.getItem('sfl_lang') || 'en';
+
+function t(key, params = {}) {
+  let text = translations[currentLang]?.[key] || translations['en']?.[key] || key;
+  Object.keys(params).forEach(p => {
+    text = text.replace(`{${p}}`, params[p]);
+  });
+  return text;
+}
+
+function alterarIdioma(novoIdioma) {
+  currentLang = novoIdioma;
+  localStorage.setItem('sfl_lang', currentLang);
+  
+  const elSelect = document.getElementById('lang-select');
+  if (elSelect) elSelect.value = currentLang;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (k) el.innerText = t(k);
+  });
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const k = el.getAttribute('data-i18n-placeholder');
+    if (k) el.placeholder = t(k);
+  });
+
+  renderizarCardsMercado();
+  renderizarPortfolio();
+}
+
 // Base de preços de contingência
 let dadosPrecos = {
   "Sunflower":0.0003666, "Potato":0.0004439, "Pumpkin":0.0010799, "Carrot":0.002097, 
@@ -19,7 +193,22 @@ let dadosPrecos = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-// Requisição com bypass de CORS
+const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
+
+function getItemIcon(itemName) {
+  if (!itemName) return TRANSPARENT_FALLBACK;
+  return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
+}
+
+function getSystemIcon(iconName) {
+  return `https://raw.githubusercontent.com/sunflower-land/sunflower-land/main/src/assets/icons/${iconName}.webp`;
+}
+
+function getIconImgTag(itemName, classeExtra = "") {
+  const url = getItemIcon(itemName);
+  return `<img src="${url}" alt="${itemName}" class="inline-block w-5 h-5 rounded-sm object-cover align-middle ${classeExtra}" onerror="this.onerror=null;this.src='${TRANSPARENT_FALLBACK}';">`;
+}
+
 async function fetchJsonSmart(url) {
   try {
     const res = await fetch(url);
@@ -43,7 +232,6 @@ async function fetchJsonSmart(url) {
   return null;
 }
 
-// Formatação inteligente
 function formatarPreco(valor) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
@@ -53,7 +241,6 @@ function formatarPreco(valor) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-// Estados Globais de Taxa
 let sflUsd = 0.0679;
 let ilhaSelecionada = localStorage.getItem('sfl_island') || 'volcano';
 let isVip = localStorage.getItem('sfl_vip') === 'true';
@@ -62,27 +249,14 @@ let hasShrine = localStorage.getItem('sfl_shrine') === 'true';
 let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
 let valorQtdMaxAtual = 0;
 
-// Calcula a Taxa Efetiva Final (Ilha -> VIP -> Shrine)
 function calcularTaxaEfetiva() {
   if (ilhaSelecionada === 'basic') return 0;
 
-  const taxasBase = {
-    petal: 0.50,
-    desert: 0.20,
-    volcano: 0.15
-  };
-
+  const taxasBase = { petal: 0.50, desert: 0.20, volcano: 0.15 };
   let taxa = taxasBase[ilhaSelecionada] || 0.15;
 
-  // VIP corta a taxa base pela metade
-  if (isVip) {
-    taxa = taxa / 2;
-  }
-
-  // Shrine reduz 2.5% adicionais
-  if (hasShrine) {
-    taxa = Math.max(0, taxa - 0.025);
-  }
+  if (isVip) taxa = taxa / 2;
+  if (hasShrine) taxa = Math.max(0, taxa - 0.025);
 
   return taxa;
 }
@@ -129,7 +303,6 @@ function atualizarDisplayTaxa() {
   if (elPreviewPercent) elPreviewPercent.innerText = `${(taxaEfetiva * 100).toFixed(1)}%`;
 }
 
-// Inicializa Controles do Header com valores salvos
 function sincronizarControlesHeader() {
   const elIsland = document.getElementById('island-select');
   if (elIsland) elIsland.value = ilhaSelecionada;
@@ -251,7 +424,7 @@ function filtrarDropdownRecursos() {
       const itemDiv = document.createElement('div');
       itemDiv.className = "px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 cursor-pointer flex justify-between items-center transition border-b border-slate-800/50 last:border-0";
       itemDiv.innerHTML = `
-        <span class="font-bold">${rec}</span>
+        <span class="font-bold flex items-center gap-1.5">${getIconImgTag(rec, "w-4 h-4")} ${rec}</span>
         <span class="text-amber-400 font-mono text-[11px]">${preco}</span>
       `;
       itemDiv.onmousedown = (e) => {
@@ -431,7 +604,6 @@ function salvarTransacao(e) {
   renderizarPortfolio();
 }
 
-// Renderiza Portfólio (Tabela no Desktop / Cards Organizados no Mobile)
 function renderizarPortfolio() {
   const tbody = document.getElementById('table-portfolio');
   const mobileContainer = document.getElementById('portfolio-mobile-cards');
@@ -463,11 +635,10 @@ function renderizarPortfolio() {
     const lucroPercentual = item.custoTotal > 0 ? (lucroAbsoluto / item.custoTotal) * 100 : 0;
     const corLucro = lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
 
-    // 1. Linha Tabela Desktop
     const tr = document.createElement('tr');
     tr.className = "border-b border-slate-800 hover:bg-slate-800/30 transition";
     tr.innerHTML = `
-      <td class="p-3 font-bold text-slate-200">${item.nome}</td>
+      <td class="p-3 font-bold text-slate-200 flex items-center gap-2">${getIconImgTag(item.nome)} ${item.nome}</td>
       <td class="p-3 font-mono">${formatarPreco(item.qty)}</td>
       <td class="p-3 font-semibold font-mono">${formatarPreco(item.custoTotal)} SFL</td>
       <td class="p-3 text-slate-400 font-mono">${formatarPreco(precoMedio)} SFL</td>
@@ -487,14 +658,16 @@ function renderizarPortfolio() {
     `;
     tbody.appendChild(tr);
 
-    // 2. Card Mobile (Coluna 1 = Totais | Coluna 2 = Unitários)
     const card = document.createElement('div');
     card.className = "bg-cardbg rounded-xl p-3.5 border border-slate-800 shadow-md flex flex-col gap-2.5";
     card.innerHTML = `
       <div class="flex justify-between items-center pb-2 border-b border-slate-800">
-        <div>
-          <span class="text-sm font-bold text-slate-100">${item.nome}</span>
-          <span class="text-xs text-slate-400 font-mono block">x${formatarPreco(item.qty)}</span>
+        <div class="flex items-center gap-2">
+          ${getIconImgTag(item.nome, "w-6 h-6")}
+          <div>
+            <span class="text-sm font-bold text-slate-100">${item.nome}</span>
+            <span class="text-xs text-slate-400 font-mono block">x${formatarPreco(item.qty)}</span>
+          </div>
         </div>
         <button onclick="abrirModal('sell', '${item.nome}')" class="bg-rose-950/80 hover:bg-rose-600/30 text-rose-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-800/60 transition">
           🔴 ${t('cardSell')}
@@ -502,25 +675,18 @@ function renderizarPortfolio() {
       </div>
 
       <div class="grid grid-cols-2 gap-2 text-xs">
-        <!-- Coluna 1: TOTAL (Custo Total) -->
         <div>
           <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thTotalCost')}</span>
           <span class="font-mono text-slate-200">${formatarPreco(item.custoTotal)} SFL</span>
         </div>
-
-        <!-- Coluna 2: UNITÁRIO (Preço Médio) -->
         <div>
           <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thAvgPrice')}</span>
           <span class="font-mono text-slate-300">${formatarPreco(precoMedio)} SFL</span>
         </div>
-
-        <!-- Coluna 1: TOTAL (Valor Líquido) -->
         <div>
           <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thNetValue')}</span>
           <span class="font-mono text-slate-100 font-semibold">${formatarPreco(valorVendaLiquidoTotal)} SFL</span>
         </div>
-
-        <!-- Coluna 2: UNITÁRIO (Preço P2P) -->
         <div>
           <span class="text-[10px] text-slate-400 uppercase font-semibold block">${t('thP2pPrice')}</span>
           <span class="font-mono text-amber-400 font-semibold">${precoAtualP2P > 0 ? formatarPreco(precoAtualP2P) + ' SFL' : 'N/A'}</span>
@@ -538,40 +704,133 @@ function renderizarPortfolio() {
   });
 }
 
+// ===== Classificação de Itens por Categoria (Com i18n e novas posições) =====
+const CATEGORIAS_MERCADO = [
+  {
+    id: 'crops',
+    titleKey: 'cat_crops',
+    itens: [
+      "Sunflower", "Potato", "Pumpkin", "Carrot", "Cabbage", "Beetroot",
+      "Cauliflower", "Parsnip", "Eggplant", "Corn", "Radish", "Wheat",
+      "Kale", "Barley", "Soybean", "Rice", "Tomato", "Zucchini", "Yam",
+      "Rhubarb", "Artichoke", "Onion", "Pepper", "Broccoli", "Turnip"
+    ]
+  },
+  {
+    id: 'fruits',
+    titleKey: 'cat_fruits',
+    itens: [
+      "Apple", "Orange", "Blueberry", "Banana", "Lemon", "Olive",
+      "Grape", "Duskberry", "Celestine", "Lunara"
+    ]
+  },
+  {
+    id: 'animals',
+    titleKey: 'cat_animals',
+    itens: [
+      "Egg", "Milk", "Wool", "Merino Wool", "Leather", "Feather", "Honey"
+    ]
+  },
+  {
+    id: 'minerals',
+    titleKey: 'cat_minerals',
+    itens: [
+      "Wood", "Stone", "Iron", "Gold", "Crimstone", "Obsidian", "Salt"
+    ]
+  },
+  {
+    id: 'misc',
+    titleKey: 'cat_misc',
+    itens: [
+      "Capsule Bait", "Chewed Bone", "Crimson Baitfish", "Umbrella Bait",
+      "Bumpkin Emblem", "Goblin Emblem", "Nightshade Emblem",
+      "Sunflorian Emblem", "Ruffroot", "Heart Leaf", "Moonfur",
+      "Ribbon", "Dewberry", "Frost Pebble", "Wild Grass", "Saltwort"
+    ]
+  }
+];
+
+function obterCategoriaItem(nomeItem) {
+  for (const cat of CATEGORIAS_MERCADO) {
+    if (cat.itens.some(i => i.toLowerCase() === nomeItem.toLowerCase())) {
+      return cat.id;
+    }
+  }
+  return 'misc';
+}
+
 function renderizarCardsMercado() {
-  const grid = document.getElementById('grid-recursos');
-  grid.innerHTML = '';
+  const container = document.getElementById('grid-recursos');
+  if (!container) return;
+  container.innerHTML = '';
 
-  Object.keys(dadosPrecos).sort().forEach(item => {
-    const precoAtual = dadosPrecos[item];
+  const grupos = {};
+  CATEGORIAS_MERCADO.forEach(cat => { grupos[cat.id] = []; });
 
-    const card = document.createElement('div');
-    card.className = "bg-cardbg rounded-xl p-3 border border-slate-800 flex justify-between items-center item-card";
-    card.setAttribute('data-name', item.toLowerCase());
+  Object.keys(dadosPrecos).forEach(item => {
+    const catId = obterCategoriaItem(item);
+    if (!grupos[catId]) grupos[catId] = [];
+    grupos[catId].push(item);
+  });
 
-    card.innerHTML = `
-      <div>
-        <div class="text-sm font-bold text-slate-200">${item}</div>
-        <div class="text-xs text-slate-400">P2P: <span class="text-amber-400 font-semibold">${formatarPreco(precoAtual)} SFL</span></div>
-      </div>
-      <div class="flex gap-1">
-        <button onclick="abrirModal('buy', '${item}')" class="bg-slate-800 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
-          ${t('cardBuy')}
-        </button>
-        <button onclick="abrirModal('sell', '${item}')" class="bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 text-slate-300 text-[11px] px-2 py-1 rounded-lg border border-slate-700 transition">
-          ${t('cardSell')}
-        </button>
-      </div>
-    `;
-    grid.appendChild(card);
+  CATEGORIAS_MERCADO.forEach(cat => {
+    const itens = grupos[cat.id] || [];
+    if (itens.length === 0) return;
+
+    // Ordenação interna: menor preço P2P -> maior preço P2P
+    itens.sort((a, b) => (dadosPrecos[a] || 0) - (dadosPrecos[b] || 0));
+
+    const section = document.createElement('div');
+    section.className = 'category-block';
+
+    const titulo = document.createElement('h3');
+    titulo.className = 'market-category-title';
+    titulo.textContent = t(cat.titleKey);
+    section.appendChild(titulo);
+
+    const grid = document.createElement('div');
+    grid.className = 'category-grid';
+
+    itens.forEach(item => {
+      const precoAtual = dadosPrecos[item];
+      const iconUrl = getItemIcon(item);
+
+      const card = document.createElement('div');
+      card.className = "market-card item-card";
+      card.setAttribute('data-name', item.toLowerCase());
+
+      card.innerHTML = `
+        <div class="market-card-img-wrap">
+          <img src="${iconUrl}" alt="${item}" onerror="this.onerror=null;this.src='${TRANSPARENT_FALLBACK}';">
+        </div>
+        <div class="market-card-info">
+          <div class="market-card-name">${item}</div>
+          <div class="market-card-price">${formatarPreco(precoAtual)} SFL</div>
+        </div>
+        <div class="market-card-actions">
+          <button onclick="abrirModal('buy', '${item}')" class="btn-buy-card">${t('cardBuy')}</button>
+          <button onclick="abrirModal('sell', '${item}')" class="btn-sell-card">${t('cardSell')}</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
   });
 }
 
 function filtrarRecursos() {
   const termo = document.getElementById('search').value.toLowerCase();
-  document.querySelectorAll('.item-card').forEach(card => {
-    const nome = card.getAttribute('data-name');
-    card.style.display = nome.includes(termo) ? 'flex' : 'none';
+  document.querySelectorAll('.category-block').forEach(section => {
+    let visiveis = 0;
+    section.querySelectorAll('.market-card').forEach(card => {
+      const nome = card.getAttribute('data-name');
+      const mostrar = nome.includes(termo);
+      card.style.display = mostrar ? 'flex' : 'none';
+      if (mostrar) visiveis++;
+    });
+    section.style.display = visiveis > 0 ? '' : 'none';
   });
 }
 
