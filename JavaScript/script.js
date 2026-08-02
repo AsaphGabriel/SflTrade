@@ -213,37 +213,33 @@ function getIconImgTag(itemName, classeExtra = "") {
 }
 
 async function fetchJsonSmart(url) {
-  const isLocal = window.location.hostname === 'localhost' || 
-                  window.location.hostname === '127.0.0.1' || 
-                  window.location.hostname.startsWith('100.');
+  const workerUrl = 'https://sfltrade.asaphgabrielsousa.workers.dev/?url=' + encodeURIComponent(url);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-  const targetUrl = url;
-  const proxies = isLocal ? [
-    'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl)
-  ] : [
-    targetUrl,
-    'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl)
-  ];
+    const response = await fetch(workerUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
 
-  for (const proxyUrl of proxies) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      const response = await fetch(proxyUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.warn(`[SmartFetch] Tentativa em ${proxyUrl} falhou, tentando proxima...`);
+    const text = await response.text();
+    // The worker may return HTML with a <pre> containing JSON
+    const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
+    if (match) {
+      return JSON.parse(match[1]);
     }
+    // Fallback: try to parse the whole response as JSON
+    try {
+      return JSON.parse(text);
+    } catch {
+      console.error(`[SmartFetch] Resposta inesperada para: ${url}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`[SmartFetch] Falha ao buscar: ${url}`, error);
+    return null;
   }
-
-  console.error(`[SmartFetch] Falha em todas as rotas para: ${url}`);
-  return null;
 }
 
 function formatarPreco(valor) {
