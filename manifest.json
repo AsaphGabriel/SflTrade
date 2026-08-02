@@ -9,14 +9,16 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/869/869869.png",
+      "src": "https://raw.githubusercontent.com/sunflower-land/sunflower-land/main/src/assets/icons/sfl.webp",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/webp",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/869/869869.png",
+      "src": "https://raw.githubusercontent.com/sunflower-land/sunflower-land/main/src/assets/icons/sfl.webp",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/webp",
+      "purpose": "any maskable"
     }
   ]
 }
