@@ -21,7 +21,7 @@ const translations = {
     labelShrine: "Shrine (-2.5%)",
 
     // Cards Top
-    sflQuoteTitle: "SFL PRICE",
+    sflQuoteTitle: "$FLOWER PRICE",
     activeTaxLabel: "Effective Tax:",
 
     // Portfolio
@@ -245,6 +245,8 @@ function formatarPreco(valor) {
 }
 
 let sflUsd = 0.0679;
+let currencyRates = { usd: 0.0679, brl: 0.4419, eur: 0.0754, sgd: 0.1117, pol: 1.194 };
+let selectedCurrency = localStorage.getItem('sfl_currency') || 'usd';
 let ilhaSelecionada = localStorage.getItem('sfl_island') || 'volcano';
 let isVip = localStorage.getItem('sfl_vip') === 'true';
 let hasShrine = localStorage.getItem('sfl_shrine') === 'true';
@@ -322,7 +324,36 @@ function sincronizarControlesHeader() {
   const elLang = document.getElementById('lang-select');
   if (elLang) elLang.value = currentLang;
 
+  const elCurrency = document.getElementById('currency-select');
+  if (elCurrency) elCurrency.value = selectedCurrency;
+
   atualizarDisplayTaxa();
+  atualizarPrecoSFL();
+}
+
+function alterarMoeda(novaMoeda) {
+  selectedCurrency = novaMoeda;
+  localStorage.setItem('sfl_currency', selectedCurrency);
+  atualizarPrecoSFL();
+  converterQuantidade();
+}
+
+function atualizarPrecoSFL() {
+  const elPrice = document.getElementById('sfl-price');
+  if (!elPrice) return;
+  const rate = currencyRates[selectedCurrency] || currencyRates.usd;
+  const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
+  const sym = symbolMap[selectedCurrency] || '$';
+  elPrice.innerText = `${sym} ${(sflUsd * rate).toFixed(4)} ${selectedCurrency.toUpperCase()}`;
+}
+
+function converterQuantidade() {
+  const qty = parseFloat(document.getElementById('converter-qty').value) || 0;
+  const rate = currencyRates[selectedCurrency] || currencyRates.usd;
+  const result = qty * sflUsd * rate;
+  const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
+  const sym = symbolMap[selectedCurrency] || '$';
+  document.getElementById('converter-result').innerText = `${sym} ${result.toFixed(4)}`;
 }
 
 function obterEstoqueAtual() {
@@ -347,11 +378,18 @@ function obterEstoqueAtual() {
 
 async function carregarDados() {
   const dataExchange = await fetchJsonSmart('https://sfl.world/api/v1.1/exchange');
-  if (dataExchange && dataExchange.sfl && dataExchange.sfl.usd) {
-    sflUsd = dataExchange.sfl.usd;
+  if (dataExchange && dataExchange.sfl) {
+    const sfl = dataExchange.sfl;
+    if (sfl.usd) sflUsd = sfl.usd;
+    currencyRates = {
+      usd: sfl.usd || 0.087,
+      brl: sfl.brl || 0.4419,
+      eur: sfl.eur || 0.0754,
+      sgd: sfl.sgd || 0.1117,
+      pol: sfl.pol || 1.194
+    };
   }
-  const elPrice = document.getElementById('sfl-price');
-  if (elPrice) elPrice.innerText = `$ ${sflUsd.toFixed(4)} USD`;
+  atualizarPrecoSFL();
 
   const dataPrices = await fetchJsonSmart('https://sfl.world/api/v1/prices');
   let textoHoraAtualizacao = '';

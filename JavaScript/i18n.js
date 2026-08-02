@@ -89,7 +89,7 @@ const translations = {
     labelShrine: "Shrine (-2.5%)",
 
     // Cards Top
-    sflQuoteTitle: "COTAÇÃO SFL",
+    sflQuoteTitle: "COTAÇÃO $FLOWER",
     activeTaxLabel: "Taxa Efetiva:",
 
     // Portfolio

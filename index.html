@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SFL Trade Tracker</title>
+  <title>SFL Tracker</title>
 
   <!-- Configurações PWA -->
   <link rel="manifest" href="manifest.json">
@@ -38,7 +38,7 @@
     <div>
       <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
         <img src="https://sfl.world/img/source/Sunflower.png" alt="Sunflower" class="header-icon" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22%3E%3C/svg%3E';">
-        SFL Trade Tracker
+        SFL Tracker
       </h1>
       <div class="flex flex-wrap items-center gap-2 mt-0.5">
         <p class="text-xs text-slate-400" data-i18n="subTitle"></p>
@@ -99,14 +99,33 @@
   </header>
 
   <!-- Cotação SFL USD -->
-  <div class="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800 flex justify-between items-center">
-    <div>
-      <div class="text-xs text-slate-400 uppercase font-semibold tracking-wider" data-i18n="sflQuoteTitle">SFL PRICE</div>
-      <div class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1" id="sfl-price">Loading...</div>
+  <div class="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      <div class="flex-1">
+        <div class="text-xs text-slate-400 uppercase font-semibold tracking-wider" data-i18n="sflQuoteTitle">$FLOWER PRICE</div>
+        <div class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1" id="sfl-price">Loading...</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- Currency Selector -->
+        <select id="currency-select" onchange="alterarMoeda(this.value)" class="bg-slate-900 border border-slate-700 text-white rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-amber-400 cursor-pointer">
+          <option value="usd" class="bg-slate-900 text-white">USD ($)</option>
+          <option value="brl" class="bg-slate-900 text-white">BRL (R$)</option>
+          <option value="eur" class="bg-slate-900 text-white">EUR (€)</option>
+          <option value="sgd" class="bg-slate-900 text-white">SGD (S$)</option>
+          <option value="pol" class="bg-slate-900 text-white">POL</option>
+        </select>
+        <div class="text-right text-xs text-slate-400">
+          <span data-i18n="activeTaxLabel">Effective Tax:</span> 
+          <span id="tax-display" class="text-amber-400 font-bold text-sm block md:inline font-mono">7.5%</span>
+        </div>
+      </div>
     </div>
-    <div class="text-right text-xs text-slate-400">
-      <span data-i18n="activeTaxLabel">Effective Tax:</span> 
-      <span id="tax-display" class="text-amber-400 font-bold text-sm block md:inline font-mono">7.5%</span>
+    <!-- Quick Converter -->
+    <div class="mt-3 flex flex-wrap items-center gap-2">
+      <label class="text-xs text-slate-400 whitespace-nowrap">$FLOWER Qty:</label>
+      <input type="number" id="converter-qty" placeholder="0" oninput="converterQuantidade()" class="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400">
+      <span class="text-xs text-slate-400">→</span>
+      <span id="converter-result" class="text-xs font-mono text-amber-400">0.00</span>
     </div>
   </div>
 
