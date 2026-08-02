@@ -344,13 +344,13 @@ function atualizarPrecoSFL() {
   const rate = currencyRates[selectedCurrency] || currencyRates.usd;
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
   const sym = symbolMap[selectedCurrency] || '$';
-  elPrice.innerText = `${sym} ${(sflUsd * rate).toFixed(4)} ${selectedCurrency.toUpperCase()}`;
+  elPrice.innerText = `${sym} ${rate.toFixed(4)} ${selectedCurrency.toUpperCase()}`;
 }
 
 function converterQuantidade() {
   const qty = parseFloat(document.getElementById('converter-qty').value) || 0;
   const rate = currencyRates[selectedCurrency] || currencyRates.usd;
-  const result = qty * sflUsd * rate;
+  const result = qty * rate;
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
   const sym = symbolMap[selectedCurrency] || '$';
   document.getElementById('converter-result').innerText = `${sym} ${result.toFixed(4)}`;
