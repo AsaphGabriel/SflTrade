@@ -213,25 +213,36 @@ function getIconImgTag(itemName, classeExtra = "") {
 }
 
 async function fetchJsonSmart(url) {
-  try {
-    const res = await fetch(url);
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn(`[CORS Direct Failed] Proxying: ${url}`);
+  const isLocal = window.location.hostname === 'localhost' || 
+                  window.location.hostname === '127.0.0.1' || 
+                  window.location.hostname.startsWith('100.');
+
+  const targetUrl = url;
+  const proxies = isLocal ? [
+    'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl)
+  ] : [
+    targetUrl,
+    'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl)
+  ];
+
+  for (const proxyUrl of proxies) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const response = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.warn(`[SmartFetch] Tentativa em ${proxyUrl} falhou, tentando proxima...`);
+    }
   }
 
-  try {
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const resProxy = await fetch(proxyUrl);
-    if (resProxy.ok) return await resProxy.json();
-  } catch (e) {}
-
-  try {
-    const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const resProxy2 = await fetch(proxyUrl2);
-    if (resProxy2.ok) return await resProxy2.json();
-  } catch (e) {}
-
+  console.error(`[SmartFetch] Falha em todas as rotas para: ${url}`);
   return null;
 }
 
