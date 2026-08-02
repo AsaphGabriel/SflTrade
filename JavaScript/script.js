@@ -245,6 +245,7 @@ function formatarPreco(valor) {
 }
 
 let sflUsd = 0.0679;
+let cotacoesSfl = {};
 let currencyRates = { usd: 0.0679, brl: 0.4419, eur: 0.0754, sgd: 0.1117, pol: 1.194 };
 let selectedCurrency = localStorage.getItem('sfl_currency') || 'usd';
 let ilhaSelecionada = localStorage.getItem('sfl_island') || 'volcano';
@@ -335,6 +336,23 @@ function alterarMoeda(novaMoeda) {
   selectedCurrency = novaMoeda;
   localStorage.setItem('sfl_currency', selectedCurrency);
   atualizarPrecoSFL();
+  atualizarExibicaoCotacao();
+  converterQuantidade();
+}
+
+function atualizarExibicaoCotacao() {
+  const elPrice = document.getElementById('sfl-price');
+  if (!elPrice) return;
+
+  const moeda = selectedCurrency;
+  const valor = cotacoesSfl[moeda] || 0.0928;
+  
+  const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
+  const sym = symbolMap[moeda] || '$';
+  
+  elPrice.innerText = `${sym} ${valor.toFixed(4)} ${moeda.toUpperCase()}`;
+  
+  // Disparar recálculo da calculadora
   converterQuantidade();
 }
 
@@ -379,6 +397,7 @@ function obterEstoqueAtual() {
 async function carregarDados() {
   const dataExchange = await fetchJsonSmart('https://sfl.world/api/v1.1/exchange');
   if (dataExchange && dataExchange.sfl) {
+    cotacoesSfl = dataExchange.sfl;
     const sfl = dataExchange.sfl;
     if (sfl.usd) sflUsd = sfl.usd;
     currencyRates = {
@@ -388,6 +407,7 @@ async function carregarDados() {
       sgd: sfl.sgd || 0.1117,
       pol: sfl.pol || 1.194
     };
+    atualizarExibicaoCotacao();
   }
   atualizarPrecoSFL();
 
