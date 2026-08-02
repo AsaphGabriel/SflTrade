@@ -37,10 +37,20 @@
   <!-- Header -->
   <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
     <div>
-      <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
-        <img src="https://sfl.world/img/source/Sunflower.png" alt="Sunflower" class="header-icon" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22%3E%3C/svg%3E';">
-        SFL Tracker
-      </h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
+          <img src="https://sfl.world/img/source/Sunflower.png" alt="Sunflower" class="header-icon" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22%3E%3C/svg%3E';">
+          SFL Tracker
+        </h1>
+        <div class="flex items-center gap-1 bg-cardbg px-2 py-1 rounded-xl border border-slate-700">
+          <input type="text" id="farm-id-search" placeholder="Farm ID" class="w-20 bg-transparent text-xs text-white focus:outline-none placeholder-slate-500">
+          <button onclick="buscarFarmId()" class="text-amber-400 hover:text-amber-300" aria-label="Buscar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
       <div class="flex flex-wrap items-center gap-2 mt-0.5">
         <p class="text-xs text-slate-400" data-i18n="subTitle"></p>
         <span id="updated-time" class="text-[11px] text-slate-500 font-mono italic"></span>
@@ -130,6 +140,7 @@
     </div>
   </div>
 
+  <div id="home-section">
   <!-- Seção 1: Portfólio -->
   <section class="mb-8">
     <h2 class="text-lg font-bold text-slate-200 mb-3 flex items-center gap-2" data-i18n="portfolioTitle">
@@ -173,6 +184,33 @@
     </div>
     
     <div id="grid-recursos" style="display: flex; flex-direction: column; gap: 32px; width: 100%;"></div>
+  </section>
+  </div>
+
+  <!-- Seção de Perfil -->
+  <section id="profile-section" class="hidden">
+    <div class="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">
+      <h2 class="text-lg font-bold text-slate-200 mb-3">Perfil</h2>
+      <div class="mb-3">
+        <label class="block text-xs text-slate-400 mb-1">Farm ID</label>
+        <input type="text" id="farm-id-input" placeholder="Ex: 12345" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs text-slate-400 mb-1">API Key</label>
+        <input type="text" id="api-key-input" placeholder="Sua chave API" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+      </div>
+      <button onclick="salvarPerfil()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl text-xs transition">Salvar</button>
+      <span id="profile-saved-msg" class="text-emerald-400 text-xs ml-2 hidden">Salvo!</span>
+    </div>
+  </section>
+
+  <!-- Seção de Informações -->
+  <section id="info-section" class="hidden">
+    <div class="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">
+      <h2 class="text-lg font-bold text-slate-200 mb-3">Informações</h2>
+      <p class="text-xs text-slate-400">SFL Tracker v1.0</p>
+      <p class="text-xs text-slate-400">Dados fornecidos por sfl.world</p>
+    </div>
   </section>
 
   <!-- Modal de Transação -->
@@ -265,5 +303,26 @@
       navigator.serviceWorker.register('./sw.js?v=202608021552');
     }
   </script>
+  <!-- Bottom Nav Bar -->
+  <nav id="bottom-nav" class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-xs z-50 bg-gray-800/90 backdrop-blur-md border border-gray-700/60 rounded-full py-2 px-4 shadow-2xl flex justify-around items-center">
+    <button onclick="showTab('home')" id="nav-home" class="flex flex-col items-center text-amber-400" aria-label="Home">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span class="text-[10px]">Home</span>
+    </button>
+    <button onclick="showTab('info')" id="nav-info" class="flex flex-col items-center text-slate-400" aria-label="Info">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+      </svg>
+      <span class="text-[10px]">Info</span>
+    </button>
+    <button onclick="showTab('profile')" id="nav-profile" class="flex flex-col items-center text-slate-400" aria-label="Profile">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+      <span class="text-[10px]">Perfil</span>
+    </button>
+  </nav>
 </body>
 </html>

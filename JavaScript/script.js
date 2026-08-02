@@ -1012,12 +1012,115 @@ alterarIdioma = function(novoIdioma) {
   renderCategoryTabs();
 };
 
+// ===== Navegação por abas (SPA) =====
+function showTab(tabName) {
+  // Esconde todas as seções
+  document.getElementById('home-section').classList.add('hidden');
+  document.getElementById('profile-section').classList.add('hidden');
+  document.getElementById('info-section').classList.add('hidden');
+
+  // Mostra a seção selecionada
+  const sectionMap = {
+    home: 'home-section',
+    profile: 'profile-section',
+    info: 'info-section'
+  };
+  const sectionId = sectionMap[tabName];
+  if (sectionId) {
+    document.getElementById(sectionId).classList.remove('hidden');
+  }
+
+  // Atualiza estilo dos botões da nav
+  document.querySelectorAll('#bottom-nav button').forEach(btn => {
+    btn.classList.remove('text-amber-400');
+    btn.classList.add('text-slate-400');
+  });
+  const activeBtn = document.getElementById(`nav-${tabName}`);
+  if (activeBtn) {
+    activeBtn.classList.remove('text-slate-400');
+    activeBtn.classList.add('text-amber-400');
+  }
+}
+
+// ===== Perfil (Farm ID e API Key) =====
+function salvarPerfil() {
+  const farmId = document.getElementById('farm-id-input').value.trim();
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('sfl_farm_id', farmId);
+  localStorage.setItem('sfl_api_key', apiKey);
+  const msg = document.getElementById('profile-saved-msg');
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2000);
+}
+
+function carregarPerfil() {
+  const farmId = localStorage.getItem('sfl_farm_id') || '';
+  const apiKey = localStorage.getItem('sfl_api_key') || '';
+  document.getElementById('farm-id-input').value = farmId;
+  document.getElementById('api-key-input').value = apiKey;
+}
+
+// ===== Busca de Farm ID =====
+async function buscarFarmId() {
+  const farmId = document.getElementById('farm-id-search').value.trim();
+  if (!farmId) return;
+
+  const url = `https://sfl.world/api/v1.1/land/${farmId}`;
+  const workerUrl = 'https://sfltrade.asaphgabrielsousa.workers.dev/?url=' + encodeURIComponent(url);
+
+  try {
+    const response = await fetch(workerUrl);
+    const text = await response.text();
+    const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
+    let data;
+    if (match) {
+      data = JSON.parse(match[1]);
+    } else {
+      data = JSON.parse(text);
+    }
+
+    if (data && data.land) {
+      const land = data.land;
+      // Atualiza ilha
+      if (land.type) {
+        const islandMap = {
+          'petal': 'petal',
+          'desert': 'desert',
+          'volcano': 'volcano',
+          'basic': 'basic',
+          'ascension': 'ascension'
+        };
+        const islandKey = islandMap[land.type.toLowerCase()] || 'volcano';
+        document.getElementById('island-select').value = islandKey;
+        atualizarIlha(islandKey);
+      }
+      // Atualiza VIP
+      if (land.vip !== undefined) {
+        const vipCheck = document.getElementById('vip-checkbox');
+        vipCheck.checked = land.vip;
+        atualizarVip(land.vip);
+      }
+      // Atualiza Shrine (se existir)
+      if (land.shrine !== undefined) {
+        const shrineCheck = document.getElementById('shrine-checkbox');
+        shrineCheck.checked = land.shrine;
+        atualizarShrine(land.shrine);
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao buscar Farm ID:', error);
+  }
+}
+
 // Inicialização
 sincronizarControlesHeader();
 alterarIdioma(currentLang);
 carregarDados(); // <-- ADICIONADO: carrega dados da API automaticamente
+carregarPerfil();
 
 // Initialize category tabs after DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   renderCategoryTabs();
+  // Mostra home por padrão
+  showTab('home');
 });
