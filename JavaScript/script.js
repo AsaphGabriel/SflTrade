@@ -1046,6 +1046,14 @@ function showTab(tabName) {
 function salvarPerfil() {
   const farmId = document.getElementById('farm-id-input').value.trim();
   const apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey) {
+    alert('A API Key não pode estar vazia!');
+    return;
+  }
+  if (!apiKey.startsWith('sfl.')) {
+    alert('A API Key deve começar obrigatoriamente com "sfl."!');
+    return;
+  }
   localStorage.setItem('sfl_farm_id', farmId);
   localStorage.setItem('sfl_api_key', apiKey);
   const msg = document.getElementById('profile-saved-msg');
@@ -1065,14 +1073,46 @@ async function buscarFarmId(e) {
   if (e) {
     e.preventDefault();
   }
-  const farmId = document.getElementById('farm-id-search').value.trim();
-  if (!farmId) return;
+  const query = document.getElementById('farm-id-search').value.trim();
+  if (!query) return;
 
-  const url = `https://sfl.world/api/v1.1/land/${farmId}`;
-  const workerUrl = 'https://sfltrade.asaphgabrielsousa.workers.dev/?url=' + encodeURIComponent(url);
+  let landId;
+
+  // Se a busca contiver letras, é um username
+  if (/[a-zA-Z]/.test(query)) {
+    const usernameUrl = 'https://sfl.world/api/v1/land/info/username/' + encodeURIComponent(query);
+    const workerUrl = 'https://sfltrade.asaphgabrielsousa.workers.dev/?url=' + encodeURIComponent(usernameUrl);
+    try {
+      const response = await fetch(workerUrl);
+      const text = await response.text();
+      const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
+      let data;
+      if (match) {
+        data = JSON.parse(match[1]);
+      } else {
+        data = JSON.parse(text);
+      }
+      if (!data || !data.nft_id) {
+        alert('Usuário não encontrado!');
+        return;
+      }
+      landId = data.nft_id;
+    } catch (error) {
+      console.error('Erro ao buscar username:', error);
+      alert('Erro ao buscar usuário.');
+      return;
+    }
+  } else {
+    // Apenas números → ID da Land
+    landId = query;
+  }
+
+  // Agora busca os detalhes da Land
+  const landUrl = `https://sfl.world/api/v1.1/land/${landId}`;
+  const workerUrl2 = 'https://sfltrade.asaphgabrielsousa.workers.dev/?url=' + encodeURIComponent(landUrl);
 
   try {
-    const response = await fetch(workerUrl);
+    const response = await fetch(workerUrl2);
     const text = await response.text();
     const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
     let data;
@@ -1109,7 +1149,7 @@ async function buscarFarmId(e) {
         shrineCheck.checked = land.shrine;
         atualizarShrine(land.shrine);
       }
-      localStorage.setItem('sfl_farm_id', farmId);
+      localStorage.setItem('sfl_farm_id', query);
       atualizarDisplayTaxa();
     }
   } catch (error) {
