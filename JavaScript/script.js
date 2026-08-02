@@ -63,11 +63,12 @@ const translations = {
     alertSelectResource: "Please select a resource.",
 
     // Categorias do Mercado
-    cat_crops: "🌾 Crops",
-    cat_fruits: "🍎 Fruits",
-    cat_animals: "🐔 Animal Production",
-    cat_minerals: "⛏️ Minerals & Resources",
-    cat_misc: "📦 Misc & Badges"
+    cat_crops: "Crops",
+    cat_fruits: "Fruits",
+    cat_animals: "Animal Production",
+    cat_minerals: "Minerals & Resources",
+    cat_misc: "Misc & Badges",
+    marketTabAll: "All"
   },
 
   pt: {
@@ -133,11 +134,12 @@ const translations = {
     alertSelectResource: "Por favor, selecione um recurso.",
 
     // Categorias do Mercado
-    cat_crops: "🌾 Plantações",
-    cat_fruits: "🍎 Frutas",
-    cat_animals: "🐔 Produção Animal",
-    cat_minerals: "⛏️ Minérios e Recursos",
-    cat_misc: "📦 Diversos e Emblemas"
+    cat_crops: "Plantações",
+    cat_fruits: "Frutas",
+    cat_animals: "Produção Animal",
+    cat_minerals: "Minérios e Recursos",
+    cat_misc: "Diversos e Emblemas",
+    marketTabAll: "Todos"
   }
 };
 
@@ -169,6 +171,7 @@ function alterarIdioma(novoIdioma) {
   });
 
   renderizarCardsMercado();
+  renderCategoryTabs();
   renderizarPortfolio();
 }
 
@@ -248,6 +251,9 @@ let hasShrine = localStorage.getItem('sfl_shrine') === 'true';
 
 let transacoes = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
 let valorQtdMaxAtual = 0;
+
+// Category Tabs State
+let currentCategoryFilter = 'all'; // 'all' or category id
 
 function calcularTaxaEfetiva() {
   if (ilhaSelecionada === 'basic') return 0;
@@ -383,6 +389,7 @@ async function carregarDados() {
   if (elUpdated) elUpdated.innerText = textoHoraAtualizacao;
 
   renderizarCardsMercado();
+  renderCategoryTabs();
   renderizarPortfolio();
 }
 
@@ -759,6 +766,77 @@ function obterCategoriaItem(nomeItem) {
   return 'misc';
 }
 
+function renderCategoryTabs() {
+  const tabsContainer = document.getElementById('category-tabs');
+  if (!tabsContainer) return;
+
+  // Build tabs: "All" + each category (no icon property needed)
+  const tabs = [
+    { id: 'all', key: 'marketTabAll' },
+    ...CATEGORIAS_MERCADO.map(cat => ({ id: cat.id, key: cat.titleKey }))
+  ];
+
+  tabsContainer.innerHTML = tabs.map(tab => {
+    const count = tab.id === 'all' 
+      ? Object.keys(dadosPrecos).length 
+      : (CATEGORIAS_MERCADO.find(c => c.id === tab.id)?.itens.filter(i => dadosPrecos[i]).length || 0);
+    
+    const isActive = currentCategoryFilter === tab.id;
+    // Build icon HTML: for 'all' no icon, otherwise use an <img> tag
+    let iconHtml = '';
+    if (tab.id !== 'all') {
+      const iconUrl = getCategoryIcon(tab.id);
+      if (iconUrl) {
+        iconHtml = `<img src="${iconUrl}" alt="${tab.id}" class="category-tab-icon" onerror="this.onerror=null;this.src='${TRANSPARENT_FALLBACK}';">`;
+      }
+    }
+    return `
+      <button 
+        class="category-tab ${isActive ? 'active' : ''}" 
+        role="tab" 
+        aria-selected="${isActive}"
+        data-category="${tab.id}"
+        onclick="selectCategoryTab('${tab.id}')"
+      >
+        ${iconHtml}
+        <span data-i18n="${tab.key}">${t(tab.key)}</span>
+        <span class="tab-count">${count}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function getCategoryIcon(catId) {
+  // Official game asset images for each category
+  const assetMap = {
+    crops: 'Sunflower',
+    fruits: 'Apple',
+    animals: 'Egg',
+    minerals: 'Wood',
+    misc: 'Sunflorian Emblem'
+  };
+  const itemName = assetMap[catId];
+  if (!itemName) return ''; // 'all' returns empty
+  return getItemIcon(itemName);
+}
+
+function selectCategoryTab(categoryId) {
+  currentCategoryFilter = categoryId;
+  
+  // Update active tab visual
+  document.querySelectorAll('.category-tab').forEach(tab => {
+    const isActive = tab.dataset.category === categoryId;
+    tab.classList.toggle('active', isActive);
+    tab.setAttribute('aria-selected', isActive);
+  });
+  
+  // Re-render cards with filter
+  renderizarCardsMercado();
+  
+  // Re-apply search filter if any
+  filtrarRecursos();
+}
+
 function renderizarCardsMercado() {
   const container = document.getElementById('grid-recursos');
   if (!container) return;
@@ -773,7 +851,12 @@ function renderizarCardsMercado() {
     grupos[catId].push(item);
   });
 
-  CATEGORIAS_MERCADO.forEach(cat => {
+  // Determine which categories to show
+  const categoriesToRender = currentCategoryFilter === 'all' 
+    ? CATEGORIAS_MERCADO 
+    : CATEGORIAS_MERCADO.filter(cat => cat.id === currentCategoryFilter);
+
+  categoriesToRender.forEach(cat => {
     const itens = grupos[cat.id] || [];
     if (itens.length === 0) return;
 
@@ -798,6 +881,7 @@ function renderizarCardsMercado() {
       const card = document.createElement('div');
       card.className = "market-card item-card";
       card.setAttribute('data-name', item.toLowerCase());
+      card.setAttribute('data-category', cat.id);
 
       card.innerHTML = `
         <div class="market-card-img-wrap">
@@ -818,6 +902,28 @@ function renderizarCardsMercado() {
     section.appendChild(grid);
     container.appendChild(section);
   });
+  
+  // Update tab counts after render (in case prices loaded)
+  updateTabCounts();
+}
+
+function updateTabCounts() {
+  document.querySelectorAll('.category-tab').forEach(tab => {
+    const catId = tab.dataset.category;
+    const countEl = tab.querySelector('.tab-count');
+    if (!countEl) return;
+    
+    let count = 0;
+    if (catId === 'all') {
+      count = Object.keys(dadosPrecos).length;
+    } else {
+      const cat = CATEGORIAS_MERCADO.find(c => c.id === catId);
+      if (cat) {
+        count = cat.itens.filter(i => dadosPrecos[i]).length;
+      }
+    }
+    countEl.textContent = count;
+  });
 }
 
 function filtrarRecursos() {
@@ -834,6 +940,19 @@ function filtrarRecursos() {
   });
 }
 
+// Re-render tabs when language changes (to update labels)
+const originalAlterarIdioma = alterarIdioma;
+alterarIdioma = function(novoIdioma) {
+  originalAlterarIdioma(novoIdioma);
+  renderCategoryTabs();
+};
+
 // Inicialização
 sincronizarControlesHeader();
 alterarIdioma(currentLang);
+carregarDados(); // <-- ADICIONADO: carrega dados da API automaticamente
+
+// Initialize category tabs after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  renderCategoryTabs();
+});

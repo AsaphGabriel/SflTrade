@@ -17,9 +17,83 @@
   background: #475569;
 }
 
+/* Utility: Hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
 /* Transição suave em cartões e botões */
 .item-card, .tax-btn, button {
   transition: all 0.2s ease-in-out;
+}
+
+/* ===== Category Tabs Bar ===== */
+.category-tabs-bar {
+  display: flex;
+  gap: 8px;
+  padding: 4px 4px 8px 4px;
+  margin: 0 -4px 16px -4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  border-bottom: 1px solid #334155;
+}
+
+.category-tab {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.category-tab:hover {
+  border-color: #475569;
+  color: #e2e8f0;
+  background: #334155;
+}
+
+.category-tab.active {
+  background: #fbbf24;
+  border-color: #fbbf24;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.category-tab .tab-count {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.2);
+}
+
+/* Official asset icon inside category tabs */
+.category-tab img.category-tab-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  vertical-align: middle;
+  display: inline-block;
+  margin-right: 4px;
+  image-rendering: pixelated;
+}
+
+.category-tab.active .tab-count {
+  background: rgba(15, 23, 42, 0.3);
 }
 
 /* ===== Container Principal: Categorias empilhadas verticalmente ===== */
@@ -166,4 +240,14 @@
 .btn-sell-card {
   background: #dc2626;
   color: #ffffff;
+}
+
+/* Header icon (Sunflower) */
+.header-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 4px;
+  image-rendering: pixelated;
 }

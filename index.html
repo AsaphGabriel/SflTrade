@@ -27,12 +27,21 @@
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen p-4 md:p-8 font-sans pb-20">
 
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="fixed inset-0 bg-darkbg flex flex-col items-center justify-center z-50">
+    <img src="https://sfl.world/img/source/Sunflower.png" alt="Sunflower" class="w-16 h-16 animate-pulse" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2264%22 height=%2264%22%3E%3C/svg%3E';">
+    <p class="text-amber-400 font-bold mt-4 text-lg">Loading...</p>
+  </div>
+
   <!-- Header -->
   <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
     <div>
-      <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">🌻 SFL Trade Tracker</h1>
+      <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
+        <img src="https://sfl.world/img/source/Sunflower.png" alt="Sunflower" class="header-icon" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22%3E%3C/svg%3E';">
+        SFL Trade Tracker
+      </h1>
       <div class="flex flex-wrap items-center gap-2 mt-0.5">
-        <p class="text-xs text-slate-400" data-i18n="subTitle">SFL & P2P Quotes via sfl.world</p>
+        <p class="text-xs text-slate-400" data-i18n="subTitle"></p>
         <span id="updated-time" class="text-[11px] text-slate-500 font-mono italic"></span>
       </div>
     </div>
@@ -137,6 +146,12 @@
       <input type="text" id="search" placeholder="Search resource..." data-i18n-placeholder="searchPlaceholder" onkeyup="filtrarRecursos()" 
              class="bg-cardbg border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-44 md:w-56">
     </div>
+    
+    <!-- Category Tabs Bar -->
+    <div id="category-tabs" class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide" role="tablist" aria-label="Market categories">
+      <!-- Tabs will be rendered by JS -->
+    </div>
+    
     <div id="grid-recursos" style="display: flex; flex-direction: column; gap: 32px; width: 100%;"></div>
   </section>
 
@@ -219,5 +234,11 @@
 
   <!-- Scripts -->
   <script src="JavaScript/script.js?v=1.9"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const loading = document.getElementById('loading-screen');
+      if (loading) loading.style.display = 'none';
+    });
+  </script>
 </body>
 </html>
