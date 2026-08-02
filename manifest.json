@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/sunflower-land/sunflower-land/main/src/assets/crops/sunflower/crop.png",
+      "src": "https://sfl.world/img/source/Sunflower.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://raw.githubusercontent.com/sunflower-land/sunflower-land/main/src/assets/crops/sunflower/crop.png",
+      "src": "https://sfl.world/img/source/Sunflower.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
