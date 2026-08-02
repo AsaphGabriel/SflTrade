@@ -1061,7 +1061,10 @@ function carregarPerfil() {
 }
 
 // ===== Busca de Farm ID =====
-async function buscarFarmId() {
+async function buscarFarmId(e) {
+  if (e) {
+    e.preventDefault();
+  }
   const farmId = document.getElementById('farm-id-search').value.trim();
   if (!farmId) return;
 
@@ -1106,6 +1109,8 @@ async function buscarFarmId() {
         shrineCheck.checked = land.shrine;
         atualizarShrine(land.shrine);
       }
+      localStorage.setItem('sfl_farm_id', farmId);
+      atualizarDisplayTaxa();
     }
   } catch (error) {
     console.error('Erro ao buscar Farm ID:', error);
