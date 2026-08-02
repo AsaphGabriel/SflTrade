@@ -1047,18 +1047,37 @@ function salvarPerfil() {
   const farmId = document.getElementById('farm-id-input').value.trim();
   const apiKey = document.getElementById('api-key-input').value.trim();
   if (!apiKey) {
-    alert('A API Key não pode estar vazia!');
+    mostrarMsgPerfil('A API Key não pode estar vazia!', 'text-rose-400');
     return;
   }
-  if (!apiKey.startsWith('sfl.')) {
-    alert('A API Key deve começar obrigatoriamente com "sfl."!');
+  if (!apiKey.startsWith('sfl.') || apiKey === 'sfl.') {
+    mostrarMsgPerfil('A API Key deve começar com "sfl." e conter o código completo!', 'text-rose-400');
     return;
   }
   localStorage.setItem('sfl_farm_id', farmId);
   localStorage.setItem('sfl_api_key', apiKey);
-  const msg = document.getElementById('profile-saved-msg');
-  msg.classList.remove('hidden');
-  setTimeout(() => msg.classList.add('hidden'), 2000);
+  mostrarMsgPerfil('Salvo com sucesso!', 'text-emerald-400');
+
+  // Sincronizar barra superior
+  const searchInput = document.getElementById('farm-id-search');
+  if (searchInput) searchInput.value = farmId;
+
+  // Se houver farmId, buscar automaticamente para atualizar taxas
+  if (farmId) {
+    buscarFarmId();
+  }
+}
+
+function mostrarMsgPerfil(texto, cor) {
+  const el = document.getElementById('profile-msg');
+  if (!el) return;
+  el.classList.remove('hidden', 'text-emerald-400', 'text-rose-400', 'text-amber-400');
+  el.classList.add(cor);
+  el.textContent = texto;
+  clearTimeout(el._timeout);
+  el._timeout = setTimeout(() => {
+    el.classList.add('hidden');
+  }, 3000);
 }
 
 function carregarPerfil() {
@@ -1075,6 +1094,11 @@ async function buscarFarmId(e) {
   }
   const query = document.getElementById('farm-id-search').value.trim();
   if (!query) return;
+
+  // Sincronizar ambos os inputs
+  document.getElementById('farm-id-search').value = query;
+  document.getElementById('farm-id-input').value = query;
+  localStorage.setItem('sfl_farm_id', query);
 
   let landId;
 
@@ -1093,13 +1117,13 @@ async function buscarFarmId(e) {
         data = JSON.parse(text);
       }
       if (!data || !data.nft_id) {
-        alert('Usuário não encontrado!');
+        mostrarMsgPerfil('Usuário não encontrado!', 'text-rose-400');
         return;
       }
       landId = data.nft_id;
     } catch (error) {
       console.error('Erro ao buscar username:', error);
-      alert('Erro ao buscar usuário.');
+      mostrarMsgPerfil('Erro ao buscar usuário.', 'text-rose-400');
       return;
     }
   } else {
@@ -1168,4 +1192,11 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCategoryTabs();
   // Mostra home por padrão
   showTab('home');
+
+  // Sincronizar farm-id inputs
+  const farmId = localStorage.getItem('sfl_farm_id') || '';
+  const searchInput = document.getElementById('farm-id-search');
+  const profileInput = document.getElementById('farm-id-input');
+  if (searchInput) searchInput.value = farmId;
+  if (profileInput) profileInput.value = farmId;
 });
