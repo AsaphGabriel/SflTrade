@@ -1,4 +1,4 @@
-export function fetchFarmData(farmId) {
+export async function fetchFarmData(farmId) {
   try {
     const response = await fetch(`https://sfltrade.asaphgabrielsousa.workers.dev/?url=https://api.sunflower-land.com/community/farms/${farmId}`)
     if (!response.ok) {
