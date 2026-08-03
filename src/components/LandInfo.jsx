@@ -13,7 +13,7 @@ function LandInfo({ farmId }) {
         const farmData = await fetchFarmData(farmId)
         setData(farmData)
       } catch (err) {
-        setError(err)
+        setError(err.message)
       } finally {
         setLoading(false)
       }
@@ -23,17 +23,12 @@ function LandInfo({ farmId }) {
   }, [farmId])
 
   if (loading) return <div>⏳ Carregando dados da Land...</div>
-  if (error) return <div>⚠️ Erro ao buscar dados da Land. Verifique o console.</div>
+  if (error) return <div style={{color: 'red'}}>⚠️ Erro: {error}</div>
 
   return (
     <div>
       <h2>Farm ID: {farmId}</h2>
-      <div>Coins: {data?.state?.coins || 'N/A'}</div>
-      <div>Diamonds: {data?.state?.diamonds || 'N/A'}</div>
-      <div>Flowers: {data?.state?.flowers || 'N/A'}</div>
-      <div>Level: {data?.state?.level || 'N/A'}</div>
-      <div>Harvests: {data?.state?.harvests || 'N/A'}</div>
-      <div>Animals: {data?.state?.animals || 'N/A'}</div>
+      <pre style={{background: '#f4f4f4', padding: '10px', overflowX: 'auto'}}>{JSON.stringify(data, null, 2)}</pre>
     </div>
   )
 }
