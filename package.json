@@ -1,0 +1,19 @@
+{
+  "name": "sfltrade",
+  "version": "1.0.0",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite"
+  },
+  "keywords": [],
+  "author": "Asaph Gabriel Sousa",
+  "license": "MIT",
+  "description": "",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "vite": "^3.2.3"
+  }
+}
