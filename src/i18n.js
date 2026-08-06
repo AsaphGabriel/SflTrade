@@ -1,7 +1,6 @@
-// Dicionário de Idiomas (EN / PT)
-const translations = {
+export const translations = {
   en: {
-    // Header
+    // ... [Mantenha as chaves antigas aqui] ...
     subTitle: "SFL & P2P Quotes via sfl.world",
     btnBuy: "🟢 Buy",
     btnSell: "🔴 Sell",
@@ -9,8 +8,6 @@ const translations = {
     updatedNow: "• Updated just now",
     updatedMinAgo: "• Updated {min}m ago",
     updatedAt: "• Updated at {time}",
-
-    // Island & Tax Selectors
     islandLabel: "Island:",
     islandPetal: "Petal (50%)",
     islandDesert: "Desert (20%)",
@@ -19,12 +16,8 @@ const translations = {
     islandAscension: "Ascension (Soon)",
     labelVip: "VIP (-50%)",
     labelShrine: "Shrine (-2.5%)",
-
-    // Cards Top
-    sflQuoteTitle: "SFL PRICE",
+    sflQuoteTitle: "$FLOWER PRICE",
     activeTaxLabel: "Effective Tax:",
-
-    // Portfolio
     portfolioTitle: "📦 My Positions (Portfolio)",
     emptyPortfolio: "No items in stock. Register a buy transaction above.",
     thResource: "Resource",
@@ -36,14 +29,10 @@ const translations = {
     thEstPl: "Est. P/L",
     thAction: "Action",
     perUnit: "/ unit",
-
-    // Market
     marketTitle: "🛒 Market P2P Prices",
     searchPlaceholder: "Search resource...",
     cardBuy: "+ Buy",
     cardSell: "- Sell",
-
-    // Modal
     modalTitleBuy: "🟢 Register Purchase",
     modalTitleSell: "🔴 Register Sale",
     labelResource: "Resource",
@@ -65,11 +54,19 @@ const translations = {
     cat_fruits: "🍎 Fruits",
     cat_animals: "🐔 Animal Production",
     cat_minerals: "⛏️ Minerals & Resources",
-    cat_misc: "📦 Misc & Badges"
+    cat_misc: "📦 Misc & Badges",
+    marketTabAll: "All",
+    
+    // NOVAS CHAVES (Perfil e Info)
+    infoTitle: "Information",
+    infoDataProvider: "Data provided by sfl.world",
+    profileTab: "Profile Settings",
+    apiKeyPlaceholder: "Your API Key (sfl....)",
+    btnSave: "Save Profile"
   },
 
   pt: {
-    // Header
+    // ... [Mantenha as chaves antigas aqui] ...
     subTitle: "Cotação e P2P via sfl.world",
     btnBuy: "🟢 Compra",
     btnSell: "🔴 Venda",
@@ -77,8 +74,6 @@ const translations = {
     updatedNow: "• Atualizado agora",
     updatedMinAgo: "• Atualizado há {min} min",
     updatedAt: "• Atualizado às {time}",
-
-    // Island & Tax Selectors
     islandLabel: "Ilha:",
     islandPetal: "Petal (50%)",
     islandDesert: "Desert (20%)",
@@ -87,12 +82,8 @@ const translations = {
     islandAscension: "Ascension (Em breve)",
     labelVip: "VIP (-50%)",
     labelShrine: "Shrine (-2.5%)",
-
-    // Cards Top
     sflQuoteTitle: "COTAÇÃO $FLOWER",
     activeTaxLabel: "Taxa Efetiva:",
-
-    // Portfolio
     portfolioTitle: "📦 Minhas Posições (Portfólio)",
     emptyPortfolio: "Nenhum recurso em estoque. Registre uma compra acima.",
     thResource: "Recurso",
@@ -104,14 +95,10 @@ const translations = {
     thEstPl: "Lucro/Prej. Est.",
     thAction: "Ação",
     perUnit: "/ un",
-
-    // Market
     marketTitle: "🛒 Preços P2P do Mercado",
     searchPlaceholder: "Buscar recurso...",
     cardBuy: "+ Compra",
     cardSell: "- Venda",
-
-    // Modal
     modalTitleBuy: "🟢 Registrar Compra",
     modalTitleSell: "🔴 Registrar Venda",
     labelResource: "Recurso",
@@ -133,36 +120,22 @@ const translations = {
     cat_fruits: "🍎 Frutas",
     cat_animals: "🐔 Produção Animal",
     cat_minerals: "⛏️ Minérios e Recursos",
-    cat_misc: "📦 Diversos e Emblemas"
+    cat_misc: "📦 Diversos e Emblemas",
+    marketTabAll: "Todos",
+
+    // NOVAS CHAVES (Perfil e Info)
+    infoTitle: "Informações",
+    infoDataProvider: "Dados fornecidos por sfl.world",
+    profileTab: "Configurações de Perfil",
+    apiKeyPlaceholder: "Sua chave API (sfl....)",
+    btnSave: "Salvar Perfil"
   }
 };
 
-let currentLang = localStorage.getItem('sfl_lang') || 'en';
-
-function t(key, params = {}) {
-  let text = translations[currentLang]?.[key] || translations['en']?.[key] || key;
+export function t(key, lang = 'en', params = {}) {
+  let text = translations[lang]?.[key] || translations['en']?.[key] || key;
   Object.keys(params).forEach(p => {
     text = text.replace(`{${p}}`, params[p]);
   });
   return text;
-}
-
-function alterarIdioma(novoIdioma) {
-  currentLang = novoIdioma;
-  localStorage.setItem('sfl_lang', currentLang);
-  
-  const elSelect = document.getElementById('lang-select');
-  if (elSelect) elSelect.value = currentLang;
-
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const k = el.getAttribute('data-i18n');
-    if (k) el.innerText = t(k);
-  });
-
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const k = el.getAttribute('data-i18n-placeholder');
-    if (k) el.placeholder = t(k);
-  });
-
-  if (typeof carregarDados === 'function') carregarDados();
 }
