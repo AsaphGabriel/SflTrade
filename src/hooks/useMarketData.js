@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { t } from '../i18n';
+import {
+  fetchWithFallback,
+  resolveFarmIdFromUsername,
+  fetchFarmDataSmart
+} from '../services/api';
 
 // Base de preços de contingência (Fallback local offline)
 const DADOS_PRECOS_INICIAIS = {
@@ -22,33 +27,6 @@ const DADOS_PRECOS_INICIAIS = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-// Requisição via Worker Cloudflare
-async function fetchJsonSmart(url) {
-  const workerUrl = 'https://sfltrade.asaphgabrielsousa.workers.dev/?url=' + encodeURIComponent(url);
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-    const response = await fetch(workerUrl, { signal: controller.signal });
-    clearTimeout(timeoutId);
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const text = await response.text();
-    const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
-    if (match) return JSON.parse(match[1]);
-    
-    try {
-      return JSON.parse(text);
-    } catch {
-      return null;
-    }
-  } catch (error) {
-    console.error(`[SmartFetch] Falha ao buscar: ${url}`, error);
-    return null;
-  }
-}
-
 export default function useMarketData() {
   // Configurações do Usuário e Persistência
   const [selectedIsland, setSelectedIsland] = useState(localStorage.getItem('sfl_island') || 'volcano');
@@ -62,6 +40,7 @@ export default function useMarketData() {
   const [currencyRates, setCurrencyRates] = useState({ usd: 0.0679, brl: 0.4419, eur: 0.0754, sgd: 0.1117, pol: 1.194 });
   const [updatedTimeText, setUpdatedTimeText] = useState('');
   const [transactions, setTransactions] = useState(() => JSON.parse(localStorage.getItem('sfl_transactions')) || []);
+  const [farmData, setFarmData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -88,34 +67,43 @@ export default function useMarketData() {
     setLoading(true);
     setError(false);
 
-    // Exchange API
-    const dataExchange = await fetchJsonSmart('https://sfl.world/api/v1.1/exchange');
-    if (dataExchange && dataExchange.sfl) {
-      const sfl = dataExchange.sfl;
-      setCurrencyRates({
-        usd: sfl.usd || 0.087,
-        brl: sfl.brl || 0.4419,
-        eur: sfl.eur || 0.0754,
-        sgd: sfl.sgd || 0.1117,
-        pol: sfl.pol || 1.194
-      });
+    try {
+      // Exchange API (sfl.world)
+      const dataExchange = await fetchWithFallback('https://sfl.world/api/v1.1/exchange');
+      if (dataExchange && dataExchange.sfl) {
+        const sfl = dataExchange.sfl;
+        setCurrencyRates({
+          usd: sfl.usd || 0.087,
+          brl: sfl.brl || 0.4419,
+          eur: sfl.eur || 0.0754,
+          sgd: sfl.sgd || 0.1117,
+          pol: sfl.pol || 1.194
+        });
+      }
+    } catch (err) {
+      console.warn('[MarketData] Erro ao buscar cotações do exchange:', err);
     }
 
-    // P2P Prices API
-    const dataPrices = await fetchJsonSmart('https://sfl.world/api/v1/prices');
-    if (dataPrices) {
-      const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
-      if (p2pData) {
-        setMarketData(prev => ({ ...prev, ...p2pData }));
-      }
+    try {
+      // P2P Prices API (sfl.world)
+      const dataPrices = await fetchWithFallback('https://sfl.world/api/v1/prices');
+      if (dataPrices) {
+        const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
+        if (p2pData) {
+          setMarketData(prev => ({ ...prev, ...p2pData }));
+        }
 
-      const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
-      if (updatedText) {
-        setUpdatedTimeText(currentLang === 'pt' ? `• Atualizado ${updatedText.replace('minutes ago', 'min atrás')}` : `• Updated ${updatedText}`);
+        const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
+        if (updatedText) {
+          setUpdatedTimeText(currentLang === 'pt' ? `• Atualizado ${updatedText.replace('minutes ago', 'min atrás')}` : `• Updated ${updatedText}`);
+        } else {
+          setUpdatedTimeText(t('updatedNow', currentLang));
+        }
       } else {
-        setUpdatedTimeText(t('updatedNow', currentLang));
+        setError(true);
       }
-    } else {
+    } catch (err) {
+      console.warn('[MarketData] Erro ao buscar preços P2P:', err);
       setError(true);
     }
 
@@ -126,7 +114,54 @@ export default function useMarketData() {
     refreshData();
   }, [refreshData]);
 
-  // 3. Cálculo de Posições do Portfólio (Estoque, Custo Médio e PnL)
+  // 3. Busca de Fazenda via Orquestrador Dual (Público vs Oficial Autenticado)
+  const searchFarm = useCallback(async (query, apiKeyOverride = null, forceRefresh = false) => {
+    if (!query) return;
+    let landId = query;
+    const apiKeyToUse = apiKeyOverride ?? localStorage.getItem('sfl_api_key') ?? '';
+
+    // Se a busca for por Nickname, converte para Farm ID
+    if (/[a-zA-Z]/.test(query)) {
+      const resolvedId = await resolveFarmIdFromUsername(query);
+      if (resolvedId) {
+        landId = resolvedId;
+      } else {
+        console.warn(`[FarmSearch] Não foi possível encontrar Farm ID para o nick '${query}'`);
+        return;
+      }
+    }
+
+    try {
+      const normalizedData = await fetchFarmDataSmart({
+        farmId: landId,
+        apiKey: apiKeyToUse,
+        forceRefresh
+      });
+
+      if (normalizedData && normalizedData.land) {
+        const land = normalizedData.land;
+        if (land.type) setSelectedIsland(String(land.type).toLowerCase());
+        if (land.vip !== undefined) setIsVip(Boolean(land.vip));
+        if (land.shrine !== undefined) setIsShrine(Boolean(land.shrine));
+        setFarmData(normalizedData);
+      } else {
+        setFarmData(null);
+      }
+    } catch (err) {
+      console.error('[FarmSearch] Erro ao carregar dados da fazenda:', err);
+      setFarmData(null);
+    }
+  }, []);
+
+  // Carregar a fazenda automaticamente se já houver uma salva
+  useEffect(() => {
+    const savedFarm = localStorage.getItem('sfl_farm_id');
+    if (savedFarm) {
+      searchFarm(savedFarm);
+    }
+  }, [searchFarm]);
+
+  // 4. Cálculo de Posições do Portfólio (Estoque, Custo Médio e PnL)
   const portfolioData = (() => {
     const estoque = {};
     transactions.forEach(t => {
@@ -168,29 +203,9 @@ export default function useMarketData() {
       });
   })();
 
-  // 4. Registrar Transação (Compra / Venda)
+  // 5. Registrar Transação (Compra / Venda)
   const handleTransaction = (nuevaTransacao) => {
     setTransactions(prev => [...prev, { ...nuevaTransacao, id: Date.now(), timestamp: new Date().toISOString() }]);
-  };
-
-  // 5. Busca de Fazenda por Username ou Farm ID
-  const searchFarm = async (query) => {
-    if (!query) return;
-    let landId = query;
-
-    if (/[a-zA-Z]/.test(query)) {
-      const data = await fetchJsonSmart('https://sfl.world/api/v1/land/info/username/' + encodeURIComponent(query));
-      if (data && data.nft_id) landId = data.nft_id;
-      else return;
-    }
-
-    const dataLand = await fetchJsonSmart(`https://sfl.world/api/v1.1/land/${landId}`);
-    if (dataLand && dataLand.land) {
-      const land = dataLand.land;
-      if (land.type) setSelectedIsland(land.type.toLowerCase());
-      if (land.vip !== undefined) setIsVip(land.vip);
-      if (land.shrine !== undefined) setIsShrine(land.shrine);
-    }
   };
 
   const flowerPrice = currencyRates[selectedCurrency] || currencyRates.usd;
@@ -210,6 +225,7 @@ export default function useMarketData() {
     setSelectedCurrency,
     marketData,
     portfolioData,
+    farmData,
     refreshData,
     handleTransaction,
     searchFarm,
@@ -217,4 +233,4 @@ export default function useMarketData() {
     loading,
     error
   };
-}
+}

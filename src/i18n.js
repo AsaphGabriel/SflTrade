@@ -62,7 +62,32 @@ export const translations = {
     infoDataProvider: "Data provided by sfl.world",
     profileTab: "Profile Settings",
     apiKeyPlaceholder: "Your API Key (sfl....)",
-    btnSave: "Save Profile"
+    btnSave: "Save Profile",
+
+    // Farm Dashboard
+    farmDataTitle: "Your Farm & Bumpkin",
+    landInfo: "Land Information",
+    bumpkinInfo: "Bumpkin Profile",
+    level: "Level",
+    coins: "Coins",
+    balance: "SFL Balance",
+    gem: "Gems",
+    marks: "Marks",
+    charm: "Charm",
+    cheer: "Cheer",
+    verified: "Verified",
+    vipStatus: "VIP Status",
+    taxFree: "Tax Free SFL",
+    taxResource: "Tax Resource",
+    legacySkills: "Legacy Skills",
+    totalReferrals: "Total Referrals",
+    vipReferrals: "VIP Referrals",
+    experience: "Experience",
+    activeSkills: "Active Skills",
+    dataSourceOfficial: "Official API",
+    dataSourcePublic: "Public Aggregator",
+    dataSourceCache: "Local Cache",
+    officialInventory: "Official Farm Inventory"
   },
 
   pt: {
@@ -128,7 +153,32 @@ export const translations = {
     infoDataProvider: "Dados fornecidos por sfl.world",
     profileTab: "Configurações de Perfil",
     apiKeyPlaceholder: "Sua chave API (sfl....)",
-    btnSave: "Salvar Perfil"
+    btnSave: "Salvar Perfil",
+
+    // Farm Dashboard
+    farmDataTitle: "Sua Fazenda e Bumpkin",
+    landInfo: "Informações da Ilha",
+    bumpkinInfo: "Perfil do Bumpkin",
+    level: "Nível",
+    coins: "Moedas",
+    balance: "Saldo SFL",
+    gem: "Gemas",
+    marks: "Marcas",
+    charm: "Charme",
+    cheer: "Alegria (Cheer)",
+    verified: "Verificado",
+    vipStatus: "Status VIP",
+    taxFree: "SFL Isento de Taxa",
+    taxResource: "Taxa de Recurso",
+    legacySkills: "Skills Legadas",
+    totalReferrals: "Indicações Totais",
+    vipReferrals: "Indicações VIP",
+    experience: "Experiência",
+    activeSkills: "Skills Ativas",
+    dataSourceOfficial: "API Oficial",
+    dataSourcePublic: "Agregador Público",
+    dataSourceCache: "Cache Local",
+    officialInventory: "Inventário Oficial da Fazenda"
   }
 };
 

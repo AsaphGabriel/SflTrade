@@ -5,6 +5,7 @@ import PortfolioTable from './components/PortfolioTable';
 import ResourceGrid from './components/ResourceGrid';
 import TransactionModal from './components/TransactionModal';
 import BottomNav from './components/BottomNav';
+import FarmDashboard from './components/FarmDashboard';
 import { t } from './i18n';
 
 const App = () => {
@@ -34,6 +35,7 @@ const App = () => {
     setSelectedCurrency,
     marketData,
     portfolioData,
+    farmData,
     refreshData,
     handleTransaction,
     searchFarm,
@@ -65,7 +67,7 @@ const App = () => {
     setProfileMsg({ text: '✅ Salvo com sucesso!', type: 'success' });
     setTimeout(() => setProfileMsg({ text: '', type: '' }), 3000);
     
-    if (farmId) searchFarm(farmId);
+    if (farmId) searchFarm(farmId, keyStr, true);
   };
 
   const openBuy = (recurso = '') => {
@@ -95,7 +97,7 @@ const App = () => {
         </div>
       )}
 
-      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <div className="p-2 md:p-4 lg:p-6 max-w-7xl mx-auto">
         <Header
           flowerPrice={flowerPrice}
           effectiveTax={effectiveTax}
@@ -135,7 +137,7 @@ const App = () => {
           )}
 
           {activeTab === 'info' && (
-            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 max-w-xl mx-auto space-y-3 shadow-lg">
+            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 w-full shadow-lg">
               <h2 className="text-xl font-bold text-amber-400 border-b border-slate-700 pb-2">
                 {t('infoTitle', currentLang)}
               </h2>
@@ -146,7 +148,7 @@ const App = () => {
           )}
 
           {(activeTab === 'perfil' || activeTab === 'profile') && (
-            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 max-w-xl mx-auto space-y-4 shadow-lg">
+            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 w-full space-y-4 shadow-lg">
               <h2 className="text-xl font-bold text-amber-400 border-b border-slate-700 pb-2">
                 {t('profileTab', currentLang)}
               </h2>
@@ -186,6 +188,8 @@ const App = () => {
                   {profileMsg.text}
                 </p>
               )}
+
+              <FarmDashboard farmData={farmData} currentLang={currentLang} />
             </div>
           )}
         </main>

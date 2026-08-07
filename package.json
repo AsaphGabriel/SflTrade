@@ -1,6 +1,6 @@
 {
   "name": "sfltrade",
-  "version": "1.0.0",
+  "version": "1.2.5",
   "main": "index.html",
   "type": "module",
   "scripts": {
