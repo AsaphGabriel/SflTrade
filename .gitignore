@@ -1,0 +1,28 @@
+.aider*
+
+# Dependencias
+node_modules/
+.pnpm-store/
+
+# Build e Distribuicao
+dist/
+dist-ssr/
+*.local
+
+# Cache do Vite
+.vite/
+
+# Variaveis de Ambiente e Segredos
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor
+.DS_Store
+.vscode/
