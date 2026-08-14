@@ -35,6 +35,7 @@ const App = () => {
     setSelectedCurrency,
     marketData,
     portfolioData,
+    transactions,
     farmData,
     refreshData,
     handleTransaction,
@@ -123,7 +124,8 @@ const App = () => {
           {activeTab === 'home' && (
             <div className="space-y-6">
               <PortfolioTable 
-                data={portfolioData} 
+                data={portfolioData}
+                transactions={transactions}
                 currentLang={currentLang} 
                 selectedCurrency={selectedCurrency}
                 onOpenSell={openSell} 

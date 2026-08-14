@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { t } from '../i18n';
+import PositionDetailsModal from './PositionDetailsModal';
 
 const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
 
@@ -41,7 +42,9 @@ function formatarMoeda(valor, currency = 'usd') {
   return `${sinal}${sym}${formattedStr} ${currCode}`;
 }
 
-const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd', onOpenSell }) => {
+const PortfolioTable = ({ data = [], transactions = [], currentLang = 'en', selectedCurrency = 'usd', onOpenSell }) => {
+  const [selectedPosition, setSelectedPosition] = useState(null);
+
   // Estado quando não há recursos em estoque
   if (!data || data.length === 0) {
     return (
@@ -70,7 +73,12 @@ const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd
           const iconUrl = getItemIcon(item.nome);
 
           return (
-            <div key={item.nome} className="bg-cardbg rounded-xl p-3.5 border border-slate-800 shadow-md flex flex-col gap-2.5">
+            <div 
+              key={item.nome} 
+              onClick={() => setSelectedPosition(item)}
+              className="bg-cardbg hover:bg-slate-800/40 rounded-xl p-3.5 border border-slate-800 hover:border-amber-400/60 shadow-md flex flex-col gap-2.5 cursor-pointer transition"
+              title={currentLang === 'pt' ? 'Clique para ver detalhes e histórico DCA' : 'Click to view position details and DCA history'}
+            >
               <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <img
@@ -85,7 +93,10 @@ const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd
                   </div>
                 </div>
                 <button
-                  onClick={() => onOpenSell && onOpenSell(item.nome)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onOpenSell) onOpenSell(item.nome);
+                  }}
                   className="bg-rose-950/80 hover:bg-rose-600/30 text-rose-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-800/60 transition"
                 >
                   🔴 {t('cardSell', currentLang)}
@@ -96,10 +107,16 @@ const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thTotalCost', currentLang)}</span>
                   <span className="font-mono text-slate-200">{formatarPreco(item.custoTotal)} SFL</span>
+                  {item.custoTotalUsd > 0 && (
+                    <span className="font-mono text-[10px] text-amber-300 block">${item.custoTotalUsd.toFixed(2)}</span>
+                  )}
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thAvgPrice', currentLang)}</span>
                   <span className="font-mono text-slate-300">{formatarPreco(item.precoMedio)} SFL</span>
+                  {item.precoMedioUsd > 0 && (
+                    <span className="font-mono text-[10px] text-slate-400 block">${formatarPreco(item.precoMedioUsd)}/un</span>
+                  )}
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thNetValue', currentLang)}</span>
@@ -150,7 +167,12 @@ const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd
               const iconUrl = getItemIcon(item.nome);
 
               return (
-                <tr key={item.nome} className="border-b border-slate-800 hover:bg-slate-800/30 transition">
+                <tr 
+                  key={item.nome} 
+                  onClick={() => setSelectedPosition(item)}
+                  className="border-b border-slate-800 hover:bg-slate-800/50 transition cursor-pointer"
+                  title={currentLang === 'pt' ? 'Clique para ver detalhes da posição e histórico DCA' : 'Click to view position details and DCA history'}
+                >
                   <td className="p-3 font-bold text-slate-200 flex items-center gap-2">
                     <img
                       src={iconUrl}
@@ -161,8 +183,18 @@ const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd
                     {item.nome}
                   </td>
                   <td className="p-3 font-mono">{formatarPreco(item.qty)}</td>
-                  <td className="p-3 font-semibold font-mono">{formatarPreco(item.custoTotal)} SFL</td>
-                  <td className="p-3 text-slate-400 font-mono">{formatarPreco(item.precoMedio)} SFL</td>
+                  <td className="p-3 font-semibold font-mono">
+                    {formatarPreco(item.custoTotal)} SFL
+                    {item.custoTotalUsd > 0 && (
+                      <div className="text-[10px] text-amber-300 font-normal">${item.custoTotalUsd.toFixed(2)}</div>
+                    )}
+                  </td>
+                  <td className="p-3 text-slate-400 font-mono">
+                    {formatarPreco(item.precoMedio)} SFL
+                    {item.precoMedioUsd > 0 && (
+                      <div className="text-[10px] text-slate-400 font-normal">${formatarPreco(item.precoMedioUsd)}/un</div>
+                    )}
+                  </td>
                   <td className="p-3 text-amber-400 font-semibold font-mono">
                     {item.precoP2P > 0 ? formatarPreco(item.precoP2P) + ' SFL' : 'N/A'}
                   </td>
@@ -184,7 +216,10 @@ const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd
                   </td>
                   <td className="p-3 text-center">
                     <button
-                      onClick={() => onOpenSell && onOpenSell(item.nome)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenSell) onOpenSell(item.nome);
+                      }}
                       className="bg-rose-950/60 hover:bg-rose-600/30 text-rose-400 text-xs px-2.5 py-1 rounded-lg border border-rose-800/50 transition"
                     >
                       🔴 {t('cardSell', currentLang)}
@@ -196,6 +231,17 @@ const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd
           </tbody>
         </table>
       </div>
+
+      {/* Modal de Detalhes da Posição */}
+      {selectedPosition && (
+        <PositionDetailsModal
+          position={selectedPosition}
+          allTransactions={transactions}
+          currentLang={currentLang}
+          selectedCurrency={selectedCurrency}
+          onClose={() => setSelectedPosition(null)}
+        />
+      )}
     </section>
   );
 };

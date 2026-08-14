@@ -3,8 +3,9 @@ import { supabase } from './supabase';
 const TOKEN_CACHE_KEY = 'sfl_token_history_cache';
 const RESOURCE_CACHE_KEY_PREFIX = 'sfl_res_history_cache_';
 const DAILY_HISTORY_KEY = 'sfl_daily_history';
+const HOURLY_HISTORY_KEY = 'sfl_hourly_history';
 const CACHE_VERSION_KEY = 'sfl_history_cache_ver';
-const CURRENT_CACHE_VERSION = 'v1.3.0_real_only';
+const CURRENT_CACHE_VERSION = 'v1.4.0_hourly_real';
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de TTL para cache de requisições ao Supabase
 
@@ -16,9 +17,8 @@ export function purgeLegacyMockCache() {
   try {
     const savedVer = localStorage.getItem(CACHE_VERSION_KEY);
     if (savedVer !== CURRENT_CACHE_VERSION) {
-      console.log('[HistoryService] Purgando cache legado de dados simulados/senoidais...');
+      console.log('[HistoryService] Atualizando estrutura de cache para granularidade horária real...');
       
-      // Remove chaves legadas específicas
       localStorage.removeItem(TOKEN_CACHE_KEY);
       
       const keysToRemove = [];
@@ -30,7 +30,6 @@ export function purgeLegacyMockCache() {
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
       
-      // Atualiza versão do cache
       localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
     }
   } catch (e) {
@@ -91,23 +90,20 @@ export function calculateMovingAverage(data = [], windowSize = 7, valueKey = 'pr
 }
 
 /**
- * 2. PERSISTÊNCIA REAL LOCAL ('sfl_daily_history')
- * Grava snapshot diário real dos preços de mercado no localStorage sem duplicatas no mesmo dia.
+ * 2. PERSISTÊNCIA REAL LOCAL COM GRANULARIDADE HORÁRIA ('sfl_hourly_history')
+ * Grava snapshot horário real (chave 'YYYY-MM-DD HH:00') incluindo preço dos recursos e cotação da $FLOWER em USD.
  */
 export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
   try {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    
-    const raw = localStorage.getItem(DAILY_HISTORY_KEY);
-    let history = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(history)) history = [];
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const date = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
 
-    // Limpa entradas com mais de 90 dias
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 90);
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
-    history = history.filter(h => h.day >= cutoffStr);
+    const hourKey = `${year}-${month}-${date} ${hours}:00`;
+    const todayStr = `${year}-${month}-${date}`;
+    const currentTokenUsd = Number(tokenPriceUsd || 0.05);
 
     // Formata recursos reais sem valores padrão arbitrários
     const cleanResources = {};
@@ -119,23 +115,31 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
       });
     }
 
-    const existingIndex = history.findIndex(h => h.day === todayStr);
-    const currentTokenUsd = Number(tokenPriceUsd || 0.05);
+    // 1. Grava em sfl_hourly_history (granularidade horária)
+    const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY);
+    let hourlyHistory = rawHourly ? JSON.parse(rawHourly) : [];
+    if (!Array.isArray(hourlyHistory)) hourlyHistory = [];
 
-    if (existingIndex >= 0) {
-      // Atualiza o registro do dia atual com os últimos preços reais
-      history[existingIndex] = {
-        ...history[existingIndex],
+    // Expura registros com mais de 90 dias
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 90);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    hourlyHistory = hourlyHistory.filter(h => (h.day || h.hourKey) >= cutoffStr);
+
+    const existingHourlyIndex = hourlyHistory.findIndex(h => h.hourKey === hourKey);
+    if (existingHourlyIndex >= 0) {
+      hourlyHistory[existingHourlyIndex] = {
+        ...hourlyHistory[existingHourlyIndex],
         timestamp: now.toISOString(),
         token_price_usd: currentTokenUsd,
         resources: {
-          ...history[existingIndex].resources,
+          ...hourlyHistory[existingHourlyIndex].resources,
           ...cleanResources
         }
       };
     } else {
-      // Adiciona novo snapshot diário
-      history.push({
+      hourlyHistory.push({
+        hourKey,
         day: todayStr,
         timestamp: now.toISOString(),
         token_price_usd: currentTokenUsd,
@@ -143,11 +147,39 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
       });
     }
 
-    // Ordena por data ascendente
-    history.sort((a, b) => a.day.localeCompare(b.day));
-    localStorage.setItem(DAILY_HISTORY_KEY, JSON.stringify(history));
+    hourlyHistory.sort((a, b) => (a.hourKey || a.day).localeCompare(b.hourKey || b.day));
+    localStorage.setItem(HOURLY_HISTORY_KEY, JSON.stringify(hourlyHistory));
+
+    // 2. Grava em sfl_daily_history para retrocompatibilidade
+    const rawDaily = localStorage.getItem(DAILY_HISTORY_KEY);
+    let dailyHistory = rawDaily ? JSON.parse(rawDaily) : [];
+    if (!Array.isArray(dailyHistory)) dailyHistory = [];
+    dailyHistory = dailyHistory.filter(h => h.day >= cutoffStr);
+
+    const existingDailyIndex = dailyHistory.findIndex(h => h.day === todayStr);
+    if (existingDailyIndex >= 0) {
+      dailyHistory[existingDailyIndex] = {
+        ...dailyHistory[existingDailyIndex],
+        timestamp: now.toISOString(),
+        token_price_usd: currentTokenUsd,
+        resources: {
+          ...dailyHistory[existingDailyIndex].resources,
+          ...cleanResources
+        }
+      };
+    } else {
+      dailyHistory.push({
+        day: todayStr,
+        timestamp: now.toISOString(),
+        token_price_usd: currentTokenUsd,
+        resources: cleanResources
+      });
+    }
+    dailyHistory.sort((a, b) => a.day.localeCompare(b.day));
+    localStorage.setItem(DAILY_HISTORY_KEY, JSON.stringify(dailyHistory));
+
   } catch (e) {
-    console.warn('[HistoryService] Erro ao gravar snapshot diário em sfl_daily_history:', e);
+    console.warn('[HistoryService] Erro ao gravar snapshot horário:', e);
   }
 }
 
@@ -210,20 +242,20 @@ export async function fetchTokenHistory(days = 90, currentPrice = 0.05) {
     console.warn('[HistoryService] Falha ao consultar Supabase token_price_history:', err.message);
   }
 
-  // 2. Tentar histórico acumulado local real ('sfl_daily_history')
+  // 2. Tentar histórico acumulado local real ('sfl_hourly_history' / 'sfl_daily_history')
   try {
-    const rawDaily = localStorage.getItem(DAILY_HISTORY_KEY);
-    if (rawDaily) {
-      const dailyHistory = JSON.parse(rawDaily);
-      if (Array.isArray(dailyHistory) && dailyHistory.length > 0) {
-        const filtered = dailyHistory.filter(h => h.day >= dateCutoffStr && h.token_price_usd > 0);
+    const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
+    if (rawHourly) {
+      const historyList = JSON.parse(rawHourly);
+      if (Array.isArray(historyList) && historyList.length > 0) {
+        const filtered = historyList.filter(h => (h.day || h.hourKey) >= dateCutoffStr && h.token_price_usd > 0);
         if (filtered.length > 0) {
           const points = filtered.map(h => ({
-            id: h.day,
+            id: h.hourKey || h.day,
             timestamp: h.timestamp,
-            day: h.day,
+            day: h.hourKey || h.day,
             price_usd: Number(h.token_price_usd),
-            source: 'local_daily_history',
+            source: 'local_hourly_history',
             isInitialData: filtered.length <= 1
           }));
           return points;
@@ -231,7 +263,7 @@ export async function fetchTokenHistory(days = 90, currentPrice = 0.05) {
       }
     }
   } catch (e) {
-    console.warn('[HistoryService] Erro ao ler sfl_daily_history para token:', e);
+    console.warn('[HistoryService] Erro ao ler sfl_hourly_history para token:', e);
   }
 
   // 3. Ponto único do preço real do dia atual
@@ -284,20 +316,20 @@ export async function fetchResourceHistory(resourceId, days = 90, currentPriceSf
     console.warn(`[HistoryService] Erro na Tabela resource_price_history para ${resourceId}:`, err.message);
   }
 
-  // 3. Tentar histórico acumulado local real ('sfl_daily_history')
+  // 3. Tentar histórico acumulado local real ('sfl_hourly_history' / 'sfl_daily_history')
   try {
-    const rawDaily = localStorage.getItem(DAILY_HISTORY_KEY);
-    if (rawDaily) {
-      const dailyHistory = JSON.parse(rawDaily);
-      if (Array.isArray(dailyHistory) && dailyHistory.length > 0) {
-        const filtered = dailyHistory.filter(h => h.day >= dateStr && h.resources && h.resources[resourceId] !== undefined);
+    const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
+    if (rawHourly) {
+      const historyList = JSON.parse(rawHourly);
+      if (Array.isArray(historyList) && historyList.length > 0) {
+        const filtered = historyList.filter(h => (h.day || h.hourKey) >= dateStr && h.resources && h.resources[resourceId] !== undefined);
         if (filtered.length > 0) {
           const rawPoints = filtered.map(h => {
             const pSfl = Number(h.resources[resourceId]);
             const pUsd = pSfl * (h.token_price_usd || 0.05);
             return {
               resource_id: resourceId,
-              day: h.day,
+              day: h.hourKey || h.day,
               timestamp: h.timestamp,
               avg_price_sfl: pSfl,
               price_sfl: pSfl,
@@ -322,7 +354,7 @@ export async function fetchResourceHistory(resourceId, days = 90, currentPriceSf
       }
     }
   } catch (e) {
-    console.warn(`[HistoryService] Erro ao ler sfl_daily_history para recurso ${resourceId}:`, e);
+    console.warn(`[HistoryService] Erro ao ler sfl_hourly_history para recurso ${resourceId}:`, e);
   }
 
   // 4. Ponto único do preço real do dia atual

@@ -241,13 +241,17 @@ export default function useMarketData() {
 
   // 5. Registrar Transação (Compra / Venda)
   const handleTransaction = (nuevaTransacao) => {
-    // Ao registrar compra, salva no LocalStorage a cotação do $FLOWER em USD no momento da entrada
+    // Ao registrar compra, salva no LocalStorage a cotação do $FLOWER em USD no momento da entrada e valor total USD
     const cotacaoEntrada = nuevaTransacao.cotacao_entrada_usd ?? currencyRates.usd ?? 0.087;
+    const totalPriceUsd = (nuevaTransacao.totalPrice || (nuevaTransacao.qty * nuevaTransacao.unitPrice)) * cotacaoEntrada;
+
     setTransactions(prev => [
       ...prev,
       {
         ...nuevaTransacao,
         cotacao_entrada_usd: cotacaoEntrada,
+        token_price_usd_at_purchase: cotacaoEntrada,
+        total_price_usd: totalPriceUsd,
         id: Date.now(),
         timestamp: new Date().toISOString()
       }
@@ -271,6 +275,7 @@ export default function useMarketData() {
     setSelectedCurrency,
     marketData,
     portfolioData,
+    transactions,
     farmData,
     refreshData,
     handleTransaction,
