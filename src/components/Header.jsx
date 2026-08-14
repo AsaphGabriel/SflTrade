@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { t } from '../i18n';
+import PriceChartModal from './PriceChartModal';
 
 const Header = ({
   flowerPrice,
@@ -23,6 +24,7 @@ const Header = ({
 }) => {
   const [farmSearch, setFarmSearch] = useState('');
   const [convQty, setConvQty] = useState('');
+  const [showTokenChart, setShowTokenChart] = useState(false);
 
   // Dispara a busca quando o usuário aperta Enter ou clica na lupa
   const handleSearchSubmit = (e) => {
@@ -150,8 +152,17 @@ const Header = ({
       <div className="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div className="flex-1">
-            <div className="text-xs text-slate-400 uppercase font-semibold tracking-wider">{t('sflQuoteTitle', currentLang)}</div>
-            <div className="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1">
+            <div className="text-xs text-slate-400 uppercase font-semibold tracking-wider flex items-center gap-1.5">
+              <span>{t('sflQuoteTitle', currentLang)}</span>
+              <button
+                onClick={() => setShowTokenChart(true)}
+                title={currentLang === 'pt' ? 'Ver gráfico de histórico do $FLOWER' : 'View $FLOWER price chart'}
+                className="text-amber-400 hover:text-amber-300 text-xs transition bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700"
+              >
+                📊
+              </button>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1 cursor-pointer" onClick={() => setShowTokenChart(true)}>
               {sym} {flowerPrice.toFixed(4)} {selectedCurrency.toUpperCase()}
             </div>
           </div>
@@ -193,6 +204,16 @@ const Header = ({
           <span className="text-xs font-mono text-amber-400">{sym} {converterResultado}</span>
         </div>
       </div>
+
+      {/* Modal de Gráfico do Token $FLOWER */}
+      {showTokenChart && (
+        <PriceChartModal
+          isToken={true}
+          flowerPriceUsd={flowerPrice}
+          currentLang={currentLang}
+          onClose={() => setShowTokenChart(false)}
+        />
+      )}
     </>
   );
 };

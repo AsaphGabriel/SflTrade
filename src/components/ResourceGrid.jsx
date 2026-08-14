@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { t } from '../i18n';
+import PriceChartModal from './PriceChartModal';
 
 // Definição das Categorias e Itens
 const CATEGORIAS_MERCADO = [
@@ -87,6 +88,7 @@ function obterCategoriaItem(nomeItem) {
 const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) => {
   const [currentCategoryFilter, setCurrentCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedChartResource, setSelectedChartResource] = useState(null);
 
   // Agrupamento de itens por categoria
   const grupos = {};
@@ -213,6 +215,13 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
                           {t('cardBuy', currentLang)}
                         </button>
                         <button
+                          onClick={() => setSelectedChartResource(item)}
+                          title={currentLang === 'pt' ? 'Ver gráfico de histórico e médias móveis' : 'View history and moving average chart'}
+                          className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold px-2 py-1 rounded-lg text-xs border border-slate-700 transition"
+                        >
+                          📊
+                        </button>
+                        <button
                           onClick={() => onOpenSell && onOpenSell(item)}
                           className="btn-sell-card"
                         >
@@ -227,6 +236,15 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
           );
         })}
       </div>
+
+      {/* Modal de Gráficos e Séries Temporais */}
+      {selectedChartResource && (
+        <PriceChartModal
+          resourceId={selectedChartResource}
+          currentLang={currentLang}
+          onClose={() => setSelectedChartResource(null)}
+        />
+      )}
     </section>
   );
 };
