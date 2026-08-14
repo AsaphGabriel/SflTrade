@@ -169,6 +169,34 @@ export default function useMarketData() {
     }
   }, [searchFarm]);
 
+  const [customAvgPrices, setCustomAvgPrices] = useState(() => {
+    try {
+      const raw = localStorage.getItem('sfl_custom_avg_prices');
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const updateCustomAvgPrice = (resourceName, avgSfl, avgUsd) => {
+    setCustomAvgPrices(prev => {
+      const updated = { ...prev };
+      if (!resourceName) return updated;
+      const key = resourceName.toLowerCase();
+
+      if (avgSfl === null && avgUsd === null) {
+        delete updated[key];
+      } else {
+        updated[key] = {
+          avgSfl: (avgSfl !== undefined && avgSfl !== null && !isNaN(avgSfl)) ? Number(avgSfl) : (updated[key]?.avgSfl ?? null),
+          avgUsd: (avgUsd !== undefined && avgUsd !== null && !isNaN(avgUsd)) ? Number(avgUsd) : (updated[key]?.avgUsd ?? null)
+        };
+      }
+      localStorage.setItem('sfl_custom_avg_prices', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   // 4. Cálculo de Posições do Portfólio (Estoque, Custo Médio e PnL Token vs Moeda Real)
   const portfolioData = (() => {
     const estoque = {};
@@ -205,19 +233,37 @@ export default function useMarketData() {
       .filter(key => estoque[key].qty > 0.0001)
       .map(key => {
         const item = estoque[key];
-        const precoMedio = item.custoTotal / item.qty; // em SFL
-        const precoMedioUsd = item.custoTotalUsd / item.qty; // em USD no momento da entrada
-        
+        let precoMedio = item.qty > 0 ? (item.custoTotal / item.qty) : 0; // em SFL
+        let precoMedioUsd = item.qty > 0 ? (item.custoTotalUsd / item.qty) : 0; // em USD
+
+        // Aplica ajuste manual de Preço Médio (se configurado pelo usuário)
+        const customOverride = customAvgPrices[key] || customAvgPrices[item.nome.toLowerCase()];
+        if (customOverride) {
+          if (customOverride.avgSfl !== null && !isNaN(customOverride.avgSfl)) {
+            precoMedio = Number(customOverride.avgSfl);
+          }
+          if (customOverride.avgUsd !== null && !isNaN(customOverride.avgUsd)) {
+            precoMedioUsd = Number(customOverride.avgUsd);
+          }
+        }
+
+        const custoTotal = item.qty * precoMedio;
+        const custoTotalUsd = item.qty * precoMedioUsd;
+
         const precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === key)] || 0;
         const precoVendaLiquidoUnitario = precoP2P * (1 - effectiveTax);
         const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario; // em SFL
         
         // Lucro em Tokens ($FLOWER)
-        const lucroAbsoluto = valorVendaLiquidoTotal - item.custoTotal;
-        const lucroPercentual = item.custoTotal > 0 ? (lucroAbsoluto / item.custoTotal) * 100 : 0;
+        const lucroAbsoluto = valorVendaLiquidoTotal - custoTotal;
+        const lucroPercentual = custoTotal > 0 ? (lucroAbsoluto / custoTotal) * 100 : 0;
 
-        // Lucro Real em Moeda Selecionada (USD / BRL / etc.)
-        const custoTotalMoeda = item.custoTotalUsd * currencyRatio;
+        // Lucro Real em USD e Moeda Selecionada (USD / BRL / etc.)
+        const valorVendaLiquidoTotalUsd = valorVendaLiquidoTotal * usdRate;
+        const lucroAbsolutoUsd = valorVendaLiquidoTotalUsd - custoTotalUsd;
+        const lucroPercentualUsd = custoTotalUsd > 0 ? (lucroAbsolutoUsd / custoTotalUsd) * 100 : 0;
+
+        const custoTotalMoeda = custoTotalUsd * currencyRatio;
         const valorVendaLiquidoTotalMoeda = valorVendaLiquidoTotal * selectedRate;
         const lucroAbsolutoMoeda = valorVendaLiquidoTotalMoeda - custoTotalMoeda;
         const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
@@ -226,6 +272,11 @@ export default function useMarketData() {
           ...item,
           precoMedio,
           precoMedioUsd,
+          custoTotal,
+          custoTotalUsd,
+          valorVendaLiquidoTotalUsd,
+          lucroAbsolutoUsd,
+          lucroPercentualUsd,
           precoP2P,
           precoVendaLiquidoUnitario,
           valorVendaLiquidoTotal,
@@ -279,6 +330,7 @@ export default function useMarketData() {
     farmData,
     refreshData,
     handleTransaction,
+    updateCustomAvgPrice,
     searchFarm,
     updatedTimeText,
     loading,

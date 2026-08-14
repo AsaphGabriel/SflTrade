@@ -42,8 +42,20 @@ function formatarMoeda(valor, currency = 'usd') {
   return `${sinal}${sym}${formattedStr} ${currCode}`;
 }
 
-const PortfolioTable = ({ data = [], transactions = [], currentLang = 'en', selectedCurrency = 'usd', onOpenSell }) => {
+const PortfolioTable = ({
+  data = [],
+  transactions = [],
+  currentLang = 'en',
+  selectedCurrency = 'usd',
+  onUpdateCustomAvgPrice,
+  onOpenSell
+}) => {
   const [selectedPosition, setSelectedPosition] = useState(null);
+
+  // Busca item atualizado dos dados
+  const activePositionItem = selectedPosition 
+    ? (data.find(p => p.nome.toLowerCase() === selectedPosition.nome.toLowerCase()) || selectedPosition)
+    : null;
 
   // Estado quando não há recursos em estoque
   if (!data || data.length === 0) {
@@ -233,12 +245,13 @@ const PortfolioTable = ({ data = [], transactions = [], currentLang = 'en', sele
       </div>
 
       {/* Modal de Detalhes da Posição */}
-      {selectedPosition && (
+      {activePositionItem && (
         <PositionDetailsModal
-          position={selectedPosition}
+          position={activePositionItem}
           allTransactions={transactions}
           currentLang={currentLang}
           selectedCurrency={selectedCurrency}
+          onUpdateCustomAvgPrice={onUpdateCustomAvgPrice}
           onClose={() => setSelectedPosition(null)}
         />
       )}

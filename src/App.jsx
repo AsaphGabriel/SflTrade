@@ -39,6 +39,7 @@ const App = () => {
     farmData,
     refreshData,
     handleTransaction,
+    updateCustomAvgPrice,
     searchFarm,
     updatedTimeText,
     loading,
@@ -128,6 +129,7 @@ const App = () => {
                 transactions={transactions}
                 currentLang={currentLang} 
                 selectedCurrency={selectedCurrency}
+                onUpdateCustomAvgPrice={updateCustomAvgPrice}
                 onOpenSell={openSell} 
               />
               <ResourceGrid 
