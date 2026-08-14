@@ -44,13 +44,23 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   // Filtra dados para a janela temporal selecionada (7, 30, 90 dias)
   const displayData = history.slice(-timeframe);
 
+  // Verifica se há apenas 1 registro inicial (acumulando dados a partir de hoje)
+  const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d.isInitialData);
+
   // Métricas calculadas da janela selecionada
   const prices = displayData.map(d => d.price_sfl || d.avg_price_sfl || d.price_usd || d.price || 0);
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
   const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
-  const latestSma7 = displayData.length > 0 ? (displayData[displayData.length - 1].sma_7d_sfl || displayData[displayData.length - 1].sma_7d) : 0;
-  const latestSma30 = displayData.length > 0 ? (displayData[displayData.length - 1].sma_30d_sfl || displayData[displayData.length - 1].sma_30d) : 0;
+
+  // Médias móveis (exibidas como null / '-' se estiver acumulando dados iniciais)
+  const latestSma7 = (!isAccumulatingHistory && displayData.length >= 7)
+    ? (displayData[displayData.length - 1].sma_7d_sfl || displayData[displayData.length - 1].sma_7d)
+    : null;
+
+  const latestSma30 = (!isAccumulatingHistory && displayData.length >= 30)
+    ? (displayData[displayData.length - 1].sma_30d_sfl || displayData[displayData.length - 1].sma_30d)
+    : null;
 
   // Cálculo de Coordenadas para Gráfico SVG Responsivo
   const svgWidth = 500;
@@ -60,8 +70,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const chartWidth = svgWidth - padding * 2;
   const chartHeight = svgHeight - padding * 2;
 
-  const yMin = minPrice * 0.95;
-  const yMax = maxPrice * 1.05 || 1;
+  const yMin = minPrice > 0 ? minPrice * 0.95 : 0;
+  const yMax = maxPrice > 0 ? maxPrice * 1.05 : 1;
   const yRange = yMax - yMin || 1;
 
   const getX = (index, total) => {
@@ -70,12 +80,13 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   };
 
   const getY = (val) => {
+    if (yRange === 0) return padding + chartHeight / 2;
     return svgHeight - padding - ((val - yMin) / yRange) * chartHeight;
   };
 
   // Gerar Paths para o SVG
   const generatePath = (valKey) => {
-    if (!displayData || displayData.length === 0) return '';
+    if (!displayData || displayData.length <= 1) return '';
     return displayData.map((d, i) => {
       const val = d[valKey] || d.price_sfl || d.avg_price_sfl || d.price_usd || 0;
       const x = getX(i, displayData.length);
@@ -85,8 +96,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   };
 
   const pricePath = generatePath('avg_price_sfl');
-  const sma7Path = generatePath('sma_7d_sfl');
-  const sma30Path = generatePath('sma_30d_sfl');
+  const sma7Path = !isAccumulatingHistory ? generatePath('sma_7d_sfl') : '';
+  const sma30Path = !isAccumulatingHistory ? generatePath('sma_30d_sfl') : '';
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
@@ -135,6 +146,18 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
           </div>
         </div>
 
+        {/* Mensagem Limpa quando estiver acumulando histórico inicial */}
+        {isAccumulatingHistory && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 text-center text-xs text-amber-300 flex items-center justify-center gap-1.5 font-medium">
+            <span>ℹ️</span>
+            <span>
+              {currentLang === 'pt' 
+                ? 'Coletando histórico diário. Dados acumulados a partir de hoje.' 
+                : 'Collecting daily history. Data accumulated starting today.'}
+            </span>
+          </div>
+        )}
+
         {/* Cards de Métricas (Preço Atual, SMA 7d, SMA 30d, Min/Max) */}
         <div className="grid grid-cols-4 gap-2 text-center text-xs">
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
@@ -149,21 +172,21 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-amber-300 block font-semibold">SMA 7d</span>
             <span className="font-mono font-bold text-amber-300">
-              {latestSma7 ? `${latestSma7.toFixed(3)} ${unitSymbol}` : '-'}
+              {latestSma7 !== null ? `${latestSma7.toFixed(3)} ${unitSymbol}` : '-'}
             </span>
           </div>
 
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-indigo-300 block font-semibold">SMA 30d</span>
             <span className="font-mono font-bold text-indigo-300">
-              {latestSma30 ? `${latestSma30.toFixed(3)} ${unitSymbol}` : '-'}
+              {latestSma30 !== null ? `${latestSma30.toFixed(3)} ${unitSymbol}` : '-'}
             </span>
           </div>
 
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-slate-400 block font-semibold">Mín / Máx</span>
             <span className="font-mono font-semibold text-slate-200 text-[11px] block">
-              {minPrice.toFixed(2)} - {maxPrice.toFixed(2)}
+              {minPrice ? `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}` : '-'}
             </span>
           </div>
         </div>
@@ -208,8 +231,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                       key={i}
                       cx={cx}
                       cy={cy}
-                      r="4"
-                      className="fill-emerald-400 hover:r-6 hover:fill-amber-400 transition-all cursor-pointer"
+                      r="5"
+                      className="fill-emerald-400 hover:r-7 hover:fill-amber-400 transition-all cursor-pointer"
                       onMouseEnter={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
                       onMouseLeave={() => setHoveredPoint(null)}
                     />

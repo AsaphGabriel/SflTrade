@@ -36,9 +36,6 @@ function setLocalCache(key, data) {
 
 /**
  * Utilitário para calcular média móvel (Simple Moving Average - SMA)
- * @param {Array} data - Array de pontos { day/timestamp, price }
- * @param {number} windowSize - Tamanho da janela (ex: 7 ou 30)
- * @param {string} valueKey - Chave numérica do valor (default: 'price_sfl' ou 'price')
  */
 export function calculateMovingAverage(data = [], windowSize = 7, valueKey = 'price_sfl') {
   if (!Array.isArray(data) || data.length === 0) return [];
@@ -57,68 +54,37 @@ export function calculateMovingAverage(data = [], windowSize = 7, valueKey = 'pr
 }
 
 /**
- * Gera histórico simulado determinístico (fallback) quando a base Supabase for recente ou estiver offline
+ * Retorna ponto inicial do dia atual com o preço real quando não há histórico acumulado no Supabase
  */
-function generateFallbackTokenHistory(days = 90, currentPrice = 0.05) {
-  const points = [];
+function createInitialTokenPoint(currentPrice = 0.05) {
   const now = new Date();
-  const basePrice = currentPrice || 0.05;
-  
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    // Variação orgânica realista em torno do preço base
-    const variance = (Math.sin(i * 0.4) * 0.12) + (Math.cos(i * 0.15) * 0.08);
-    const simulatedPrice = Math.max(0.001, basePrice * (1 + variance));
-    
-    points.push({
-      id: `sim_${i}`,
-      timestamp: date.toISOString(),
-      day: date.toISOString().split('T')[0],
-      price_usd: Number(simulatedPrice.toFixed(6)),
-      source: 'simulated_fallback'
-    });
-  }
-  
-  return points;
+  const todayStr = now.toISOString().split('T')[0];
+  return [{
+    id: `real_today`,
+    timestamp: now.toISOString(),
+    day: todayStr,
+    price_usd: Number(currentPrice || 0.05),
+    source: 'realtime',
+    isInitialData: true
+  }];
 }
 
-function generateFallbackResourceHistory(resourceId, days = 90, currentPriceSfl = 1.0) {
-  const points = [];
+function createInitialResourcePoint(resourceId, currentPriceSfl = 0) {
   const now = new Date();
-  const basePrice = currentPriceSfl || 1.0;
-  
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0];
-    
-    // Oscilação simulada para renderizar curvas no frontend
-    const variance = (Math.sin(i * 0.3 + resourceId.length) * 0.15) + (Math.cos(i * 0.7) * 0.05);
-    const avgSfl = Math.max(0.0001, basePrice * (1 + variance));
-    const minSfl = avgSfl * 0.93;
-    const maxSfl = avgSfl * 1.07;
-    
-    points.push({
-      resource_id: resourceId,
-      day: dateStr,
-      avg_price_sfl: Number(avgSfl.toFixed(6)),
-      min_price_sfl: Number(minSfl.toFixed(6)),
-      max_price_sfl: Number(maxSfl.toFixed(6)),
-      avg_price_usd: Number((avgSfl * 0.05).toFixed(6)),
-      records_count: 10
-    });
-  }
-  
-  // Inclui SMA 7d e SMA 30d
-  const withSma7 = calculateMovingAverage(points, 7, 'avg_price_sfl');
-  const withSma30 = calculateMovingAverage(withSma7, 30, 'avg_price_sfl');
-  
-  return withSma30.map(item => ({
-    ...item,
-    sma_7d_sfl: item.sma_7d,
-    sma_30d_sfl: item.sma_30d
-  }));
+  const todayStr = now.toISOString().split('T')[0];
+  const price = Number(currentPriceSfl || 0);
+  return [{
+    resource_id: resourceId,
+    day: todayStr,
+    timestamp: now.toISOString(),
+    avg_price_sfl: price,
+    price_sfl: price,
+    min_price_sfl: price,
+    max_price_sfl: price,
+    avg_price_usd: price * 0.05,
+    records_count: 1,
+    isInitialData: true
+  }];
 }
 
 /**
@@ -142,25 +108,25 @@ export async function fetchTokenHistory(days = 90, currentPrice = 0.05) {
       return data;
     }
   } catch (err) {
-    console.warn('[HistoryService] Falha ao consultar Supabase token_price_history, aplicando fallback:', err.message);
+    console.warn('[HistoryService] Falha ao consultar Supabase token_price_history:', err.message);
   }
 
-  // 2. Tentar Cache Local
+  // 2. Tentar Cache Local (se contiver dados reais de consultas anteriores)
   const cached = getLocalCache(TOKEN_CACHE_KEY);
-  if (cached && cached.data && cached.data.length > 0) {
+  if (cached && cached.data && cached.data.length > 0 && !cached.data.every(d => d.source === 'simulated_fallback')) {
     return cached.data;
   }
 
-  // 3. Fallback de contingência offline
-  const fallbackData = generateFallbackTokenHistory(days, currentPrice);
-  setLocalCache(TOKEN_CACHE_KEY, fallbackData);
-  return fallbackData;
+  // 3. Ponto único do preço real do dia atual
+  const initialData = createInitialTokenPoint(currentPrice);
+  setLocalCache(TOKEN_CACHE_KEY, initialData);
+  return initialData;
 }
 
 /**
  * Busca histórico de preços de um recurso (até 90 dias)
  */
-export async function fetchResourceHistory(resourceId, days = 90, currentPriceSfl = 1.0) {
+export async function fetchResourceHistory(resourceId, days = 90, currentPriceSfl = 0) {
   if (!resourceId) return [];
 
   const cacheKey = RESOURCE_CACHE_KEY_PREFIX + resourceId.toLowerCase();
@@ -195,7 +161,6 @@ export async function fetchResourceHistory(resourceId, days = 90, currentPriceSf
       .order('timestamp', { ascending: true });
 
     if (!error && Array.isArray(data) && data.length > 0) {
-      // Processa médias diárias e SMA no frontend
       const withSma = calculateMovingAverage(data, 7, 'price_sfl');
       setLocalCache(cacheKey, withSma);
       return withSma;
@@ -204,14 +169,14 @@ export async function fetchResourceHistory(resourceId, days = 90, currentPriceSf
     console.warn(`[HistoryService] Erro na Tabela resource_price_history para ${resourceId}:`, err.message);
   }
 
-  // 3. Tentar Cache Local
+  // 3. Tentar Cache Local (se contiver dados reais)
   const cached = getLocalCache(cacheKey);
-  if (cached && cached.data && cached.data.length > 0) {
+  if (cached && cached.data && cached.data.length > 0 && !cached.data.every(d => d.records_count === 10 && d.avg_price_usd === d.avg_price_sfl * 0.05)) {
     return cached.data;
   }
 
-  // 4. Fallback de contingência (gera curva suave para visualização do gráfico)
-  const fallbackData = generateFallbackResourceHistory(resourceId, days, currentPriceSfl);
-  setLocalCache(cacheKey, fallbackData);
-  return fallbackData;
+  // 4. Ponto único do preço real do dia atual
+  const initialData = createInitialResourcePoint(resourceId, currentPriceSfl);
+  setLocalCache(cacheKey, initialData);
+  return initialData;
 }

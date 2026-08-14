@@ -195,7 +195,12 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
                   const iconUrl = getItemIcon(item);
 
                   return (
-                    <div key={item} className="market-card item-card">
+                    <div 
+                      key={item} 
+                      className="market-card item-card cursor-pointer hover:border-amber-400"
+                      onClick={() => setSelectedChartResource(item)}
+                      title={currentLang === 'pt' ? 'Clique para ver gráfico de histórico e médias móveis' : 'Click to view history and moving average chart'}
+                    >
                       <div className="market-card-img-wrap">
                         <img
                           src={iconUrl}
@@ -209,20 +214,19 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
                       </div>
                       <div className="market-card-actions">
                         <button
-                          onClick={() => onOpenBuy && onOpenBuy(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenBuy) onOpenBuy(item);
+                          }}
                           className="btn-buy-card"
                         >
                           {t('cardBuy', currentLang)}
                         </button>
                         <button
-                          onClick={() => setSelectedChartResource(item)}
-                          title={currentLang === 'pt' ? 'Ver gráfico de histórico e médias móveis' : 'View history and moving average chart'}
-                          className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold px-2 py-1 rounded-lg text-xs border border-slate-700 transition"
-                        >
-                          📊
-                        </button>
-                        <button
-                          onClick={() => onOpenSell && onOpenSell(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenSell) onOpenSell(item);
+                          }}
                           className="btn-sell-card"
                         >
                           {t('cardSell', currentLang)}
