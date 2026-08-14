@@ -50,11 +50,11 @@ export const translations = {
     btnCancel: "Cancel",
     btnConfirm: "Confirm",
     alertSelectResource: "Please select a resource.",
-    cat_crops: "🌾 Crops",
-    cat_fruits: "🍎 Fruits",
-    cat_animals: "🐔 Animal Production",
-    cat_minerals: "⛏️ Minerals & Resources",
-    cat_misc: "📦 Misc & Badges",
+    cat_crops: "Crops",
+    cat_fruits: "Fruits",
+    cat_animals: "Animal Production",
+    cat_minerals: "Minerals & Resources",
+    cat_misc: "Misc & Badges",
     marketTabAll: "All",
     
     // NOVAS CHAVES (Perfil e Info)
@@ -141,11 +141,11 @@ export const translations = {
     btnCancel: "Cancelar",
     btnConfirm: "Confirmar",
     alertSelectResource: "Por favor, selecione um recurso.",
-    cat_crops: "🌾 Plantações",
-    cat_fruits: "🍎 Frutas",
-    cat_animals: "🐔 Produção Animal",
-    cat_minerals: "⛏️ Minérios e Recursos",
-    cat_misc: "📦 Diversos e Emblemas",
+    cat_crops: "Plantações",
+    cat_fruits: "Frutas",
+    cat_animals: "Produção Animal",
+    cat_minerals: "Minérios e Recursos",
+    cat_misc: "Diversos e Emblemas",
     marketTabAll: "Todos",
 
     // NOVAS CHAVES (Perfil e Info)

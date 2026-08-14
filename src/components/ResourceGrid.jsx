@@ -176,7 +176,15 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
           return (
             <div key={cat.id} className="category-block">
               <h3 className="market-category-title">
-                {t(cat.titleKey, currentLang)}
+                {getCategoryIcon(cat.id) && (
+                  <img
+                    src={getCategoryIcon(cat.id)}
+                    alt={cat.id}
+                    className="w-5 h-5 object-contain inline-block"
+                    onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                  />
+                )}
+                <span>{t(cat.titleKey, currentLang)}</span>
               </h3>
 
               <div className="category-grid">
