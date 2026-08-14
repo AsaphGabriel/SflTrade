@@ -74,19 +74,23 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
 
     // 2. Sincronizar Transações (subir transações locais que ainda não estão no Supabase)
     if (localTransactions && localTransactions.length > 0) {
-      // Buscar transações existentes para evitar duplicatas simples
       const { data: existingTx } = await supabase
         .from('user_transactions')
-        .select('created_at, resource_id, quantity')
+        .select('resource_id, type, quantity, price_sfl, created_at')
         .eq('user_id', userId);
 
+      // Chave robusta de identificação de transação
+      const makeKey = (res, type, qty, price) => {
+        return `${String(res).toLowerCase()}_${String(type).toUpperCase()}_${Number(qty).toFixed(4)}_${Number(price).toFixed(6)}`;
+      };
+
       const existingSet = new Set(
-        (existingTx || []).map(t => `${t.created_at}_${t.resource_id}_${t.quantity}`)
+        (existingTx || []).map(t => makeKey(t.resource_id, t.type, t.quantity, t.price_sfl))
       );
 
       const newTxsToInsert = localTransactions
         .filter(t => {
-          const key = `${t.timestamp || t.created_at}_${t.recurso || t.resource_id}_${t.qty || t.quantity}`;
+          const key = makeKey(t.recurso || t.resource_id, t.tipo || t.type, t.qty || t.quantity, t.unitPrice || t.price_sfl);
           return !existingSet.has(key);
         })
         .map(t => ({
@@ -95,9 +99,9 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
           type: (t.tipo || t.type || 'BUY').toUpperCase(),
           quantity: Number(t.qty || t.quantity || 0),
           price_sfl: Number(t.unitPrice || t.price_sfl || 0),
-          token_price_usd_at_purchase: Number(t.cotacao_entrada_usd || t.token_price_usd_at_purchase || 0),
+          token_price_usd_at_purchase: Number(t.cotacao_entrada_usd || t.token_price_usd_at_purchase || 0.087),
           total_sfl: Number(t.totalPrice || t.total_sfl || 0),
-          total_usd: Number(t.total_price_usd || t.total_usd || (t.totalPrice * (t.cotacao_entrada_usd || 0.087))),
+          total_usd: Number(t.total_price_usd || t.total_usd || ((t.totalPrice || 0) * (t.cotacao_entrada_usd || 0.087))),
           created_at: t.timestamp || t.created_at || new Date().toISOString()
         }));
 
@@ -108,6 +112,8 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
         
         if (insertTxErr) {
           console.warn('[SyncService] Erro ao enviar transações locais:', insertTxErr);
+        } else {
+          console.log(`[SyncService] ${newTxsToInsert.length} transações locais enviadas para a nuvem!`);
         }
       }
     }
@@ -132,7 +138,7 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
       }
     }
 
-    console.log('[SyncService] Sincronização Local -> Supabase concluída com sucesso!');
+    console.log('[SyncService] Sincronização Local -> Supabase finalizada!');
   } catch (err) {
     console.error('[SyncService] Erro na sincronização Local -> Supabase:', err);
   }

@@ -1,24 +1,28 @@
 # 📜 Memory Log - SflTrade
 
-## [2026-08-14] Infraestrutura de Sincronização Multi-Dispositivos via Supabase Auth
+## [2026-08-14] Refino da Sincronização Cloud, Gráficos Globais e Ajuste de Altura dos Modais
 
-### 1. Sincronização e Backup da Branch Main
-- Branch `develop` integrada à `main` com sucesso e enviada para `origin/main` como snapshot/backup oficial.
-- Retorno imediato à branch `develop` para desenvolvimento das novas funcionalidades.
+### 1. Sincronização Completa de Transações (Mobile <-> Nuvem)
+- **Correção da Sequência de Sync (2-Step Sync)**:
+  - Garantido que ao logar em qualquer dispositivo (celular ou desktop), o app **primeiro envia** todas as transações locais salvas no `localStorage` para a tabela `user_transactions` do Supabase.
+  - Em seguida, **busca e consolida** o histórico completo remoto do Supabase para atualizar a aplicação.
+- **Identificação Única de Transações**: Chave de duplicação refinada (`recurso_tipo_qty_preco`) evitando perdas ou duplicações em sincronizações cruzadas.
+- **Botão "🔄 Sincronizar Agora"**: Adicionado no modal de Autenticação e no card do Perfil para permitir que o usuário force a sincronização manual a qualquer momento.
 
-### 2. Script de Tabelas de Usuário (`supabase_user_schema.sql`)
-- Criado arquivo `supabase_user_schema.sql` na raiz com:
-  - Tabela `user_portfolios` (id UUID, user_id UUID FK auth.users, resource_id, quantity, avg_price_sfl, avg_token_price_usd, updated_at).
-  - Tabela `user_transactions` (id UUID, user_id UUID FK auth.users, resource_id, type BUY/SELL, quantity, price_sfl, token_price_usd_at_purchase, total_sfl, total_usd, created_at).
-  - Tabela `user_settings` (user_id UUID PK FK auth.users, island_tax, vip_active, shrine_active, preferred_currency, updated_at).
-  - Políticas RLS (Row Level Security) habilitadas com acesso exclusivo para `auth.uid() = user_id` em operações SELECT, INSERT, UPDATE e DELETE.
+### 2. Histórico e Gráficos Globais de Recursos
+- **Transmissão Automática para o Supabase**: Ajustado `recordDailySnapshot` em `historyService.js` para gravar cotações locais e transmitir snapshots globais para `token_price_history` e `resource_price_history` no Supabase (com throttle inteligente a cada 15 min).
+- **Consistência Multi-Dispositivo**: Dispositivos que acessarem o aplicativo pela primeira vez agora consultam os dados de preços globais salvos no Supabase, garantindo que os gráficos não fiquem zerados.
 
-### 3. Camada de Autenticação e Sincronização Frontend
-- **Auth Service (`src/services/authService.js`)**: Integração com Supabase Auth (`signUp`, `signInWithPassword`, `signInWithOtp`, `signOut`, `getSession`, `getUser`, `onAuthStateChange`).
-- **Sync Service (`src/services/syncService.js`)**: Estratégia Híbrida Local-First/Offline. Operações continuam no LocalStorage quando deslogado; ao realizar login ocorre sync/merge automático enviando os dados locais e baixando o histórico remoto. Gravação bidirecional instantânea quando logado.
-- **Componente AuthModal (`src/components/AuthModal.jsx`)**: Modal responsivo com modos Login (E-mail + Senha), Cadastro e Link Mágico. Exibição do status (`🟢 Conectado como usuario@email.com` ou `⚪ Modo Convidado / Offline`) e botão de encerramento de sessão seguro.
-- **Header & Interface**: Indicador de status Cloud no cabeçalho e card de gerenciamento de conta na aba Perfil.
+### 3. Otimização de Layout e Altura dos Modais
+- **`PositionDetailsModal.jsx`**:
+  - Ajustada a altura máxima para `max-h-[85vh]` com rolagem interna fluida.
+  - Mantida a largura ideal (`w-full max-w-lg`) e reduzido o espaçamento vertical (`p-3.5 md:p-4`, `space-y-3`, cards compactos `p-2.5`).
+  - Lista de transações do recurso reduzida para `max-h-36`.
+- **`TransactionModal.jsx`**:
+  - Ajustado para `max-h-[85vh] overflow-y-auto` com padding e margens mais enxutas.
+- **`AuthModal.jsx`**:
+  - Ajustado para `max-h-[85vh]` integrando o botão de sincronização direta.
 
-### 4. Build, Testes e Deploy
-- Compilação realizada via `npm run build` com 0 erros.
-- Publicação da versão final compilada na branch `gh-pages` via `npx gh-pages -d dist`.
+### 4. Build & Deploy
+- Executado `npm run build` (0 erros).
+- Deploy atualizado na branch `gh-pages` (`npx gh-pages -d dist`).

@@ -55,7 +55,6 @@ const PositionDetailsModal = ({
     nome,
     qty,
     precoMedio,
-    precoMedioUsd,
     cotacaoMediaFlowerUsd = 0.05,
     custoTotalUsd,
     valorVendaLiquidoTotalUsd,
@@ -72,10 +71,9 @@ const PositionDetailsModal = ({
     setEditFlowerUsd(cotacaoMediaFlowerUsd ? cotacaoMediaFlowerUsd.toString() : '');
   }, [precoMedio, cotacaoMediaFlowerUsd]);
 
-  // Filtra histórico de transações específicas deste recurso
   const resourceTxList = allTransactions
     .filter(t => t.recurso && t.recurso.toLowerCase() === nome.toLowerCase())
-    .sort((a, b) => new Date(b.timestamp || b.id) - new Date(a.timestamp || a.id));
+    .sort((a, b) => new Date(b.timestamp || b.created_at || b.id) - new Date(a.timestamp || a.created_at || a.id));
 
   const corLucroUsd = lucroAbsolutoUsd >= 0 ? 'text-emerald-400' : 'text-rose-400';
   const iconUrl = getItemIcon(nome);
@@ -101,68 +99,68 @@ const PositionDetailsModal = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in"
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 z-50 animate-fade-in"
       onClick={onClose}
     >
       <div 
-        className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] flex flex-col relative"
+        className="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-lg w-full shadow-2xl space-y-3 max-h-[85vh] flex flex-col relative"
         onClick={(e) => e.stopPropagation()}
       >
         
-        {/* Cabeçalho do Modal */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
+        {/* Cabeçalho Compacto do Modal */}
+        <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
+          <div className="flex items-center gap-2">
             <img
               src={iconUrl}
               alt={nome}
-              className="w-8 h-8 rounded-md object-contain align-middle"
+              className="w-7 h-7 rounded-md object-contain align-middle"
               onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
             />
             <div>
-              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-1.5 leading-tight">
                 {nome}
               </h3>
-              <p className="text-[11px] text-slate-400">
-                {currentLang === 'pt' ? 'Visão Geral & Edição de Preço Médio (DCA)' : 'Overview & Average Price Editing (DCA)'}
+              <p className="text-[10px] text-slate-400">
+                {currentLang === 'pt' ? 'Visão Geral & Preço Médio (DCA)' : 'Overview & Average Price (DCA)'}
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition text-lg"
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition text-base"
           >
             ✕
           </button>
         </div>
 
-        {/* Conteúdo com Scroll Interno */}
-        <div className="overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+        {/* Conteúdo com Scroll Interno Ajustado */}
+        <div className="overflow-y-auto space-y-3 pr-1 scrollbar-thin scrollbar-thumb-slate-700 flex-1">
           
           {/* Card de Resumo do Preço Médio (DCA) + Botão de Edição */}
-          <div className="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 space-y-3">
+          <div className="bg-slate-800/80 rounded-xl p-2.5 border border-slate-700 space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">
                 📊 {currentLang === 'pt' ? 'Preço Médio Ponderado (DCA)' : 'Weighted Average Price (DCA)'}
               </span>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="text-[11px] bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold px-2 py-1 rounded-lg border border-slate-600 transition flex items-center gap-1"
+                className="text-[10px] bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold px-2 py-0.5 rounded-lg border border-slate-600 transition flex items-center gap-1"
               >
-                ✏️ {isEditing ? (currentLang === 'pt' ? 'Cancelar' : 'Cancel') : (currentLang === 'pt' ? 'Editar Média' : 'Edit Average')}
+                ✏️ {isEditing ? (currentLang === 'pt' ? 'Cancelar' : 'Cancel') : (currentLang === 'pt' ? 'Editar' : 'Edit')}
               </button>
             </div>
 
-            {/* Painel de Edição Manual de Preço Médio e Cotação $FLOWER */}
+            {/* Painel de Edição Manual */}
             {isEditing ? (
-              <form onSubmit={handleSaveCustomAvg} className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700/80 space-y-3 animate-fade-in text-xs">
-                <div className="text-[11px] text-amber-300 font-semibold mb-1">
-                  💡 {currentLang === 'pt' ? 'Definir Preço Médio e Cotação de Entrada' : 'Set Average Price and Entry Rate'}
+              <form onSubmit={handleSaveCustomAvg} className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 space-y-2 animate-fade-in text-xs">
+                <div className="text-[10px] text-amber-300 font-semibold mb-0.5">
+                  💡 {currentLang === 'pt' ? 'Definir Preço Médio e Cotação' : 'Set Avg Price & Rate'}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">
-                      {currentLang === 'pt' ? 'Preço Médio em SFL' : 'Avg Price in SFL'} (ex: 0.0239)
+                    <label className="block text-[9px] text-slate-400 mb-0.5">
+                      {currentLang === 'pt' ? 'Preço Médio SFL' : 'Avg Price SFL'}
                     </label>
                     <input
                       type="number"
@@ -170,13 +168,13 @@ const PositionDetailsModal = ({
                       value={editSfl}
                       onChange={(e) => setEditSfl(e.target.value)}
                       placeholder="0.0239"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">
-                      {currentLang === 'pt' ? 'Cotação Média $FLOWER ($)' : 'Avg $FLOWER USD Rate ($)'} (ex: 0.0670)
+                    <label className="block text-[9px] text-slate-400 mb-0.5">
+                      {currentLang === 'pt' ? 'Cotação $FLOWER ($)' : 'Avg $FLOWER USD ($)'}
                     </label>
                     <input
                       type="number"
@@ -184,48 +182,48 @@ const PositionDetailsModal = ({
                       value={editFlowerUsd}
                       onChange={(e) => setEditFlowerUsd(e.target.value)}
                       placeholder="0.0670"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-mono font-bold"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-mono font-bold"
                     />
                   </div>
                 </div>
 
-                <div className="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-lg font-mono flex justify-between">
-                  <span>{currentLang === 'pt' ? 'Custo Médio USD / un:' : 'Avg USD / unit:'}</span>
+                <div className="text-[10px] text-slate-400 bg-slate-950/60 p-1.5 rounded-lg font-mono flex justify-between">
+                  <span>{currentLang === 'pt' ? 'Custo USD / un:' : 'Avg USD / unit:'}</span>
                   <span className="font-bold text-amber-300">${previewUnitUsd}</span>
                 </div>
 
-                <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+                <div className="flex justify-between items-center pt-1.5 border-t border-slate-800">
                   <button
                     type="button"
                     onClick={handleResetCustomAvg}
-                    className="text-[10px] text-rose-400 hover:underline"
+                    className="text-[9px] text-rose-400 hover:underline"
                   >
-                    🔄 {currentLang === 'pt' ? 'Restaurar Cálculo Automático' : 'Reset Auto Calculation'}
+                    🔄 {currentLang === 'pt' ? 'Restaurar Auto' : 'Reset Auto'}
                   </button>
                   <button
                     type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition"
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-0.5 rounded-lg text-xs transition"
                   >
-                    💾 {currentLang === 'pt' ? 'Salvar Alterações' : 'Save Changes'}
+                    💾 {currentLang === 'pt' ? 'Salvar' : 'Save'}
                   </button>
                 </div>
               </form>
             ) : (
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">{currentLang === 'pt' ? 'Estoque' : 'Stock'}</span>
-                  <span className="font-mono font-bold text-slate-100">{formatarPreco(qty)}</span>
+              <div className="grid grid-cols-3 gap-1.5 text-center text-xs">
+                <div className="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                  <span className="text-[9px] text-slate-400 block">{currentLang === 'pt' ? 'Estoque' : 'Stock'}</span>
+                  <span className="font-mono font-bold text-slate-100 text-xs">{formatarPreco(qty)}</span>
                 </div>
-                <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">{currentLang === 'pt' ? 'Média SFL' : 'Avg SFL'}</span>
-                  <span className="font-mono font-bold text-slate-200">{formatarPreco(precoMedio)} SFL</span>
+                <div className="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                  <span className="text-[9px] text-slate-400 block">{currentLang === 'pt' ? 'Média SFL' : 'Avg SFL'}</span>
+                  <span className="font-mono font-bold text-slate-200 text-xs">{formatarPreco(precoMedio)} SFL</span>
                 </div>
-                <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-amber-300 font-semibold block">
-                    {currentLang === 'pt' ? 'Cotação Média $FLOWER' : 'Avg $FLOWER Rate'}
+                <div className="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                  <span className="text-[9px] text-amber-300 font-semibold block">
+                    {currentLang === 'pt' ? 'Cotação $FLOWER' : 'Avg $FLOWER'}
                   </span>
-                  <span className="font-mono font-bold text-amber-300 text-[11px] block mt-0.5">
-                    ${cotacaoMediaFlowerUsd.toFixed(4)} USD / FLOWER
+                  <span className="font-mono font-bold text-amber-300 text-[10px] block mt-0.5">
+                    ${cotacaoMediaFlowerUsd.toFixed(4)} USD
                   </span>
                 </div>
               </div>
@@ -233,54 +231,54 @@ const PositionDetailsModal = ({
           </div>
 
           {/* Card Comparativo de Custo Total vs Valor Atual */}
-          <div className="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 space-y-2">
+          <div className="bg-slate-800/80 rounded-xl p-2.5 border border-slate-700 space-y-1.5">
             <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">
               💰 {currentLang === 'pt' ? 'Comparativo Financeiro em Dólar' : 'Financial Comparison in USD'}
             </span>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-semibold">
+              <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                <span className="text-[9px] text-slate-400 block uppercase font-semibold">
                   {currentLang === 'pt' ? 'Custo Total USD' : 'Total USD Cost'}
                 </span>
-                <span className="font-mono text-sm font-bold text-slate-200 block mt-0.5">
+                <span className="font-mono text-xs font-bold text-slate-200 block mt-0.5">
                   {formatarMoeda(custoTotalUsd, 'usd')}
                 </span>
               </div>
-              <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-semibold">
+              <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                <span className="text-[9px] text-slate-400 block uppercase font-semibold">
                   {currentLang === 'pt' ? 'Valor Líquido USD' : 'Net USD Value'}
                 </span>
-                <span className="font-mono text-sm font-bold text-slate-100 block mt-0.5">
+                <span className="font-mono text-xs font-bold text-slate-100 block mt-0.5">
                   {formatarMoeda(valorVendaLiquidoTotalUsd, 'usd')}
                 </span>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-700/60 flex justify-between items-center text-xs">
-              <span className="text-slate-400 font-semibold">
-                {currentLang === 'pt' ? 'Lucro/Prejuízo Real USD:' : 'Real PnL in USD:'}
+            <div className="pt-1.5 border-t border-slate-700/60 flex justify-between items-center text-xs">
+              <span className="text-slate-400 font-semibold text-[11px]">
+                {currentLang === 'pt' ? 'Lucro/Prejuízo Real:' : 'Real PnL:'}
               </span>
-              <span className={`font-mono font-bold text-sm ${corLucroUsd}`}>
+              <span className={`font-mono font-bold text-xs ${corLucroUsd}`}>
                 {lucroAbsolutoUsd >= 0 ? '+' : ''}{formatarMoeda(lucroAbsolutoUsd, 'usd')} ({lucroPercentualUsd.toFixed(1)}%)
               </span>
             </div>
           </div>
 
-          {/* Histórico de Transações do Recurso */}
+          {/* Histórico de Transações Compacto */}
           <div>
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              📜 {currentLang === 'pt' ? 'Histórico de Transações do Recurso' : 'Resource Transactions History'} ({resourceTxList.length})
+            <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              📜 {currentLang === 'pt' ? 'Histórico de Transações' : 'Transactions History'} ({resourceTxList.length})
             </h4>
 
             {resourceTxList.length === 0 ? (
-              <div className="text-xs text-slate-500 text-center py-4 bg-slate-900/50 rounded-xl border border-slate-800">
-                {currentLang === 'pt' ? 'Nenhuma transação registrada para este recurso.' : 'No transactions recorded for this resource.'}
+              <div className="text-[11px] text-slate-500 text-center py-3 bg-slate-900/50 rounded-xl border border-slate-800">
+                {currentLang === 'pt' ? 'Nenhuma transação registrada.' : 'No transactions recorded.'}
               </div>
             ) : (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
+              <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
                 {resourceTxList.map((tx) => {
                   const isBuy = tx.tipo === 'buy';
-                  const dateFormatted = new Date(tx.timestamp || tx.id).toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
+                  const dateFormatted = new Date(tx.timestamp || tx.created_at || tx.id).toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
                     day: '2-digit',
                     month: '2-digit',
                     hour: '2-digit',
@@ -290,22 +288,22 @@ const PositionDetailsModal = ({
                   const totalUsd = tx.total_price_usd || (tx.totalPrice * cotacaoTx);
 
                   return (
-                    <div key={tx.id || Math.random()} className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/80 text-xs flex justify-between items-center font-mono">
+                    <div key={tx.id || Math.random()} className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/80 text-[11px] flex justify-between items-center font-mono">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
                             {isBuy ? (currentLang === 'pt' ? 'Compra' : 'Buy') : (currentLang === 'pt' ? 'Venda' : 'Sell')}
                           </span>
                           <span className="text-slate-200 font-bold">{formatarPreco(tx.qty)} un</span>
                           <span className="text-slate-400">@ {formatarPreco(tx.unitPrice)} SFL</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
+                        <div className="text-[9px] text-slate-500 mt-0.5">
                           {dateFormatted} • $FLOWER: ${cotacaoTx.toFixed(4)}
                         </div>
                       </div>
                       <div className="text-right font-bold">
                         <span className="text-amber-400 block">{formatarPreco(tx.totalPrice)} SFL</span>
-                        <span className="text-slate-300 text-[11px] block">${totalUsd.toFixed(2)}</span>
+                        <span className="text-slate-300 text-[10px] block">${totalUsd.toFixed(2)}</span>
                       </div>
                     </div>
                   );
@@ -316,10 +314,10 @@ const PositionDetailsModal = ({
 
         </div>
 
-        {/* Botão de Fechar */}
+        {/* Botão de Fechar Compacto */}
         <button
           onClick={onClose}
-          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition border border-slate-700"
+          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-1.5 rounded-xl text-xs transition border border-slate-700"
         >
           {t('btnCancel', currentLang)}
         </button>

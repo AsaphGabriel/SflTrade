@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { signUp, signInWithPassword, signInWithOtp, signOut } from '../services/authService';
 import { t } from '../i18n';
 
-const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) => {
+const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, onSyncCloud, isSyncing = false }) => {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup' | 'magiclink'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +27,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
       const data = await signInWithPassword({ email, password });
       showMessage(currentLang === 'pt' ? '✅ Login efetuado com sucesso!' : '✅ Logged in successfully!', 'success');
       if (onAuthChange) onAuthChange(data.user);
+      if (onSyncCloud) await onSyncCloud(data.user);
       setTimeout(() => {
         onClose();
       }, 1000);
@@ -90,28 +91,38 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
     }
   };
 
+  const handleManualSync = async () => {
+    if (!user || !onSyncCloud) return;
+    try {
+      await onSyncCloud(user);
+      showMessage(currentLang === 'pt' ? '✅ Sincronização concluída com sucesso!' : '✅ Sync completed successfully!', 'success');
+    } catch (e) {
+      showMessage(currentLang === 'pt' ? 'Erro ao sincronizar.' : 'Sync failed.', 'error');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         
         {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-800/80 border-b border-slate-700">
+        <div className="flex items-center justify-between px-5 py-3.5 bg-slate-800/80 border-b border-slate-700">
           <div className="flex items-center space-x-2">
-            <span className="text-xl">⚡</span>
-            <h3 className="font-bold text-amber-400 text-lg">
+            <span className="text-lg">⚡</span>
+            <h3 className="font-bold text-amber-400 text-base">
               {t('authTitle', currentLang)}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-700 transition"
+            className="text-slate-400 hover:text-white text-lg font-bold w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-700 transition"
           >
             ✕
           </button>
         </div>
 
         {/* Status Atual do Usuário */}
-        <div className="px-6 py-3 bg-slate-800/40 border-b border-slate-800 text-xs flex items-center justify-between">
+        <div className="px-5 py-2.5 bg-slate-800/40 border-b border-slate-800 text-xs flex items-center justify-between">
           <span className="text-slate-400">{currentLang === 'pt' ? 'Status:' : 'Status:'}</span>
           {user ? (
             <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
@@ -126,33 +137,50 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
           )}
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Se logado, exibe card do perfil com botão de logout */}
+        <div className="p-5 space-y-4 overflow-y-auto">
+          {/* Se logado, exibe card de status com botões de Ação */}
           {user ? (
-            <div className="space-y-4 text-center">
-              <div className="p-4 bg-slate-800 rounded-xl border border-slate-700/60">
-                <p className="text-sm text-slate-300">
+            <div className="space-y-3.5 text-center">
+              <div className="p-3.5 bg-slate-800 rounded-xl border border-slate-700/60 text-xs space-y-1">
+                <p className="text-slate-300 font-medium">
                   {currentLang === 'pt' ? 'Sua conta está conectada e sincronizada!' : 'Your account is connected and synchronized!'}
                 </p>
-                <p className="text-xs text-amber-400/90 mt-1">
+                <p className="text-[11px] text-amber-400/90">
                   {t('syncNotice', currentLang)}
                 </p>
               </div>
 
-              <button
-                onClick={handleLogout}
-                disabled={loading}
-                className="w-full bg-rose-600/90 hover:bg-rose-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <span className="animate-spin text-sm">⌛</span>
-                ) : (
-                  <>
-                    <span>🚪</span>
-                    <span>{t('btnLogout', currentLang)}</span>
-                  </>
-                )}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleManualSync}
+                  disabled={isSyncing || loading}
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-2 px-3 rounded-xl shadow transition text-xs flex items-center justify-center gap-1.5"
+                >
+                  {isSyncing ? (
+                    <span className="animate-spin text-xs">⌛</span>
+                  ) : (
+                    <>
+                      <span>🔄</span>
+                      <span>{currentLang === 'pt' ? 'Sincronizar Agora' : 'Sync Now'}</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  disabled={loading}
+                  className="bg-rose-600/90 hover:bg-rose-600 text-white font-bold py-2 px-3 rounded-xl shadow transition text-xs flex items-center justify-center gap-1.5"
+                >
+                  {loading ? (
+                    <span className="animate-spin text-xs">⌛</span>
+                  ) : (
+                    <>
+                      <span>🚪</span>
+                      <span>{t('btnLogout', currentLang)}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -161,28 +189,28 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
                 <button
                   type="button"
                   onClick={() => setAuthMode('login')}
-                  className={`py-2 rounded-lg transition ${authMode === 'login' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`py-1.5 rounded-lg transition ${authMode === 'login' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   {t('btnLogin', currentLang)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthMode('signup')}
-                  className={`py-2 rounded-lg transition ${authMode === 'signup' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`py-1.5 rounded-lg transition ${authMode === 'signup' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   {t('btnSignUp', currentLang)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthMode('magiclink')}
-                  className={`py-2 rounded-lg transition ${authMode === 'magiclink' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`py-1.5 rounded-lg transition ${authMode === 'magiclink' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   Magic Link
                 </button>
               </div>
 
               {/* Formulário de Login / Cadastro / Magic Link */}
-              <form onSubmit={authMode === 'login' ? handleLogin : authMode === 'signup' ? handleSignUp : handleMagicLink} className="space-y-4">
+              <form onSubmit={authMode === 'login' ? handleLogin : authMode === 'signup' ? handleSignUp : handleMagicLink} className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
                     {t('labelEmail', currentLang)}
@@ -193,7 +221,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seuemail@exemplo.com"
-                    className="w-full bg-slate-950 text-slate-100 px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-sm"
+                    className="w-full bg-slate-950 text-slate-100 px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs"
                   />
                 </div>
 
@@ -208,7 +236,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-slate-950 text-slate-100 px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-sm"
+                      className="w-full bg-slate-950 text-slate-100 px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs"
                     />
                   </div>
                 )}
@@ -216,10 +244,10 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm mt-2"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-2 px-3 rounded-xl shadow transition flex items-center justify-center gap-1.5 text-xs mt-1"
                 >
                   {loading ? (
-                    <span className="animate-spin text-sm">⌛</span>
+                    <span className="animate-spin text-xs">⌛</span>
                   ) : (
                     <span>
                       {authMode === 'login' && t('btnLogin', currentLang)}
@@ -234,7 +262,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange }) 
 
           {/* Mensagens de Feedback */}
           {msg.text && (
-            <div className={`p-3 rounded-xl border text-xs font-medium text-center ${
+            <div className={`p-2.5 rounded-xl border text-xs font-medium text-center ${
               msg.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' :
               msg.type === 'info' ? 'bg-sky-500/10 border-sky-500/30 text-sky-300' :
               'bg-rose-500/10 border-rose-500/30 text-rose-300'

@@ -18,7 +18,6 @@ const App = () => {
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
   const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
   
-  // Mensagens do perfil
   const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
 
   const {
@@ -26,6 +25,8 @@ const App = () => {
     setUser,
     isAuthModalOpen,
     setIsAuthModalOpen,
+    isSyncing,
+    syncCloud,
     flowerPrice,
     effectiveTax,
     selectedIsland,
@@ -51,7 +52,6 @@ const App = () => {
     error
   } = useMarketData();
 
-  // Validação da API Key
   const handleSaveProfile = () => {
     const keyStr = apiKey.trim();
 
@@ -186,20 +186,31 @@ const App = () => {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className={`px-4 py-2 rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 ${
-                    user 
-                      ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600' 
-                      : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold'
-                  }`}
-                >
-                  {user ? (
-                    <><span>⚙️</span> <span>{currentLang === 'pt' ? 'Gerenciar Conta' : 'Manage Account'}</span></>
-                  ) : (
-                    <><span>⚡</span> <span>{currentLang === 'pt' ? 'Entrar / Sincronizar' : 'Sign In / Sync'}</span></>
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  {user && (
+                    <button
+                      onClick={() => syncCloud()}
+                      disabled={isSyncing}
+                      className="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-1"
+                    >
+                      {isSyncing ? <span className="animate-spin">⌛</span> : <span>🔄 Sincronizar</span>}
+                    </button>
                   )}
-                </button>
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className={`px-4 py-2 rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 ${
+                      user 
+                        ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600' 
+                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold'
+                    }`}
+                  >
+                    {user ? (
+                      <><span>⚙️</span> <span>{currentLang === 'pt' ? 'Gerenciar Conta' : 'Manage Account'}</span></>
+                    ) : (
+                      <><span>⚡</span> <span>{currentLang === 'pt' ? 'Entrar / Sincronizar' : 'Sign In / Sync'}</span></>
+                    )}
+                  </button>
+                </div>
               </div>
               
               <div className="space-y-4">
@@ -278,6 +289,8 @@ const App = () => {
         user={user}
         currentLang={currentLang}
         onAuthChange={(updatedUser) => setUser(updatedUser)}
+        onSyncCloud={syncCloud}
+        isSyncing={isSyncing}
       />
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

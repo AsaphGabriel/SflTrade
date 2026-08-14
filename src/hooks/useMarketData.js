@@ -6,7 +6,7 @@ import {
   fetchFarmDataSmart
 } from '../services/api';
 import { recordDailySnapshot } from '../services/historyService';
-import { onAuthStateChange, getUser } from '../services/authService';
+import { onAuthStateChange } from '../services/authService';
 import {
   fetchRemoteUserData,
   syncLocalToSupabase,
@@ -40,6 +40,7 @@ export default function useMarketData() {
   // Autenticação Supabase
   const [user, setUser] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Configurações do Usuário e Persistência
   const [selectedIsland, setSelectedIsland] = useState(localStorage.getItem('sfl_island') || 'volcano');
@@ -59,7 +60,69 @@ export default function useMarketData() {
 
   const initialSyncDone = useRef(false);
 
-  // 1. Ocultar / Atualizar Autenticação e Sincronização em Nuvem
+  // Função principal de sincronização (Push Local -> Remote e Pull Remote -> Local)
+  const syncCloud = useCallback(async (targetUser = user) => {
+    if (!targetUser) return;
+    setIsSyncing(true);
+
+    try {
+      // 1. PRIMEIRO: envia transações e configurações locais para o Supabase
+      const currentLocalTxs = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
+      await syncLocalToSupabase(targetUser.id, {
+        localTransactions: currentLocalTxs,
+        localSettings: {
+          selectedIsland: localStorage.getItem('sfl_island') || 'volcano',
+          isVip: localStorage.getItem('sfl_vip') === 'true',
+          isShrine: localStorage.getItem('sfl_shrine') === 'true',
+          selectedCurrency: localStorage.getItem('sfl_currency') || 'usd'
+        }
+      });
+
+      // 2. SEGUNDO: busca dados consolidados do Supabase (contendo transações de todos os dispositivos)
+      const remote = await fetchRemoteUserData(targetUser.id);
+
+      if (remote && remote.transactions && remote.transactions.length > 0) {
+        const formattedRemoteTxs = remote.transactions.map(rt => ({
+          id: rt.id,
+          recurso: rt.resource_id,
+          tipo: rt.type ? rt.type.toLowerCase() : 'buy',
+          qty: Number(rt.quantity),
+          unitPrice: Number(rt.price_sfl),
+          cotacao_entrada_usd: Number(rt.token_price_usd_at_purchase),
+          totalPrice: Number(rt.total_sfl),
+          total_price_usd: Number(rt.total_usd),
+          timestamp: rt.created_at
+        }));
+
+        setTransactions(formattedRemoteTxs);
+        localStorage.setItem('sfl_transactions', JSON.stringify(formattedRemoteTxs));
+      }
+
+      if (remote && remote.settings) {
+        const s = remote.settings;
+        if (s.preferred_currency) {
+          const cur = String(s.preferred_currency).toLowerCase();
+          setSelectedCurrency(cur);
+          localStorage.setItem('sfl_currency', cur);
+        }
+        if (s.vip_active !== undefined) {
+          setIsVip(Boolean(s.vip_active));
+          localStorage.setItem('sfl_vip', String(Boolean(s.vip_active)));
+        }
+        if (s.shrine_active !== undefined) {
+          setIsShrine(Boolean(s.shrine_active));
+          localStorage.setItem('sfl_shrine', String(Boolean(s.shrine_active)));
+        }
+      }
+      console.log('[MarketData] Sincronização cloud concluída com sucesso!');
+    } catch (err) {
+      console.error('[MarketData] Erro ao realizar syncCloud:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [user]);
+
+  // Autenticação e Sincronização em Nuvem
   useEffect(() => {
     const subscription = onAuthStateChange(async (event, session) => {
       const currentUser = session?.user || null;
@@ -67,62 +130,7 @@ export default function useMarketData() {
 
       if (currentUser && !initialSyncDone.current) {
         initialSyncDone.current = true;
-        // Puxa dados remotos e sincroniza com o local
-        const remote = await fetchRemoteUserData(currentUser.id);
-        
-        // Se houver dados locais no localStorage, envia e faz o merge para o Supabase
-        const currentLocalTxs = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
-        await syncLocalToSupabase(currentUser.id, {
-          localTransactions: currentLocalTxs,
-          localSettings: {
-            selectedIsland: localStorage.getItem('sfl_island') || 'volcano',
-            isVip: localStorage.getItem('sfl_vip') === 'true',
-            isShrine: localStorage.getItem('sfl_shrine') === 'true',
-            selectedCurrency: localStorage.getItem('sfl_currency') || 'usd'
-          }
-        });
-
-        // Atualizar estado com transações mescladas se houver
-        if (remote && remote.transactions && remote.transactions.length > 0) {
-          const formattedRemoteTxs = remote.transactions.map(rt => ({
-            id: rt.id,
-            recurso: rt.resource_id,
-            tipo: rt.type ? rt.type.toLowerCase() : 'buy',
-            qty: Number(rt.quantity),
-            unitPrice: Number(rt.price_sfl),
-            cotacao_entrada_usd: Number(rt.token_price_usd_at_purchase),
-            totalPrice: Number(rt.total_sfl),
-            total_price_usd: Number(rt.total_usd),
-            timestamp: rt.created_at
-          }));
-
-          setTransactions(prev => {
-            const combinedMap = new Map();
-            prev.forEach(t => combinedMap.set(`${t.timestamp}_${t.recurso}_${t.qty}`, t));
-            formattedRemoteTxs.forEach(rt => combinedMap.set(`${rt.timestamp}_${rt.recurso}_${rt.qty}`, rt));
-            const mergedList = Array.from(combinedMap.values());
-            localStorage.setItem('sfl_transactions', JSON.stringify(mergedList));
-            return mergedList;
-          });
-        }
-
-        // Atualizar configurações a partir do Supabase se existirem
-        if (remote && remote.settings) {
-          const s = remote.settings;
-          if (s.preferred_currency) {
-            const cur = String(s.preferred_currency).toLowerCase();
-            setSelectedCurrency(cur);
-            localStorage.setItem('sfl_currency', cur);
-          }
-          if (s.vip_active !== undefined) {
-            setIsVip(Boolean(s.vip_active));
-            localStorage.setItem('sfl_vip', String(Boolean(s.vip_active)));
-          }
-          if (s.shrine_active !== undefined) {
-            setIsShrine(Boolean(s.shrine_active));
-            localStorage.setItem('sfl_shrine', String(Boolean(s.shrine_active)));
-          }
-        }
+        await syncCloud(currentUser);
       } else if (!currentUser) {
         initialSyncDone.current = false;
       }
@@ -131,7 +139,7 @@ export default function useMarketData() {
     return () => {
       if (subscription && subscription.unsubscribe) subscription.unsubscribe();
     };
-  }, []);
+  }, [syncCloud]);
 
   // Helper para salvar configs tanto local quanto remoto
   const updateIsland = (val) => {
@@ -183,7 +191,6 @@ export default function useMarketData() {
     let fetchedUsd = 0.087;
 
     try {
-      // Exchange API (sfl.world)
       const dataExchange = await fetchWithFallback('https://sfl.world/api/v1.1/exchange');
       if (dataExchange && dataExchange.sfl) {
         const sfl = dataExchange.sfl;
@@ -201,14 +208,12 @@ export default function useMarketData() {
     }
 
     try {
-      // P2P Prices API (sfl.world)
       const dataPrices = await fetchWithFallback('https://sfl.world/api/v1/prices');
       if (dataPrices) {
         const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
         if (p2pData) {
           setMarketData(prev => {
             const merged = { ...prev, ...p2pData };
-            // Grava snapshot diário real no localStorage ('sfl_daily_history')
             recordDailySnapshot(fetchedUsd, merged);
             return merged;
           });
@@ -235,7 +240,7 @@ export default function useMarketData() {
     refreshData();
   }, [refreshData]);
 
-  // Busca de Fazenda via Orquestrador Dual (Público vs Oficial Autenticado)
+  // Busca de Fazenda
   const searchFarm = useCallback(async (query, apiKeyOverride = null, forceRefresh = false) => {
     if (!query) return;
     let landId = query;
@@ -320,6 +325,7 @@ export default function useMarketData() {
 
     transactions.forEach(t => {
       const item = t.recurso;
+      if (!item) return;
       const key = item.toLowerCase();
       if (!estoque[key]) {
         estoque[key] = { nome: item, qty: 0, custoTotal: 0, custoTotalUsd: 0 };
@@ -426,9 +432,12 @@ export default function useMarketData() {
       timestamp: new Date().toISOString()
     };
 
-    setTransactions(prev => [...prev, txObj]);
+    setTransactions(prev => {
+      const updated = [...prev, txObj];
+      localStorage.setItem('sfl_transactions', JSON.stringify(updated));
+      return updated;
+    });
 
-    // Se estiver logado, envia a transação para o Supabase
     if (user) {
       saveTransactionRemote(user.id, txObj);
     }
@@ -441,6 +450,8 @@ export default function useMarketData() {
     setUser,
     isAuthModalOpen,
     setIsAuthModalOpen,
+    isSyncing,
+    syncCloud,
     flowerPrice,
     effectiveTax,
     selectedIsland,
