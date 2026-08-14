@@ -276,6 +276,12 @@ export default function useMarketData() {
         const lucroAbsolutoMoeda = valorVendaLiquidoTotalMoeda - custoTotalMoeda;
         const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
 
+        // Lucro Real em Moeda Selecionada (USD / BRL / etc.)
+        const custoTotalMoeda = item.custoTotalUsd * currencyRatio;
+        const valorVendaLiquidoTotalMoeda = valorVendaLiquidoTotal * selectedRate;
+        const lucroAbsolutoMoeda = valorVendaLiquidoTotalMoeda - custoTotalMoeda;
+        const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
+
         return {
           ...item,
           precoMedio,
