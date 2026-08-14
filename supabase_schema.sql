@@ -51,6 +51,24 @@ CREATE POLICY "Allow public read access on resource_price_history"
     TO anon, authenticated
     USING (true);
 
+-- ====================================================================
+-- POLÍTICA OPCIONAL DE INSERÇÃO PÚBLICA (OPCIONAL PARA DESENVOLVIMENTO/TESTES)
+-- Por padrão, o app funciona 100% gravando os dados reais diários localmente no localStorage ('sfl_daily_history').
+-- Caso deseje permitir escrita direta do cliente no Supabase sem service_role, descomente as linhas abaixo:
+--
+-- DROP POLICY IF EXISTS "Allow public insert on token_price_history" ON public.token_price_history;
+-- CREATE POLICY "Allow public insert on token_price_history"
+--     ON public.token_price_history FOR INSERT
+--     TO anon, authenticated
+--     WITH CHECK (true);
+--
+-- DROP POLICY IF EXISTS "Allow public insert on resource_price_history" ON public.resource_price_history;
+-- CREATE POLICY "Allow public insert on resource_price_history"
+--     ON public.resource_price_history FOR INSERT
+--     TO anon, authenticated
+--     WITH CHECK (true);
+-- ====================================================================
+
 -- 5. FUNÇÃO DE LIMPEZA E EXPURGO AUTOMÁTICO (> 90 DIAS)
 CREATE OR REPLACE FUNCTION public.clean_old_price_history()
 RETURNS void

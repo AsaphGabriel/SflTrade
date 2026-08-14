@@ -5,6 +5,7 @@ import {
   resolveFarmIdFromUsername,
   fetchFarmDataSmart
 } from '../services/api';
+import { recordDailySnapshot } from '../services/historyService';
 
 // Base de preços de contingência (Fallback local offline)
 const DADOS_PRECOS_INICIAIS = {
@@ -66,14 +67,16 @@ export default function useMarketData() {
   const refreshData = useCallback(async () => {
     setLoading(true);
     setError(false);
+    let fetchedUsd = 0.087;
 
     try {
       // Exchange API (sfl.world)
       const dataExchange = await fetchWithFallback('https://sfl.world/api/v1.1/exchange');
       if (dataExchange && dataExchange.sfl) {
         const sfl = dataExchange.sfl;
+        fetchedUsd = sfl.usd || 0.087;
         setCurrencyRates({
-          usd: sfl.usd || 0.087,
+          usd: fetchedUsd,
           brl: sfl.brl || 0.4419,
           eur: sfl.eur || 0.0754,
           sgd: sfl.sgd || 0.1117,
@@ -90,7 +93,12 @@ export default function useMarketData() {
       if (dataPrices) {
         const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
         if (p2pData) {
-          setMarketData(prev => ({ ...prev, ...p2pData }));
+          setMarketData(prev => {
+            const merged = { ...prev, ...p2pData };
+            // Grava snapshot diário real no localStorage ('sfl_daily_history')
+            recordDailySnapshot(fetchedUsd, merged);
+            return merged;
+          });
         }
 
         const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
