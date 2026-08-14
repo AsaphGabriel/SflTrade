@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { t } from '../i18n';
-import usePWAInstall from '../hooks/usePWAInstall';
 
 const Header = ({
   flowerPrice,
@@ -24,7 +23,6 @@ const Header = ({
 }) => {
   const [farmSearch, setFarmSearch] = useState('');
   const [convQty, setConvQty] = useState('');
-  const { isStandalone, showIOSInstruction, setShowIOSInstruction, promptInstall } = usePWAInstall();
 
   // Dispara a busca quando o usuário aperta Enter ou clica na lupa
   const handleSearchSubmit = (e) => {
@@ -135,15 +133,6 @@ const Header = ({
 
           {/* Botões de Ação */}
           <div className="flex flex-wrap items-center gap-1.5 ml-auto lg:ml-0">
-            {!isStandalone && (
-              <button 
-                onClick={promptInstall}
-                title="Instalar App / Criar Atalho na Tela Inicial" 
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-indigo-900/30 border border-indigo-400/30 animate-pulse"
-              >
-                📲 {currentLang === 'pt' ? 'Instalar App' : 'Install App'}
-              </button>
-            )}
             <button onClick={() => onOpenBuy('')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
               {t('btnBuy', currentLang)}
             </button>
@@ -156,27 +145,6 @@ const Header = ({
           </div>
         </div>
       </header>
-
-      {/* Modal de Instruções para iOS */}
-      {showIOSInstruction && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
-            <div className="text-3xl">📱</div>
-            <h3 className="text-lg font-bold text-amber-400">Instalar no iPhone / iPad</h3>
-            <p className="text-xs text-slate-300 leading-relaxed text-left">
-              1. No Safari, toque no ícone de <strong className="text-white">Compartilhar</strong> (quadrado com seta 📤).<br/><br/>
-              2. Role a lista para baixo e toque em <strong className="text-white">"Adicionar à Tela de Início"</strong> ➕.<br/><br/>
-              3. Confirme em <strong className="text-white font-bold">Adicionar</strong> no canto superior direito!
-            </p>
-            <button 
-              onClick={() => setShowIOSInstruction(false)}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 rounded-xl text-xs transition"
-            >
-              Entendi!
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Cotação SFL & Conversor Rápido */}
       <div className="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">

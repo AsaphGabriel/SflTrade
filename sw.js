@@ -1,9 +1,11 @@
-const CACHE_NAME = 'sfl-tracker-v1.2.6';
+const CACHE_NAME = 'sfl-tracker-v1.2.7';
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './crop.png'
+  '/SflTrade/',
+  '/SflTrade/index.html',
+  '/SflTrade/manifest.json',
+  '/SflTrade/crop.png',
+  '/SflTrade/icon-192.png',
+  '/SflTrade/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -30,6 +32,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
 
   event.respondWith(
     fetch(event.request)
@@ -44,7 +47,7 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => {
         return caches.match(event.request).then((response) => {
-          return response || caches.match('./index.html');
+          return response || caches.match('/SflTrade/index.html');
         });
       })
   );
