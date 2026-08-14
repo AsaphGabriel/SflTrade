@@ -178,18 +178,23 @@ export default function useMarketData() {
     }
   });
 
-  const updateCustomAvgPrice = (resourceName, avgSfl, avgUsd) => {
+  const updateCustomAvgPrice = (resourceName, avgSfl, flowerUsdRate) => {
     setCustomAvgPrices(prev => {
       const updated = { ...prev };
       if (!resourceName) return updated;
       const key = resourceName.toLowerCase();
 
-      if (avgSfl === null && avgUsd === null) {
+      if (avgSfl === null && flowerUsdRate === null) {
         delete updated[key];
       } else {
+        const sflVal = (avgSfl !== undefined && avgSfl !== null && !isNaN(avgSfl)) ? Number(avgSfl) : (updated[key]?.avgSfl ?? null);
+        const flowerRateVal = (flowerUsdRate !== undefined && flowerUsdRate !== null && !isNaN(flowerUsdRate)) ? Number(flowerUsdRate) : (updated[key]?.flowerUsdRate ?? null);
+        const avgUsdVal = (sflVal !== null && flowerRateVal !== null) ? (sflVal * flowerRateVal) : null;
+
         updated[key] = {
-          avgSfl: (avgSfl !== undefined && avgSfl !== null && !isNaN(avgSfl)) ? Number(avgSfl) : (updated[key]?.avgSfl ?? null),
-          avgUsd: (avgUsd !== undefined && avgUsd !== null && !isNaN(avgUsd)) ? Number(avgUsd) : (updated[key]?.avgUsd ?? null)
+          avgSfl: sflVal,
+          flowerUsdRate: flowerRateVal,
+          avgUsd: avgUsdVal
         };
       }
       localStorage.setItem('sfl_custom_avg_prices', JSON.stringify(updated));
@@ -234,21 +239,24 @@ export default function useMarketData() {
       .map(key => {
         const item = estoque[key];
         let precoMedio = item.qty > 0 ? (item.custoTotal / item.qty) : 0; // em SFL
-        let precoMedioUsd = item.qty > 0 ? (item.custoTotalUsd / item.qty) : 0; // em USD
+        let cotacaoMediaFlowerUsd = item.custoTotal > 0 ? (item.custoTotalUsd / item.custoTotal) : usdRate; // cotação em USD do $FLOWER na entrada
 
-        // Aplica ajuste manual de Preço Médio (se configurado pelo usuário)
+        // Aplica ajuste manual de Preço Médio / Cotação $FLOWER (se configurado pelo usuário)
         const customOverride = customAvgPrices[key] || customAvgPrices[item.nome.toLowerCase()];
         if (customOverride) {
           if (customOverride.avgSfl !== null && !isNaN(customOverride.avgSfl)) {
             precoMedio = Number(customOverride.avgSfl);
           }
-          if (customOverride.avgUsd !== null && !isNaN(customOverride.avgUsd)) {
-            precoMedioUsd = Number(customOverride.avgUsd);
+          if (customOverride.flowerUsdRate !== null && !isNaN(customOverride.flowerUsdRate)) {
+            cotacaoMediaFlowerUsd = Number(customOverride.flowerUsdRate);
+          } else if (customOverride.avgUsd !== null && !isNaN(customOverride.avgUsd) && precoMedio > 0) {
+            cotacaoMediaFlowerUsd = Number(customOverride.avgUsd) / precoMedio;
           }
         }
 
+        const precoMedioUsd = precoMedio * cotacaoMediaFlowerUsd;
         const custoTotal = item.qty * precoMedio;
-        const custoTotalUsd = item.qty * precoMedioUsd;
+        const custoTotalUsd = custoTotal * cotacaoMediaFlowerUsd;
 
         const precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === key)] || 0;
         const precoVendaLiquidoUnitario = precoP2P * (1 - effectiveTax);
@@ -272,6 +280,7 @@ export default function useMarketData() {
           ...item,
           precoMedio,
           precoMedioUsd,
+          cotacaoMediaFlowerUsd,
           custoTotal,
           custoTotalUsd,
           valorVendaLiquidoTotalUsd,

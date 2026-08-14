@@ -56,6 +56,7 @@ const PositionDetailsModal = ({
     qty,
     precoMedio,
     precoMedioUsd,
+    cotacaoMediaFlowerUsd = 0.05,
     custoTotalUsd,
     valorVendaLiquidoTotalUsd,
     lucroAbsolutoUsd,
@@ -64,12 +65,12 @@ const PositionDetailsModal = ({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editSfl, setEditSfl] = useState('');
-  const [editUsd, setEditUsd] = useState('');
+  const [editFlowerUsd, setEditFlowerUsd] = useState('');
 
   useEffect(() => {
     setEditSfl(precoMedio ? precoMedio.toString() : '');
-    setEditUsd(precoMedioUsd ? precoMedioUsd.toString() : '');
-  }, [precoMedio, precoMedioUsd]);
+    setEditFlowerUsd(cotacaoMediaFlowerUsd ? cotacaoMediaFlowerUsd.toString() : '');
+  }, [precoMedio, cotacaoMediaFlowerUsd]);
 
   // Filtra histórico de transações específicas deste recurso
   const resourceTxList = allTransactions
@@ -82,9 +83,9 @@ const PositionDetailsModal = ({
   const handleSaveCustomAvg = (e) => {
     e.preventDefault();
     const valSfl = editSfl !== '' ? parseFloat(editSfl) : null;
-    const valUsd = editUsd !== '' ? parseFloat(editUsd) : null;
+    const valFlowerUsd = editFlowerUsd !== '' ? parseFloat(editFlowerUsd) : null;
     if (onUpdateCustomAvgPrice) {
-      onUpdateCustomAvgPrice(nome, valSfl, valUsd);
+      onUpdateCustomAvgPrice(nome, valSfl, valFlowerUsd);
     }
     setIsEditing(false);
   };
@@ -95,6 +96,8 @@ const PositionDetailsModal = ({
     }
     setIsEditing(false);
   };
+
+  const previewUnitUsd = (parseFloat(editSfl || 0) * parseFloat(editFlowerUsd || 0)).toFixed(4);
 
   return (
     <div 
@@ -145,40 +148,52 @@ const PositionDetailsModal = ({
                 onClick={() => setIsEditing(!isEditing)}
                 className="text-[11px] bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold px-2 py-1 rounded-lg border border-slate-600 transition flex items-center gap-1"
               >
-                ✏️ {isEditing ? (currentLang === 'pt' ? 'Fechar Edição' : 'Cancel Edit') : (currentLang === 'pt' ? 'Editar Média' : 'Edit Average')}
+                ✏️ {isEditing ? (currentLang === 'pt' ? 'Cancelar' : 'Cancel') : (currentLang === 'pt' ? 'Editar Média' : 'Edit Average')}
               </button>
             </div>
 
-            {/* Painel de Edição Manual de Preço Médio */}
+            {/* Painel de Edição Manual de Preço Médio e Cotação $FLOWER */}
             {isEditing ? (
-              <form onSubmit={handleSaveCustomAvg} className="bg-slate-900/90 p-3 rounded-xl border border-slate-700/80 space-y-3 animate-fade-in text-xs">
+              <form onSubmit={handleSaveCustomAvg} className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700/80 space-y-3 animate-fade-in text-xs">
                 <div className="text-[11px] text-amber-300 font-semibold mb-1">
-                  💡 {currentLang === 'pt' ? 'Ajuste manual de Preço Médio' : 'Manual Average Price Adjustment'}
+                  💡 {currentLang === 'pt' ? 'Definir Preço Médio e Cotação de Entrada' : 'Set Average Price and Entry Rate'}
                 </div>
+                
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">Preço Médio em SFL</label>
+                    <label className="block text-[10px] text-slate-400 mb-1">
+                      {currentLang === 'pt' ? 'Preço Médio em SFL' : 'Avg Price in SFL'} (ex: 0.0239)
+                    </label>
                     <input
                       type="number"
                       step="any"
                       value={editSfl}
                       onChange={(e) => setEditSfl(e.target.value)}
-                      placeholder="0.0000"
+                      placeholder="0.0239"
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">Preço Médio em USD ($)</label>
+                    <label className="block text-[10px] text-slate-400 mb-1">
+                      {currentLang === 'pt' ? 'Cotação Média $FLOWER ($)' : 'Avg $FLOWER USD Rate ($)'} (ex: 0.0670)
+                    </label>
                     <input
                       type="number"
                       step="any"
-                      value={editUsd}
-                      onChange={(e) => setEditUsd(e.target.value)}
-                      placeholder="0.0000"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                      value={editFlowerUsd}
+                      onChange={(e) => setEditFlowerUsd(e.target.value)}
+                      placeholder="0.0670"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-mono font-bold"
                     />
                   </div>
                 </div>
+
+                <div className="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-lg font-mono flex justify-between">
+                  <span>{currentLang === 'pt' ? 'Custo Médio USD / un:' : 'Avg USD / unit:'}</span>
+                  <span className="font-bold text-amber-300">${previewUnitUsd}</span>
+                </div>
+
                 <div className="flex justify-between items-center pt-2 border-t border-slate-800">
                   <button
                     type="button"
@@ -191,7 +206,7 @@ const PositionDetailsModal = ({
                     type="submit"
                     className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition"
                   >
-                    💾 {currentLang === 'pt' ? 'Salvar Média' : 'Save Average'}
+                    💾 {currentLang === 'pt' ? 'Salvar Alterações' : 'Save Changes'}
                   </button>
                 </div>
               </form>
@@ -206,8 +221,12 @@ const PositionDetailsModal = ({
                   <span className="font-mono font-bold text-slate-200">{formatarPreco(precoMedio)} SFL</span>
                 </div>
                 <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">{currentLang === 'pt' ? 'Média USD' : 'Avg USD'}</span>
-                  <span className="font-mono font-bold text-amber-300">${formatarPreco(precoMedioUsd)}</span>
+                  <span className="text-[10px] text-amber-300 font-semibold block">
+                    {currentLang === 'pt' ? 'Cotação Média $FLOWER' : 'Avg $FLOWER Rate'}
+                  </span>
+                  <span className="font-mono font-bold text-amber-300 text-[11px] block mt-0.5">
+                    ${cotacaoMediaFlowerUsd.toFixed(4)} USD / FLOWER
+                  </span>
                 </div>
               </div>
             )}
@@ -267,7 +286,7 @@ const PositionDetailsModal = ({
                     hour: '2-digit',
                     minute: '2-digit'
                   });
-                  const cotacaoTx = tx.cotacao_entrada_usd || tx.token_price_usd_at_purchase || 0.05;
+                  const cotacaoTx = tx.cotacao_entrada_usd || tx.token_price_usd_at_purchase || cotacaoMediaFlowerUsd || 0.05;
                   const totalUsd = tx.total_price_usd || (tx.totalPrice * cotacaoTx);
 
                   return (
