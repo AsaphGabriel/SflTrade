@@ -87,7 +87,19 @@ export const translations = {
     dataSourceOfficial: "Official API",
     dataSourcePublic: "Public Aggregator",
     dataSourceCache: "Local Cache",
-    officialInventory: "Official Farm Inventory"
+    officialInventory: "Official Farm Inventory",
+
+    // Auth & Sync
+    authTitle: "Cloud Account & Sync",
+    authStatusConnected: "Connected as {email}",
+    authStatusGuest: "Guest / Offline Mode",
+    btnLogin: "Sign In",
+    btnSignUp: "Sign Up",
+    btnMagicLink: "Send Magic Link",
+    btnLogout: "Logout",
+    labelEmail: "Email",
+    labelPassword: "Password",
+    syncNotice: "Multi-device sync enabled with Supabase Auth."
   },
 
   pt: {
@@ -178,7 +190,19 @@ export const translations = {
     dataSourceOfficial: "API Oficial",
     dataSourcePublic: "Agregador Público",
     dataSourceCache: "Cache Local",
-    officialInventory: "Inventário Oficial da Fazenda"
+    officialInventory: "Inventário Oficial da Fazenda",
+
+    // Auth & Sync
+    authTitle: "Conta Cloud & Sincronização",
+    authStatusConnected: "Conectado como {email}",
+    authStatusGuest: "Modo Convidado / Offline",
+    btnLogin: "Entrar",
+    btnSignUp: "Cadastrar",
+    btnMagicLink: "Enviar Link Mágico",
+    btnLogout: "Sair da Conta",
+    labelEmail: "E-mail",
+    labelPassword: "Senha",
+    syncNotice: "Sincronização multi-dispositivo ativada via Supabase."
   }
 };
 

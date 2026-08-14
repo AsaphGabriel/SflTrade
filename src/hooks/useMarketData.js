@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { t } from '../i18n';
 import {
   fetchWithFallback,
@@ -6,6 +6,14 @@ import {
   fetchFarmDataSmart
 } from '../services/api';
 import { recordDailySnapshot } from '../services/historyService';
+import { onAuthStateChange, getUser } from '../services/authService';
+import {
+  fetchRemoteUserData,
+  syncLocalToSupabase,
+  saveTransactionRemote,
+  savePortfoliosRemote,
+  saveSettingsRemote
+} from '../services/syncService';
 
 // Base de preços de contingência (Fallback local offline)
 const DADOS_PRECOS_INICIAIS = {
@@ -29,6 +37,10 @@ const DADOS_PRECOS_INICIAIS = {
 };
 
 export default function useMarketData() {
+  // Autenticação Supabase
+  const [user, setUser] = useState(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   // Configurações do Usuário e Persistência
   const [selectedIsland, setSelectedIsland] = useState(localStorage.getItem('sfl_island') || 'volcano');
   const [isVip, setIsVip] = useState(localStorage.getItem('sfl_vip') === 'true');
@@ -45,7 +57,108 @@ export default function useMarketData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // 1. Cálculo da Taxa Efetiva
+  const initialSyncDone = useRef(false);
+
+  // 1. Ocultar / Atualizar Autenticação e Sincronização em Nuvem
+  useEffect(() => {
+    const subscription = onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+
+      if (currentUser && !initialSyncDone.current) {
+        initialSyncDone.current = true;
+        // Puxa dados remotos e sincroniza com o local
+        const remote = await fetchRemoteUserData(currentUser.id);
+        
+        // Se houver dados locais no localStorage, envia e faz o merge para o Supabase
+        const currentLocalTxs = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
+        await syncLocalToSupabase(currentUser.id, {
+          localTransactions: currentLocalTxs,
+          localSettings: {
+            selectedIsland: localStorage.getItem('sfl_island') || 'volcano',
+            isVip: localStorage.getItem('sfl_vip') === 'true',
+            isShrine: localStorage.getItem('sfl_shrine') === 'true',
+            selectedCurrency: localStorage.getItem('sfl_currency') || 'usd'
+          }
+        });
+
+        // Atualizar estado com transações mescladas se houver
+        if (remote && remote.transactions && remote.transactions.length > 0) {
+          const formattedRemoteTxs = remote.transactions.map(rt => ({
+            id: rt.id,
+            recurso: rt.resource_id,
+            tipo: rt.type ? rt.type.toLowerCase() : 'buy',
+            qty: Number(rt.quantity),
+            unitPrice: Number(rt.price_sfl),
+            cotacao_entrada_usd: Number(rt.token_price_usd_at_purchase),
+            totalPrice: Number(rt.total_sfl),
+            total_price_usd: Number(rt.total_usd),
+            timestamp: rt.created_at
+          }));
+
+          setTransactions(prev => {
+            const combinedMap = new Map();
+            prev.forEach(t => combinedMap.set(`${t.timestamp}_${t.recurso}_${t.qty}`, t));
+            formattedRemoteTxs.forEach(rt => combinedMap.set(`${rt.timestamp}_${rt.recurso}_${rt.qty}`, rt));
+            const mergedList = Array.from(combinedMap.values());
+            localStorage.setItem('sfl_transactions', JSON.stringify(mergedList));
+            return mergedList;
+          });
+        }
+
+        // Atualizar configurações a partir do Supabase se existirem
+        if (remote && remote.settings) {
+          const s = remote.settings;
+          if (s.preferred_currency) {
+            const cur = String(s.preferred_currency).toLowerCase();
+            setSelectedCurrency(cur);
+            localStorage.setItem('sfl_currency', cur);
+          }
+          if (s.vip_active !== undefined) {
+            setIsVip(Boolean(s.vip_active));
+            localStorage.setItem('sfl_vip', String(Boolean(s.vip_active)));
+          }
+          if (s.shrine_active !== undefined) {
+            setIsShrine(Boolean(s.shrine_active));
+            localStorage.setItem('sfl_shrine', String(Boolean(s.shrine_active)));
+          }
+        }
+      } else if (!currentUser) {
+        initialSyncDone.current = false;
+      }
+    });
+
+    return () => {
+      if (subscription && subscription.unsubscribe) subscription.unsubscribe();
+    };
+  }, []);
+
+  // Helper para salvar configs tanto local quanto remoto
+  const updateIsland = (val) => {
+    setSelectedIsland(val);
+    localStorage.setItem('sfl_island', val);
+    if (user) saveSettingsRemote(user.id, { selectedIsland: val, isVip, isShrine, selectedCurrency });
+  };
+
+  const updateVip = (val) => {
+    setIsVip(val);
+    localStorage.setItem('sfl_vip', String(val));
+    if (user) saveSettingsRemote(user.id, { selectedIsland, isVip: val, isShrine, selectedCurrency });
+  };
+
+  const updateShrine = (val) => {
+    setIsShrine(val);
+    localStorage.setItem('sfl_shrine', String(val));
+    if (user) saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine: val, selectedCurrency });
+  };
+
+  const updateCurrency = (val) => {
+    setSelectedCurrency(val);
+    localStorage.setItem('sfl_currency', val);
+    if (user) saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine, selectedCurrency: val });
+  };
+
+  // Cálculo da Taxa Efetiva
   const effectiveTax = (() => {
     if (selectedIsland === 'basic') return 0;
     const taxasBase = { petal: 0.50, desert: 0.20, volcano: 0.15 };
@@ -57,13 +170,13 @@ export default function useMarketData() {
 
   // Salva preferências no localStorage
   useEffect(() => { localStorage.setItem('sfl_island', selectedIsland); }, [selectedIsland]);
-  useEffect(() => { localStorage.setItem('sfl_vip', isVip); }, [isVip]);
-  useEffect(() => { localStorage.setItem('sfl_shrine', isShrine); }, [isShrine]);
+  useEffect(() => { localStorage.setItem('sfl_vip', String(isVip)); }, [isVip]);
+  useEffect(() => { localStorage.setItem('sfl_shrine', String(isShrine)); }, [isShrine]);
   useEffect(() => { localStorage.setItem('sfl_lang', currentLang); }, [currentLang]);
   useEffect(() => { localStorage.setItem('sfl_currency', selectedCurrency); }, [selectedCurrency]);
   useEffect(() => { localStorage.setItem('sfl_transactions', JSON.stringify(transactions)); }, [transactions]);
 
-  // 2. Busca Cotações da API
+  // Busca Cotações da API
   const refreshData = useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -122,13 +235,12 @@ export default function useMarketData() {
     refreshData();
   }, [refreshData]);
 
-  // 3. Busca de Fazenda via Orquestrador Dual (Público vs Oficial Autenticado)
+  // Busca de Fazenda via Orquestrador Dual (Público vs Oficial Autenticado)
   const searchFarm = useCallback(async (query, apiKeyOverride = null, forceRefresh = false) => {
     if (!query) return;
     let landId = query;
     const apiKeyToUse = apiKeyOverride ?? localStorage.getItem('sfl_api_key') ?? '';
 
-    // Se a busca for por Nickname, converte para Farm ID
     if (/[a-zA-Z]/.test(query)) {
       const resolvedId = await resolveFarmIdFromUsername(query);
       if (resolvedId) {
@@ -148,9 +260,9 @@ export default function useMarketData() {
 
       if (normalizedData && normalizedData.land) {
         const land = normalizedData.land;
-        if (land.type) setSelectedIsland(String(land.type).toLowerCase());
-        if (land.vip !== undefined) setIsVip(Boolean(land.vip));
-        if (land.shrine !== undefined) setIsShrine(Boolean(land.shrine));
+        if (land.type) updateIsland(String(land.type).toLowerCase());
+        if (land.vip !== undefined) updateVip(Boolean(land.vip));
+        if (land.shrine !== undefined) updateShrine(Boolean(land.shrine));
         setFarmData(normalizedData);
       } else {
         setFarmData(null);
@@ -159,9 +271,8 @@ export default function useMarketData() {
       console.error('[FarmSearch] Erro ao carregar dados da fazenda:', err);
       setFarmData(null);
     }
-  }, []);
+  }, [updateIsland, updateVip, updateShrine]);
 
-  // Carregar a fazenda automaticamente se já houver uma salva
   useEffect(() => {
     const savedFarm = localStorage.getItem('sfl_farm_id');
     if (savedFarm) {
@@ -202,7 +313,7 @@ export default function useMarketData() {
     });
   };
 
-  // 4. Cálculo de Posições do Portfólio (Estoque, Custo Médio e PnL Token vs Moeda Real)
+  // Cálculo de Posições do Portfólio
   const portfolioData = (() => {
     const estoque = {};
     const defaultUsdRate = currencyRates.usd || 0.087;
@@ -216,7 +327,6 @@ export default function useMarketData() {
       if (t.tipo === 'buy') {
         estoque[key].qty += t.qty;
         estoque[key].custoTotal += t.totalPrice;
-        // Salva custo de entrada em USD (se o registro antigo não tinha cotacao_entrada_usd, usa a cotação USD atual como fallback)
         const cotacaoTxUsd = t.cotacao_entrada_usd || defaultUsdRate;
         estoque[key].custoTotalUsd += (t.totalPrice * cotacaoTxUsd);
       } else if (t.tipo === 'sell') {
@@ -231,17 +341,15 @@ export default function useMarketData() {
 
     const usdRate = currencyRates.usd || 0.087;
     const selectedRate = currencyRates[selectedCurrency] || usdRate;
-    // Proporção de conversão da moeda selecionada em relação ao USD (ex: se selecionou BRL, converte via taxa BRL / USD)
     const currencyRatio = usdRate > 0 ? (selectedRate / usdRate) : 1;
 
     return Object.keys(estoque)
       .filter(key => estoque[key].qty > 0.0001)
       .map(key => {
         const item = estoque[key];
-        let precoMedio = item.qty > 0 ? (item.custoTotal / item.qty) : 0; // em SFL
-        let cotacaoMediaFlowerUsd = item.custoTotal > 0 ? (item.custoTotalUsd / item.custoTotal) : usdRate; // cotação em USD do $FLOWER na entrada
+        let precoMedio = item.qty > 0 ? (item.custoTotal / item.qty) : 0;
+        let cotacaoMediaFlowerUsd = item.custoTotal > 0 ? (item.custoTotalUsd / item.custoTotal) : usdRate;
 
-        // Aplica ajuste manual de Preço Médio / Cotação $FLOWER (se configurado pelo usuário)
         const customOverride = customAvgPrices[key] || customAvgPrices[item.nome.toLowerCase()];
         if (customOverride) {
           if (customOverride.avgSfl !== null && !isNaN(customOverride.avgSfl)) {
@@ -260,13 +368,11 @@ export default function useMarketData() {
 
         const precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === key)] || 0;
         const precoVendaLiquidoUnitario = precoP2P * (1 - effectiveTax);
-        const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario; // em SFL
+        const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
         
-        // Lucro em Tokens ($FLOWER)
         const lucroAbsoluto = valorVendaLiquidoTotal - custoTotal;
         const lucroPercentual = custoTotal > 0 ? (lucroAbsoluto / custoTotal) * 100 : 0;
 
-        // Lucro Real em USD e Moeda Selecionada (USD / BRL / etc.)
         const valorVendaLiquidoTotalUsd = valorVendaLiquidoTotal * usdRate;
         const lucroAbsolutoUsd = valorVendaLiquidoTotalUsd - custoTotalUsd;
         const lucroPercentualUsd = custoTotalUsd > 0 ? (lucroAbsolutoUsd / custoTotalUsd) * 100 : 0;
@@ -299,40 +405,54 @@ export default function useMarketData() {
       });
   })();
 
-  // 5. Registrar Transação (Compra / Venda)
+  // Sincronizar Portfólios com Supabase quando `portfolioData` é atualizado e usuário logado
+  useEffect(() => {
+    if (user && portfolioData.length > 0) {
+      savePortfoliosRemote(user.id, portfolioData);
+    }
+  }, [user, portfolioData]);
+
+  // Registrar Transação (Compra / Venda)
   const handleTransaction = (nuevaTransacao) => {
-    // Ao registrar compra, salva no LocalStorage a cotação do $FLOWER em USD no momento da entrada e valor total USD
     const cotacaoEntrada = nuevaTransacao.cotacao_entrada_usd ?? currencyRates.usd ?? 0.087;
     const totalPriceUsd = (nuevaTransacao.totalPrice || (nuevaTransacao.qty * nuevaTransacao.unitPrice)) * cotacaoEntrada;
 
-    setTransactions(prev => [
-      ...prev,
-      {
-        ...nuevaTransacao,
-        cotacao_entrada_usd: cotacaoEntrada,
-        token_price_usd_at_purchase: cotacaoEntrada,
-        total_price_usd: totalPriceUsd,
-        id: Date.now(),
-        timestamp: new Date().toISOString()
-      }
-    ]);
+    const txObj = {
+      ...nuevaTransacao,
+      cotacao_entrada_usd: cotacaoEntrada,
+      token_price_usd_at_purchase: cotacaoEntrada,
+      total_price_usd: totalPriceUsd,
+      id: Date.now(),
+      timestamp: new Date().toISOString()
+    };
+
+    setTransactions(prev => [...prev, txObj]);
+
+    // Se estiver logado, envia a transação para o Supabase
+    if (user) {
+      saveTransactionRemote(user.id, txObj);
+    }
   };
 
   const flowerPrice = currencyRates[selectedCurrency] || currencyRates.usd;
 
   return {
+    user,
+    setUser,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
     flowerPrice,
     effectiveTax,
     selectedIsland,
-    setSelectedIsland,
+    setSelectedIsland: updateIsland,
     isVip,
-    setIsVip,
+    setIsVip: updateVip,
     isShrine,
-    setIsShrine,
+    setIsShrine: updateShrine,
     currentLang,
     setCurrentLang,
     selectedCurrency,
-    setSelectedCurrency,
+    setSelectedCurrency: updateCurrency,
     marketData,
     portfolioData,
     transactions,
@@ -345,4 +465,4 @@ export default function useMarketData() {
     loading,
     error
   };
-}
+}

@@ -4,6 +4,7 @@ import Header from './components/Header';
 import PortfolioTable from './components/PortfolioTable';
 import ResourceGrid from './components/ResourceGrid';
 import TransactionModal from './components/TransactionModal';
+import AuthModal from './components/AuthModal';
 import BottomNav from './components/BottomNav';
 import FarmDashboard from './components/FarmDashboard';
 import { t } from './i18n';
@@ -17,10 +18,14 @@ const App = () => {
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
   const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
   
-  // Novo estado para controlar mensagens de erro e sucesso do perfil
+  // Mensagens do perfil
   const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
 
   const {
+    user,
+    setUser,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
     flowerPrice,
     effectiveTax,
     selectedIsland,
@@ -46,7 +51,7 @@ const App = () => {
     error
   } = useMarketData();
 
-  // A função com a VALIDAÇÃO BLINDADA da API Key
+  // Validação da API Key
   const handleSaveProfile = () => {
     const keyStr = apiKey.trim();
 
@@ -62,7 +67,6 @@ const App = () => {
       return;
     }
 
-    // Se passou na validação, salva!
     localStorage.setItem('sfl_farm_id', farmId);
     localStorage.setItem('sfl_api_key', keyStr);
     
@@ -119,6 +123,8 @@ const App = () => {
           onSearchFarm={searchFarm}
           updatedTimeText={updatedTimeText}
           savedFarmId={farmId}
+          user={user}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
         />
 
         <main>
@@ -153,46 +159,89 @@ const App = () => {
           )}
 
           {(activeTab === 'perfil' || activeTab === 'profile') && (
-            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 w-full space-y-4 shadow-lg">
-              <h2 className="text-xl font-bold text-amber-400 border-b border-slate-700 pb-2">
-                {t('profileTab', currentLang)}
+            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 w-full space-y-6 shadow-lg">
+              <h2 className="text-xl font-bold text-amber-400 border-b border-slate-700 pb-2 flex items-center justify-between">
+                <span>{t('profileTab', currentLang)}</span>
               </h2>
+
+              {/* Card de Conta Supabase Cloud */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <span>☁️</span>
+                    <span>{t('authTitle', currentLang)}</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {user ? (
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        {t('authStatusConnected', currentLang, { email: user.email })}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+                        {t('authStatusGuest', currentLang)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className={`px-4 py-2 rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 ${
+                    user 
+                      ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600' 
+                      : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold'
+                  }`}
+                >
+                  {user ? (
+                    <><span>⚙️</span> <span>{currentLang === 'pt' ? 'Gerenciar Conta' : 'Manage Account'}</span></>
+                  ) : (
+                    <><span>⚡</span> <span>{currentLang === 'pt' ? 'Entrar / Sincronizar' : 'Sign In / Sync'}</span></>
+                  )}
+                </button>
+              </div>
               
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Farm ID</label>
-                <input
-                  type="text"
-                  value={farmId}
-                  onChange={(e) => setFarmId(e.target.value)}
-                  placeholder="Ex: 123456"
-                  className="w-full bg-slate-900 text-white px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400"
-                />
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-300 border-b border-slate-700/60 pb-1">
+                  🔑 {currentLang === 'pt' ? 'Credenciais da Fazenda (API SFL)' : 'Farm API Credentials'}
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Farm ID</label>
+                  <input
+                    type="text"
+                    value={farmId}
+                    onChange={(e) => setFarmId(e.target.value)}
+                    placeholder="Ex: 123456"
+                    className="w-full bg-slate-900 text-white px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">API Key</label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={t('apiKeyPlaceholder', currentLang)}
+                    className="w-full bg-slate-900 text-white px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400 text-sm"
+                  />
+                </div>
+
+                <button
+                  onClick={handleSaveProfile}
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition"
+                >
+                  {t('btnSave', currentLang)}
+                </button>
+
+                {profileMsg.text && (
+                  <p className={`text-sm font-bold text-center ${profileMsg.type === 'error' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {profileMsg.text}
+                  </p>
+                )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">API Key</label>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={t('apiKeyPlaceholder', currentLang)}
-                  className="w-full bg-slate-900 text-white px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <button
-                onClick={handleSaveProfile}
-                className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition"
-              >
-                {t('btnSave', currentLang)}
-              </button>
-
-              {/* Mensagem dinâmica renderizada aqui */}
-              {profileMsg.text && (
-                <p className={`text-sm font-bold text-center ${profileMsg.type === 'error' ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  {profileMsg.text}
-                </p>
-              )}
 
               <FarmDashboard farmData={farmData} currentLang={currentLang} />
             </div>
@@ -221,6 +270,14 @@ const App = () => {
         portfolioData={portfolioData}
         currentLang={currentLang}
         initialResource={modalResource}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        user={user}
+        currentLang={currentLang}
+        onAuthChange={(updatedUser) => setUser(updatedUser)}
       />
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
