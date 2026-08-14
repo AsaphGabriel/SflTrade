@@ -17,7 +17,31 @@ function formatarPreco(valor) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-const PortfolioTable = ({ data = [], currentLang = 'en', onOpenSell }) => {
+function formatarMoeda(valor, currency = 'usd') {
+  if (valor === undefined || valor === null || isNaN(valor)) return '$0.00 USD';
+  const num = Number(valor);
+  const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
+  const currLower = (currency || 'usd').toLowerCase();
+  const sym = symbolMap[currLower] || '$';
+  const currCode = currency.toUpperCase();
+  const sinal = num < 0 ? '-' : '';
+  const absNum = Math.abs(num);
+  
+  let formattedStr = '';
+  if (absNum === 0) {
+    formattedStr = '0.00';
+  } else if (absNum >= 100) {
+    formattedStr = absNum.toFixed(2);
+  } else if (absNum >= 1) {
+    formattedStr = absNum.toFixed(2);
+  } else {
+    formattedStr = absNum.toFixed(3);
+  }
+
+  return `${sinal}${sym}${formattedStr} ${currCode}`;
+}
+
+const PortfolioTable = ({ data = [], currentLang = 'en', selectedCurrency = 'usd', onOpenSell }) => {
   // Estado quando não há recursos em estoque
   if (!data || data.length === 0) {
     return (
@@ -41,7 +65,8 @@ const PortfolioTable = ({ data = [], currentLang = 'en', onOpenSell }) => {
       {/* Visão Mobile (< md): Cards Individuais */}
       <div className="grid grid-cols-1 gap-3 md:hidden">
         {data.map(item => {
-          const corLucro = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
           const iconUrl = getItemIcon(item.nome);
 
           return (
@@ -86,11 +111,17 @@ const PortfolioTable = ({ data = [], currentLang = 'en', onOpenSell }) => {
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+              <div className="pt-2 border-t border-slate-800 flex flex-wrap justify-between items-center text-xs gap-y-1">
                 <span className="text-slate-400 font-semibold">{t('thEstPl', currentLang)}:</span>
-                <span className={`font-mono font-bold ${corLucro}`}>
-                  {item.lucroAbsoluto >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} SFL ({item.lucroPercentual.toFixed(1)}%)
-                </span>
+                <div className="font-mono font-bold text-right flex flex-wrap justify-end items-center gap-1.5 text-xs">
+                  <span className={corLucroToken}>
+                    {item.lucroAbsoluto >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} FLOWER ({item.lucroPercentual.toFixed(1)}%)
+                  </span>
+                  <span className="text-slate-600">|</span>
+                  <span className={corLucroMoeda}>
+                    {item.lucroAbsolutoMoeda >= 0 ? '+' : ''}{formatarMoeda(item.lucroAbsolutoMoeda, selectedCurrency)} ({item.lucroPercentualMoeda.toFixed(1)}%)
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -114,7 +145,8 @@ const PortfolioTable = ({ data = [], currentLang = 'en', onOpenSell }) => {
           </thead>
           <tbody>
             {data.map(item => {
-              const corLucro = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
+              const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
+              const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
               const iconUrl = getItemIcon(item.nome);
 
               return (
@@ -140,8 +172,15 @@ const PortfolioTable = ({ data = [], currentLang = 'en', onOpenSell }) => {
                       ({formatarPreco(item.precoVendaLiquidoUnitario)} {t('perUnit', currentLang)})
                     </div>
                   </td>
-                  <td className={`p-3 text-right font-bold font-mono ${corLucro}`}>
-                    {item.lucroAbsoluto >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} SFL ({item.lucroPercentual.toFixed(1)}%)
+                  <td className="p-3 text-right font-mono">
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className={`font-bold ${corLucroToken}`}>
+                        {item.lucroAbsoluto >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} FLOWER ({item.lucroPercentual.toFixed(1)}%)
+                      </span>
+                      <span className={`text-[11px] font-semibold ${corLucroMoeda}`}>
+                        {item.lucroAbsolutoMoeda >= 0 ? '+' : ''}{formatarMoeda(item.lucroAbsolutoMoeda, selectedCurrency)} ({item.lucroPercentualMoeda.toFixed(1)}%)
+                      </span>
+                    </div>
                   </td>
                   <td className="p-3 text-center">
                     <button

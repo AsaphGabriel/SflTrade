@@ -161,51 +161,89 @@ export default function useMarketData() {
     }
   }, [searchFarm]);
 
-  // 4. Cálculo de Posições do Portfólio (Estoque, Custo Médio e PnL)
+  // 4. Cálculo de Posições do Portfólio (Estoque, Custo Médio e PnL Token vs Moeda Real)
   const portfolioData = (() => {
     const estoque = {};
+    const defaultUsdRate = currencyRates.usd || 0.087;
+
     transactions.forEach(t => {
       const item = t.recurso;
       const key = item.toLowerCase();
       if (!estoque[key]) {
-        estoque[key] = { nome: item, qty: 0, custoTotal: 0 };
+        estoque[key] = { nome: item, qty: 0, custoTotal: 0, custoTotalUsd: 0 };
       }
       if (t.tipo === 'buy') {
         estoque[key].qty += t.qty;
         estoque[key].custoTotal += t.totalPrice;
+        // Salva custo de entrada em USD (se o registro antigo não tinha cotacao_entrada_usd, usa a cotação USD atual como fallback)
+        const cotacaoTxUsd = t.cotacao_entrada_usd || defaultUsdRate;
+        estoque[key].custoTotalUsd += (t.totalPrice * cotacaoTxUsd);
       } else if (t.tipo === 'sell') {
-        const precoMedioAntes = estoque[key].qty > 0 ? (estoque[key].custoTotal / estoque[key].qty) : 0;
+        const qtyAntes = estoque[key].qty;
+        const precoMedioAntesSfl = qtyAntes > 0 ? (estoque[key].custoTotal / qtyAntes) : 0;
+        const precoMedioAntesUsd = qtyAntes > 0 ? (estoque[key].custoTotalUsd / qtyAntes) : 0;
         estoque[key].qty -= t.qty;
-        estoque[key].custoTotal -= (t.qty * precoMedioAntes);
+        estoque[key].custoTotal -= (t.qty * precoMedioAntesSfl);
+        estoque[key].custoTotalUsd -= (t.qty * precoMedioAntesUsd);
       }
     });
+
+    const usdRate = currencyRates.usd || 0.087;
+    const selectedRate = currencyRates[selectedCurrency] || usdRate;
+    // Proporção de conversão da moeda selecionada em relação ao USD (ex: se selecionou BRL, converte via taxa BRL / USD)
+    const currencyRatio = usdRate > 0 ? (selectedRate / usdRate) : 1;
 
     return Object.keys(estoque)
       .filter(key => estoque[key].qty > 0.0001)
       .map(key => {
         const item = estoque[key];
-        const precoMedio = item.custoTotal / item.qty;
+        const precoMedio = item.custoTotal / item.qty; // em SFL
+        const precoMedioUsd = item.custoTotalUsd / item.qty; // em USD no momento da entrada
+        
         const precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === key)] || 0;
         const precoVendaLiquidoUnitario = precoP2P * (1 - effectiveTax);
-        const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
+        const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario; // em SFL
+        
+        // Lucro em Tokens ($FLOWER)
         const lucroAbsoluto = valorVendaLiquidoTotal - item.custoTotal;
         const lucroPercentual = item.custoTotal > 0 ? (lucroAbsoluto / item.custoTotal) * 100 : 0;
+
+        // Lucro Real em Moeda Selecionada (USD / BRL / etc.)
+        const custoTotalMoeda = item.custoTotalUsd * currencyRatio;
+        const valorVendaLiquidoTotalMoeda = valorVendaLiquidoTotal * selectedRate;
+        const lucroAbsolutoMoeda = valorVendaLiquidoTotalMoeda - custoTotalMoeda;
+        const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
 
         return {
           ...item,
           precoMedio,
+          precoMedioUsd,
           precoP2P,
           precoVendaLiquidoUnitario,
           valorVendaLiquidoTotal,
           lucroAbsoluto,
-          lucroPercentual
+          lucroPercentual,
+          custoTotalMoeda,
+          valorVendaLiquidoTotalMoeda,
+          lucroAbsolutoMoeda,
+          lucroPercentualMoeda
         };
       });
   })();
 
   // 5. Registrar Transação (Compra / Venda)
   const handleTransaction = (nuevaTransacao) => {
-    setTransactions(prev => [...prev, { ...nuevaTransacao, id: Date.now(), timestamp: new Date().toISOString() }]);
+    // Ao registrar compra, salva no LocalStorage a cotação do $FLOWER em USD no momento da entrada
+    const cotacaoEntrada = nuevaTransacao.cotacao_entrada_usd ?? currencyRates.usd ?? 0.087;
+    setTransactions(prev => [
+      ...prev,
+      {
+        ...nuevaTransacao,
+        cotacao_entrada_usd: cotacaoEntrada,
+        id: Date.now(),
+        timestamp: new Date().toISOString()
+      }
+    ]);
   };
 
   const flowerPrice = currencyRates[selectedCurrency] || currencyRates.usd;

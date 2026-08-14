@@ -125,6 +125,7 @@ const App = () => {
               <PortfolioTable 
                 data={portfolioData} 
                 currentLang={currentLang} 
+                selectedCurrency={selectedCurrency}
                 onOpenSell={openSell} 
               />
               <ResourceGrid 
