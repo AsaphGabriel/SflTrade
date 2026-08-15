@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { t } from '../i18n';
 
 const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
@@ -18,7 +18,7 @@ function formatarPreco(valor) {
 }
 
 const TransactionModal = ({
-  isOpen,
+  isOpen = true,
   onClose,
   type = 'buy',
   onSubmit,
@@ -28,8 +28,8 @@ const TransactionModal = ({
   currentLang = 'en',
   initialResource = ''
 }) => {
-  const [resourceSearch, setResourceSearch] = useState('');
-  const [selectedResource, setSelectedResource] = useState('');
+  const [resourceSearch, setResourceSearch] = useState(initialResource || '');
+  const [selectedResource, setSelectedResource] = useState(initialResource || '');
   const [quantity, setQuantity] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
@@ -38,36 +38,7 @@ const TransactionModal = ({
 
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      setQuantity('');
-      setUnitPrice('');
-      setTotalPrice('');
-      setIsDropdownOpen(false);
-
-      if (initialResource) {
-        handleSelectResource(initialResource);
-      } else {
-        setSelectedResource('');
-        setResourceSearch('');
-        setMaxStock(0);
-      }
-    }
-  }, [isOpen, initialResource]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  if (!isOpen) return null;
-
-  const handleSelectResource = (nomeRecurso) => {
+  const handleSelectResource = useCallback((nomeRecurso) => {
     setSelectedResource(nomeRecurso);
     setResourceSearch(nomeRecurso);
     setIsDropdownOpen(false);
@@ -81,7 +52,7 @@ const TransactionModal = ({
     }
 
     if (type === 'sell') {
-      const itemEstoque = portfolioData.find(p => p.nome.toLowerCase() === nomeRecurso.toLowerCase());
+      const itemEstoque = (portfolioData || []).find(p => p && p.nome && p.nome.toLowerCase() === nomeRecurso.toLowerCase());
       if (itemEstoque && itemEstoque.qty > 0) {
         setMaxStock(itemEstoque.qty);
         setQuantity(itemEstoque.qty.toString());
@@ -92,7 +63,25 @@ const TransactionModal = ({
         setMaxStock(0);
       }
     }
-  };
+  }, [marketData, portfolioData, quantity, type]);
+
+  useEffect(() => {
+    if (initialResource) {
+      handleSelectResource(initialResource);
+    }
+  }, [initialResource, handleSelectResource]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  if (!isOpen) return null;
 
   const handleUseMaxStock = () => {
     if (maxStock > 0) {
@@ -130,18 +119,18 @@ const TransactionModal = ({
     }
   };
 
-  const getFilteredResources = () => {
+  const filteredResources = useMemo(() => {
     const termo = resourceSearch.toLowerCase().trim();
     let listaBase = [];
 
     if (type === 'sell') {
-      listaBase = portfolioData.filter(item => item.qty > 0.0001).map(item => item.nome);
+      listaBase = (portfolioData || []).filter(item => item && item.qty > 0.0001).map(item => item.nome);
     } else {
-      listaBase = Object.keys(marketData).sort();
+      listaBase = Object.keys(marketData || {}).sort();
     }
 
-    return listaBase.filter(r => r.toLowerCase().includes(termo));
-  };
+    return listaBase.filter(r => r && r.toLowerCase().includes(termo));
+  }, [resourceSearch, type, portfolioData, marketData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -202,12 +191,12 @@ const TransactionModal = ({
             {/* Dropdown de Resultados */}
             {isDropdownOpen && (
               <div className="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl max-h-40 overflow-y-auto z-20 shadow-xl">
-                {getFilteredResources().length === 0 ? (
+                {filteredResources.length === 0 ? (
                   <div className="p-2 text-xs text-slate-500 text-center">
                     {type === 'sell' ? t('noStockSell', currentLang) : t('noItemFound', currentLang)}
                   </div>
                 ) : (
-                  getFilteredResources().map(rec => (
+                  filteredResources.map(rec => (
                     <div
                       key={rec}
                       onClick={() => handleSelectResource(rec)}

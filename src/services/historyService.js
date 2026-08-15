@@ -53,22 +53,29 @@ function setLocalCache(key, data) {
 }
 
 /**
- * Utilitário para calcular média móvel (Simple Moving Average - SMA)
+ * Utilitário linear O(N) para calcular média móvel (Simple Moving Average - SMA) sem travamentos de CPU
  */
 export function calculateMovingAverage(data = [], windowSize = 7, valueKey = 'price_sfl') {
   if (!Array.isArray(data) || data.length === 0) return [];
+  const safeWindow = Math.max(1, windowSize);
+  const result = [];
+  let runningSum = 0;
   
-  return data.map((item, index) => {
-    const start = Math.max(0, index - windowSize + 1);
-    const subset = data.slice(start, index + 1);
-    const sum = subset.reduce((acc, curr) => acc + (Number(curr[valueKey] || curr.price || 0)), 0);
-    const avg = subset.length > 0 ? sum / subset.length : 0;
-    
-    return {
-      ...item,
+  for (let i = 0; i < data.length; i++) {
+    const val = Number(data[i][valueKey] || data[i].price || 0) || 0;
+    runningSum += val;
+    if (i >= safeWindow) {
+      const oldVal = Number(data[i - safeWindow][valueKey] || data[i - safeWindow].price || 0) || 0;
+      runningSum -= oldVal;
+    }
+    const count = Math.min(i + 1, safeWindow);
+    const avg = count > 0 ? runningSum / count : 0;
+    result.push({
+      ...data[i],
       [`sma_${windowSize}d`]: Number(avg.toFixed(6))
-    };
-  });
+    });
+  }
+  return result;
 }
 
 /**

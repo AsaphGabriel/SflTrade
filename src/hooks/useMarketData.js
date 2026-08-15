@@ -158,29 +158,45 @@ export default function useMarketData() {
     };
   }, [syncCloud]);
 
-  // Helper para salvar configs tanto local quanto remoto
+  // Helper para salvar configs tanto local quanto remoto (desacoplado do clique)
   const updateIsland = useCallback((val) => {
     setSelectedIsland(val);
     localStorage.setItem('sfl_island', val);
-    if (user) saveSettingsRemote(user.id, { selectedIsland: val, isVip, isShrine, selectedCurrency });
+    if (user) {
+      setTimeout(() => {
+        saveSettingsRemote(user.id, { selectedIsland: val, isVip, isShrine, selectedCurrency });
+      }, 100);
+    }
   }, [user, isVip, isShrine, selectedCurrency]);
 
   const updateVip = useCallback((val) => {
     setIsVip(val);
     localStorage.setItem('sfl_vip', String(val));
-    if (user) saveSettingsRemote(user.id, { selectedIsland, isVip: val, isShrine, selectedCurrency });
+    if (user) {
+      setTimeout(() => {
+        saveSettingsRemote(user.id, { selectedIsland, isVip: val, isShrine, selectedCurrency });
+      }, 100);
+    }
   }, [user, selectedIsland, isShrine, selectedCurrency]);
 
   const updateShrine = useCallback((val) => {
     setIsShrine(val);
     localStorage.setItem('sfl_shrine', String(val));
-    if (user) saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine: val, selectedCurrency });
+    if (user) {
+      setTimeout(() => {
+        saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine: val, selectedCurrency });
+      }, 100);
+    }
   }, [user, selectedIsland, isVip, selectedCurrency]);
 
   const updateCurrency = useCallback((val) => {
     setSelectedCurrency(val);
     localStorage.setItem('sfl_currency', val);
-    if (user) saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine, selectedCurrency: val });
+    if (user) {
+      setTimeout(() => {
+        saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine, selectedCurrency: val });
+      }, 100);
+    }
   }, [user, selectedIsland, isVip, isShrine]);
 
   // Cálculo da Taxa Efetiva
@@ -194,12 +210,7 @@ export default function useMarketData() {
   })();
 
   // Salva preferências no localStorage
-  useEffect(() => { localStorage.setItem('sfl_island', selectedIsland); }, [selectedIsland]);
-  useEffect(() => { localStorage.setItem('sfl_vip', String(isVip)); }, [isVip]);
-  useEffect(() => { localStorage.setItem('sfl_shrine', String(isShrine)); }, [isShrine]);
   useEffect(() => { localStorage.setItem('sfl_lang', currentLang); }, [currentLang]);
-  useEffect(() => { localStorage.setItem('sfl_currency', selectedCurrency); }, [selectedCurrency]);
-  useEffect(() => { localStorage.setItem('sfl_transactions', JSON.stringify(transactions)); }, [transactions]);
 
   // Busca Cotações da API
   const refreshData = useCallback(async () => {
@@ -430,8 +441,9 @@ export default function useMarketData() {
       });
   }, [transactions, currencyRates, selectedCurrency, customAvgPrices, marketData, effectiveTax]);
 
-  // Registrar Transação (Compra / Venda)
-  const handleTransaction = (nuevaTransacao) => {
+  // Registrar Transação (Compra / Venda) com desacoplamento assíncrono
+  const handleTransaction = useCallback((nuevaTransacao) => {
+    if (!nuevaTransacao) return;
     const cotacaoEntrada = nuevaTransacao.cotacao_entrada_usd ?? currencyRates.usd ?? 0.087;
     const totalPriceUsd = (nuevaTransacao.totalPrice || (nuevaTransacao.qty * nuevaTransacao.unitPrice)) * cotacaoEntrada;
 
@@ -446,14 +458,18 @@ export default function useMarketData() {
 
     setTransactions(prev => {
       const updated = [...prev, txObj];
-      localStorage.setItem('sfl_transactions', JSON.stringify(updated));
+      try {
+        localStorage.setItem('sfl_transactions', JSON.stringify(updated));
+      } catch (e) {}
       return updated;
     });
 
     if (user) {
-      saveTransactionRemote(user.id, txObj);
+      setTimeout(() => {
+        saveTransactionRemote(user.id, txObj);
+      }, 100);
     }
-  };
+  }, [currencyRates.usd, user]);
 
   const flowerPrice = currencyRates[selectedCurrency] || currencyRates.usd;
 

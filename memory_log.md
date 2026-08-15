@@ -1,6 +1,33 @@
 # 📜 Memory Log - SflTrade
 
-## [2026-08-14] Hotfix: Desempenho e Resiliência dos Modais no Navegador Brave & Tratamento SVG
+## [2026-08-14] Hotfix Definitivo: Eliminação de Thread Lock (Congelamento de JS) em Transações, Edições e Modais
+
+### 1. 🔍 Causa Raiz do Thread Lock (Congelamento de Thread JS)
+- **Persistência Síncrona Duplicada + Chamadas Remotas no Clique**:
+  - Ao comprar ou vender, `handleTransaction` executava `localStorage.setItem` síncrono duas vezes (no updater e em `useEffect`) e disparava chamada remota do Supabase de forma bloqueante no mesmo tick do evento de clique.
+  - Ao editar médias de posição, `setCustomAvgPrices` disparava cascata de `useEffect` no modal filho (`PositionDetailsModal`).
+- **Renderização e Montagem Fantasma de Modais no App (`App.jsx`)**:
+  - `TransactionModal` (duas instâncias) e `AuthModal` ficavam permanentemente montados no DOM com `isOpen={false}`, forçando o React a recalcular props pesadas e diffing de árvores completas a cada clique.
+- **Complexidade de Cálculo das Médias Móveis (`calculateMovingAverage` em `historyService.js`)**:
+  - O cálculo anterior alocava subarrays com `slice` e `reduce` repetidos, gerando pressão no Garbage Collector.
+
+### 2. 🛠️ Soluções e Desacoplamentos Aplicados
+- **Desacoplamento Assíncrono (`useMarketData.js`)**:
+  - `handleTransaction`, `updateIsland`, `updateVip`, `updateShrine` e `updateCurrency` agora atualizam o estado local de forma pura e limpa.
+  - Qualquer sincronização secundária com o Supabase (`saveTransactionRemote` / `saveSettingsRemote`) foi desacoplada via `setTimeout(..., 100)` fora da thread de clique.
+  - Removido `useEffect` redundante que re-gravava `transactions` no `localStorage`.
+- **Renderização Condicional de Modais (`App.jsx`)**:
+  - Modais agora só são montados quando seus respectivos estados estão abertos (`isBuyModalOpen && <TransactionModal ... />`), eliminando overhead em segundo plano.
+- **Cálculo Linear O(N) para SMA (`historyService.js`)**:
+  - `calculateMovingAverage` reescrita com soma de janela deslizante O(N), eliminando alocações desnecessárias.
+- **Isolamento e Memoização no `TransactionModal.jsx`**:
+  - Memoizada a lista filtrada de recursos com `useMemo` e estabilizado `handleSelectResource` com `useCallback`.
+
+### 3. 🚀 Build & Deploy
+- Compilação executada com sucesso (`npm run build` em 175ms).
+- Publicação efetuada na branch `gh-pages` (`npx gh-pages -d dist`).
+
+---
 
 ### 1. 🛡️ Otimização para Brave Shields & Navegadores com Bloqueio de Rastreio
 - **Timeouts Rápidos no Supabase (`withTimeout` em `historyService.js`)**: Adicionado timeout com limite de 2,5 segundos para todas as consultas do Supabase no `fetchTokenHistory` e `fetchResourceHistory`. Caso o Brave Shields retarde ou bloqueie consultas REST/WebSockets, o app cai instantaneamente no fallback de dados locais sem travar a interface.

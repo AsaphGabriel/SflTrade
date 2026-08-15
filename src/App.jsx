@@ -260,38 +260,44 @@ const App = () => {
         </main>
       </div>
 
-      <TransactionModal
-        isOpen={isBuyModalOpen}
-        onClose={() => setIsBuyModalOpen(false)}
-        type="buy"
-        onSubmit={handleTransaction}
-        effectiveTax={effectiveTax}
-        marketData={marketData}
-        portfolioData={portfolioData}
-        currentLang={currentLang}
-        initialResource={modalResource}
-      />
-      <TransactionModal
-        isOpen={isSellModalOpen}
-        onClose={() => setIsSellModalOpen(false)}
-        type="sell"
-        onSubmit={handleTransaction}
-        effectiveTax={effectiveTax}
-        marketData={marketData}
-        portfolioData={portfolioData}
-        currentLang={currentLang}
-        initialResource={modalResource}
-      />
+      {isBuyModalOpen && (
+        <TransactionModal
+          isOpen={true}
+          onClose={() => setIsBuyModalOpen(false)}
+          type="buy"
+          onSubmit={handleTransaction}
+          effectiveTax={effectiveTax}
+          marketData={marketData}
+          portfolioData={portfolioData}
+          currentLang={currentLang}
+          initialResource={modalResource}
+        />
+      )}
+      {isSellModalOpen && (
+        <TransactionModal
+          isOpen={true}
+          onClose={() => setIsSellModalOpen(false)}
+          type="sell"
+          onSubmit={handleTransaction}
+          effectiveTax={effectiveTax}
+          marketData={marketData}
+          portfolioData={portfolioData}
+          currentLang={currentLang}
+          initialResource={modalResource}
+        />
+      )}
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        user={user}
-        currentLang={currentLang}
-        onAuthChange={(updatedUser) => setUser(updatedUser)}
-        onSyncCloud={syncCloud}
-        isSyncing={isSyncing}
-      />
+      {isAuthModalOpen && (
+        <AuthModal
+          isOpen={true}
+          onClose={() => setIsAuthModalOpen(false)}
+          user={user}
+          currentLang={currentLang}
+          onAuthChange={(updatedUser) => setUser(updatedUser)}
+          onSyncCloud={syncCloud}
+          isSyncing={isSyncing}
+        />
+      )}
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
