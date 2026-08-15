@@ -1,6 +1,22 @@
 import { supabase } from './supabase';
 
 /**
+ * Utilitário para verificar se o erro é de permissão/RLS (ex: 42501 Forbidden)
+ */
+function isPermissionOrForbiddenError(error) {
+  if (!error) return false;
+  const code = String(error.code || '');
+  const msg = String(error.message || '');
+  return (
+    code === '42501' ||
+    error.status === 403 ||
+    msg.toLowerCase().includes('row-level security') ||
+    msg.toLowerCase().includes('permission denied') ||
+    msg.toLowerCase().includes('42501')
+  );
+}
+
+/**
  * Busca todas as informações do usuário no Supabase (settings, portfolios, transactions)
  */
 export async function fetchRemoteUserData(userId) {
@@ -14,8 +30,14 @@ export async function fetchRemoteUserData(userId) {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (settingsErr && settingsErr.code !== 'PGRST116') {
-      console.warn('[SyncService] Erro ao buscar user_settings:', settingsErr);
+    if (settingsErr) {
+      if (isPermissionOrForbiddenError(settingsErr)) {
+        console.warn('[SyncService] Permissão negada ao buscar user_settings (42501). Abortando busca remota.');
+        return null;
+      }
+      if (settingsErr.code !== 'PGRST116') {
+        console.warn('[SyncService] Erro ao buscar user_settings:', settingsErr.message || settingsErr);
+      }
     }
 
     // 2. Portfólios
@@ -25,7 +47,11 @@ export async function fetchRemoteUserData(userId) {
       .eq('user_id', userId);
 
     if (portErr) {
-      console.warn('[SyncService] Erro ao buscar user_portfolios:', portErr);
+      if (isPermissionOrForbiddenError(portErr)) {
+        console.warn('[SyncService] Permissão negada ao buscar user_portfolios (42501).');
+      } else {
+        console.warn('[SyncService] Erro ao buscar user_portfolios:', portErr.message || portErr);
+      }
     }
 
     // 3. Transações
@@ -36,7 +62,11 @@ export async function fetchRemoteUserData(userId) {
       .order('created_at', { ascending: true });
 
     if (txErr) {
-      console.warn('[SyncService] Erro ao buscar user_transactions:', txErr);
+      if (isPermissionOrForbiddenError(txErr)) {
+        console.warn('[SyncService] Permissão negada ao buscar user_transactions (42501).');
+      } else {
+        console.warn('[SyncService] Erro ao buscar user_transactions:', txErr.message || txErr);
+      }
     }
 
     return {
@@ -45,7 +75,7 @@ export async function fetchRemoteUserData(userId) {
       transactions: transactionsData || []
     };
   } catch (err) {
-    console.error('[SyncService] Erro em fetchRemoteUserData:', err);
+    console.warn('[SyncService] Exceção em fetchRemoteUserData:', err?.message || err);
     return null;
   }
 }
@@ -62,7 +92,7 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
       const islandTaxMap = { basic: 0, desert: 20, volcano: 15, petal: 50 };
       const islandTax = islandTaxMap[localSettings.selectedIsland] ?? 15.0;
 
-      await supabase.from('user_settings').upsert({
+      const { error: setErr } = await supabase.from('user_settings').upsert({
         user_id: userId,
         island_tax: islandTax,
         vip_active: Boolean(localSettings.isVip),
@@ -70,14 +100,30 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
         preferred_currency: (localSettings.selectedCurrency || 'USD').toUpperCase(),
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' });
+
+      if (setErr) {
+        if (isPermissionOrForbiddenError(setErr)) {
+          console.warn('[SyncService] Permissão negada ao sincronizar user_settings (42501). Interrompendo push.');
+          return;
+        }
+        console.warn('[SyncService] Erro ao sincronizar user_settings:', setErr.message || setErr);
+      }
     }
 
     // 2. Sincronizar Transações (subir transações locais que ainda não estão no Supabase)
     if (localTransactions && localTransactions.length > 0) {
-      const { data: existingTx } = await supabase
+      const { data: existingTx, error: fetchTxErr } = await supabase
         .from('user_transactions')
         .select('resource_id, type, quantity, price_sfl, created_at')
         .eq('user_id', userId);
+
+      if (fetchTxErr) {
+        if (isPermissionOrForbiddenError(fetchTxErr)) {
+          console.warn('[SyncService] Permissão negada ao consultar user_transactions (42501).');
+          return;
+        }
+        console.warn('[SyncService] Erro ao consultar transações existentes:', fetchTxErr.message || fetchTxErr);
+      }
 
       // Chave robusta de identificação de transação
       const makeKey = (res, type, qty, price) => {
@@ -111,7 +157,11 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
           .insert(newTxsToInsert);
         
         if (insertTxErr) {
-          console.warn('[SyncService] Erro ao enviar transações locais:', insertTxErr);
+          if (isPermissionOrForbiddenError(insertTxErr)) {
+            console.warn('[SyncService] Permissão negada ao inserir transações (42501). Abortando.');
+            return;
+          }
+          console.warn('[SyncService] Erro ao enviar transações locais:', insertTxErr.message || insertTxErr);
         } else {
           console.log(`[SyncService] ${newTxsToInsert.length} transações locais enviadas para a nuvem!`);
         }
@@ -134,13 +184,17 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
         .upsert(portfolioRows, { onConflict: 'user_id, resource_id' });
 
       if (portErr) {
-        console.warn('[SyncService] Erro ao sincronizar user_portfolios:', portErr);
+        if (isPermissionOrForbiddenError(portErr)) {
+          console.warn('[SyncService] Permissão negada ao sincronizar user_portfolios (42501).');
+          return;
+        }
+        console.warn('[SyncService] Erro ao sincronizar user_portfolios:', portErr.message || portErr);
       }
     }
 
     console.log('[SyncService] Sincronização Local -> Supabase finalizada!');
   } catch (err) {
-    console.error('[SyncService] Erro na sincronização Local -> Supabase:', err);
+    console.warn('[SyncService] Erro na sincronização Local -> Supabase:', err?.message || err);
   }
 }
 
@@ -168,10 +222,14 @@ export async function saveTransactionRemote(userId, transaction) {
       .insert([row]);
 
     if (error) {
-      console.error('[SyncService] Erro ao salvar transação no Supabase:', error);
+      if (isPermissionOrForbiddenError(error)) {
+        console.warn('[SyncService] Permissão negada ao salvar transação remota (42501).');
+        return;
+      }
+      console.warn('[SyncService] Erro ao salvar transação no Supabase:', error.message || error);
     }
   } catch (err) {
-    console.error('[SyncService] Exceção ao salvar transação no Supabase:', err);
+    console.warn('[SyncService] Exceção ao salvar transação no Supabase:', err?.message || err);
   }
 }
 
@@ -179,7 +237,7 @@ export async function saveTransactionRemote(userId, transaction) {
  * Persiste portfólios atualizados diretamente no Supabase
  */
 export async function savePortfoliosRemote(userId, portfolioList) {
-  if (!userId || !portfolioList) return;
+  if (!userId || !portfolioList || portfolioList.length === 0) return;
 
   try {
     const rows = portfolioList.map(p => ({
@@ -197,11 +255,15 @@ export async function savePortfoliosRemote(userId, portfolioList) {
         .upsert(rows, { onConflict: 'user_id, resource_id' });
 
       if (error) {
-        console.error('[SyncService] Erro ao salvar portfólio no Supabase:', error);
+        if (isPermissionOrForbiddenError(error)) {
+          console.warn('[SyncService] Permissão negada ao salvar portfólio remoto (42501).');
+          return;
+        }
+        console.warn('[SyncService] Erro ao salvar portfólio no Supabase:', error.message || error);
       }
     }
   } catch (err) {
-    console.error('[SyncService] Exceção ao salvar portfólio no Supabase:', err);
+    console.warn('[SyncService] Exceção ao salvar portfólio no Supabase:', err?.message || err);
   }
 }
 
@@ -229,9 +291,13 @@ export async function saveSettingsRemote(userId, settings) {
       .upsert(row, { onConflict: 'user_id' });
 
     if (error) {
-      console.error('[SyncService] Erro ao salvar configurações no Supabase:', error);
+      if (isPermissionOrForbiddenError(error)) {
+        console.warn('[SyncService] Permissão negada ao salvar configurações remotas (42501).');
+        return;
+      }
+      console.warn('[SyncService] Erro ao salvar configurações no Supabase:', error.message || error);
     }
   } catch (err) {
-    console.error('[SyncService] Exceção ao salvar configurações no Supabase:', err);
+    console.warn('[SyncService] Exceção ao salvar configurações no Supabase:', err?.message || err);
   }
 }

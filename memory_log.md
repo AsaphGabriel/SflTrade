@@ -1,5 +1,26 @@
 # 📜 Memory Log - SflTrade
 
+## [2026-08-14] Hotfix: Eliminação de Loop Infinito de Sincronização e Tratamento de Erro 42501 (Supabase RLS)
+
+### 1. 🛑 Eliminação do Loop Infinito no React
+- **Remoção de `useEffect` Instável (`useMarketData.js`)**: Removida a sincronização contínua de portfólios disparada pela dependência `portfolioData` (que era recriada a cada render do componente).
+- **Trava de Concorrência & Rate Limiting (`useMarketData.js`)**:
+  - Implementado bloqueio por referência (`isSyncingRef`) impedindo execuções simultâneas de `syncCloud`.
+  - Adicionado controle de cooldown (`lastBackgroundSyncRef` com janela mínima de 60 segundos) para sincronizações automáticas em segundo plano.
+  - Sincronização manual diferenciada (`isManual = true`), permitindo disparo imediato sob demanda do usuário.
+
+### 2. 🛡️ Tratamento Resiliente do Erro 42501 (Forbidden / RLS)
+- **Interrupção Graciosa (`syncService.js`)**:
+  - Implementada função auxiliar `isPermissionOrForbiddenError` para detectar código `42501`, status `403` ou mensagens de restrição de RLS (Row-Level Security).
+  - Em caso de restrição de acesso ou erro de permissão em `fetchRemoteUserData`, `syncLocalToSupabase`, `saveTransactionRemote`, `savePortfoliosRemote` ou `saveSettingsRemote`, a operação é imediatamente cancelada com aviso no console, **sem disparar re-tentativas em loop**.
+- **`historyService.js`**: Tratamento seguro no retorno das chamadas de histórico global no Supabase (`token_price_history` e `resource_price_history`).
+
+### 3. 🚀 Build & Deploy
+- Compilação executada com sucesso via `npm run build`.
+- Publicação efetuada na branch `gh-pages` (`npx gh-pages -d dist`).
+
+---
+
 ## [2026-08-14] Refino da Sincronização Cloud, Gráficos Globais e Ajuste de Altura dos Modais
 
 ### 1. Sincronização Completa de Transações (Mobile <-> Nuvem)

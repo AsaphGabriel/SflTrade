@@ -59,10 +59,26 @@ export default function useMarketData() {
   const [error, setError] = useState(false);
 
   const initialSyncDone = useRef(false);
+  const isSyncingRef = useRef(false);
+  const lastBackgroundSyncRef = useRef(0);
 
   // Função principal de sincronização (Push Local -> Remote e Pull Remote -> Local)
-  const syncCloud = useCallback(async (targetUser = user) => {
+  const syncCloud = useCallback(async (targetUser = user, isManual = false) => {
     if (!targetUser) return;
+    if (isSyncingRef.current) {
+      console.log('[MarketData] Sincronização já em andamento, ignorando nova chamada.');
+      return;
+    }
+
+    const now = Date.now();
+    // Trava de background: se não for acionamento manual, bloqueia execuções com intervalo menor que 60 segundos
+    if (!isManual && now - lastBackgroundSyncRef.current < 60000) {
+      console.log('[MarketData] Sincronização em segundo plano ignorada (cooldown de 60s ativo).');
+      return;
+    }
+
+    lastBackgroundSyncRef.current = now;
+    isSyncingRef.current = true;
     setIsSyncing(true);
 
     try {
@@ -116,8 +132,9 @@ export default function useMarketData() {
       }
       console.log('[MarketData] Sincronização cloud concluída com sucesso!');
     } catch (err) {
-      console.error('[MarketData] Erro ao realizar syncCloud:', err);
+      console.warn('[MarketData] Erro ao realizar syncCloud:', err?.message || err);
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
   }, [user]);
@@ -130,7 +147,7 @@ export default function useMarketData() {
 
       if (currentUser && !initialSyncDone.current) {
         initialSyncDone.current = true;
-        await syncCloud(currentUser);
+        await syncCloud(currentUser, false);
       } else if (!currentUser) {
         initialSyncDone.current = false;
       }
@@ -410,13 +427,6 @@ export default function useMarketData() {
         };
       });
   })();
-
-  // Sincronizar Portfólios com Supabase quando `portfolioData` é atualizado e usuário logado
-  useEffect(() => {
-    if (user && portfolioData.length > 0) {
-      savePortfoliosRemote(user.id, portfolioData);
-    }
-  }, [user, portfolioData]);
 
   // Registrar Transação (Compra / Venda)
   const handleTransaction = (nuevaTransacao) => {

@@ -141,8 +141,10 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
       supabase
         .from('token_price_history')
         .insert([{ price_usd: currentTokenUsd, source: 'sfl.world' }])
-        .then(() => {})
-        .catch(err => console.warn('[HistoryService] Erro ao gravar token_price_history global:', err));
+        .then(({ error }) => {
+          if (error) console.warn('[HistoryService] Erro ao gravar token_price_history global:', error.message || error);
+        })
+        .catch(err => console.warn('[HistoryService] Exceção ao gravar token_price_history global:', err?.message || err));
 
       // Envia cotações dos recursos
       const resourceRows = Object.entries(cleanResources).map(([resId, priceSfl]) => ({
@@ -156,8 +158,14 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
         supabase
           .from('resource_price_history')
           .insert(resourceRows)
-          .then(() => console.log(`[HistoryService] ${resourceRows.length} cotações globais enviadas ao Supabase!`))
-          .catch(err => console.warn('[HistoryService] Erro ao enviar resource_price_history global:', err));
+          .then(({ error }) => {
+            if (error) {
+              console.warn('[HistoryService] Erro ao enviar resource_price_history global:', error.message || error);
+            } else {
+              console.log(`[HistoryService] ${resourceRows.length} cotações globais enviadas ao Supabase!`);
+            }
+          })
+          .catch(err => console.warn('[HistoryService] Exceção ao enviar resource_price_history global:', err?.message || err));
       }
     }
 

@@ -189,7 +189,7 @@ const App = () => {
                 <div className="flex items-center gap-2 w-full md:w-auto">
                   {user && (
                     <button
-                      onClick={() => syncCloud()}
+                      onClick={() => syncCloud(user, true)}
                       disabled={isSyncing}
                       className="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-1"
                     >

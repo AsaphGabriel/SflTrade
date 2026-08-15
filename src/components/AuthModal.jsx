@@ -94,7 +94,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
   const handleManualSync = async () => {
     if (!user || !onSyncCloud) return;
     try {
-      await onSyncCloud(user);
+      await onSyncCloud(user, true);
       showMessage(currentLang === 'pt' ? '✅ Sincronização concluída com sucesso!' : '✅ Sync completed successfully!', 'success');
     } catch (e) {
       showMessage(currentLang === 'pt' ? 'Erro ao sincronizar.' : 'Sync failed.', 'error');
