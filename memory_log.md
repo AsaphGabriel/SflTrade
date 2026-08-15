@@ -1,6 +1,21 @@
 # 📜 Memory Log - SflTrade
 
-## [2026-08-14] Hotfix Definitivo: Eliminação de Travamento no Celular, Correção de Imagens no Service Worker e Disponibilização Global de Preços no Supabase
+## [2026-08-14] Hotfix: Desempenho e Resiliência dos Modais no Navegador Brave & Tratamento SVG
+
+### 1. 🛡️ Otimização para Brave Shields & Navegadores com Bloqueio de Rastreio
+- **Timeouts Rápidos no Supabase (`withTimeout` em `historyService.js`)**: Adicionado timeout com limite de 2,5 segundos para todas as consultas do Supabase no `fetchTokenHistory` e `fetchResourceHistory`. Caso o Brave Shields retarde ou bloqueie consultas REST/WebSockets, o app cai instantaneamente no fallback de dados locais sem travar a interface.
+- **Sanitização de Coordenadas SVG (`PriceChartModal.jsx`)**:
+  - Garantida sanitização estrita de valores numéricos nos arrays de preços, evitando divisão por zero ou `NaN` que travavam o motor de renderização Blink/Chromium ao traçar paths e círculos SVG.
+- **Remoção de Filtros `backdrop-blur` Pesados**:
+  - Modais (`PriceChartModal`, `PositionDetailsModal`, `TransactionModal`, `AuthModal`) atualizados com overlay de alto contraste direto (`bg-black/80`), eliminando gargalos de renderização de GPU/Compositor em navegadores desktop.
+- **Proteção Contra Erros de Renderização em Detalhes da Posição (`PositionDetailsModal.jsx`)**:
+  - Adicionadas verificações defensivas contra `position.nome` nulo e filtragem segura na lista de transações.
+
+### 2. 🚀 Build & Deploy
+- Compilação realizada com sucesso (`npm run build`).
+- Publicação efetuada na branch `gh-pages` (`npx gh-pages -d dist`).
+
+---
 
 ### 1. 🛑 Causa Raiz do Travamento no Celular & Correções de Render Loop
 - **Eliminação de Loop em `searchFarm` (`useMarketData.js`)**:

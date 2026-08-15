@@ -42,24 +42,28 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   }, [resourceId, isToken, flowerPriceUsd]);
 
   // Filtra dados para a janela temporal selecionada (7, 30, 90 dias)
-  const displayData = history.slice(-timeframe);
+  const displayData = Array.isArray(history) ? history.slice(-timeframe) : [];
 
   // Verifica se há apenas 1 registro inicial (acumulando dados a partir de hoje)
-  const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d.isInitialData);
+  const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d && d.isInitialData);
 
-  // Métricas calculadas da janela selecionada
-  const prices = displayData.map(d => d.price_sfl || d.avg_price_sfl || d.price_usd || d.price || 0);
+  // Métricas calculadas da janela selecionada com sanitização estrita de números
+  const prices = displayData
+    .map(d => Number(d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? d.price ?? 0))
+    .filter(p => !isNaN(p) && p > 0);
+
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
   const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
 
   // Médias móveis (exibidas como null / '-' se estiver acumulando dados iniciais)
-  const latestSma7 = (!isAccumulatingHistory && displayData.length >= 7)
-    ? (displayData[displayData.length - 1].sma_7d_sfl || displayData[displayData.length - 1].sma_7d)
+  const latestItem = displayData.length > 0 ? displayData[displayData.length - 1] : null;
+  const latestSma7 = (!isAccumulatingHistory && displayData.length >= 7 && latestItem)
+    ? Number(latestItem.sma_7d_sfl ?? latestItem.sma_7d ?? 0)
     : null;
 
-  const latestSma30 = (!isAccumulatingHistory && displayData.length >= 30)
-    ? (displayData[displayData.length - 1].sma_30d_sfl || displayData[displayData.length - 1].sma_30d)
+  const latestSma30 = (!isAccumulatingHistory && displayData.length >= 30 && latestItem)
+    ? Number(latestItem.sma_30d_sfl ?? latestItem.sma_30d ?? 0)
     : null;
 
   // Cálculo de Coordenadas para Gráfico SVG Responsivo
@@ -72,7 +76,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
   const yMin = minPrice > 0 ? minPrice * 0.95 : 0;
   const yMax = maxPrice > 0 ? maxPrice * 1.05 : 1;
-  const yRange = yMax - yMin || 1;
+  const yRange = (yMax - yMin) || 1;
 
   const getX = (index, total) => {
     if (total <= 1) return padding + chartWidth / 2;
@@ -80,19 +84,27 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   };
 
   const getY = (val) => {
-    if (yRange === 0) return padding + chartHeight / 2;
-    return svgHeight - padding - ((val - yMin) / yRange) * chartHeight;
+    const num = Number(val);
+    if (isNaN(num) || yRange === 0) return padding + chartHeight / 2;
+    const computed = svgHeight - padding - ((num - yMin) / yRange) * chartHeight;
+    return isNaN(computed) ? padding + chartHeight / 2 : computed;
   };
 
   // Gerar Paths para o SVG
   const generatePath = (valKey) => {
     if (!displayData || displayData.length <= 1) return '';
-    return displayData.map((d, i) => {
-      const val = d[valKey] || d.price_sfl || d.avg_price_sfl || d.price_usd || 0;
-      const x = getX(i, displayData.length);
-      const y = getY(val);
-      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    }).join(' ');
+    return displayData
+      .map((d, i) => {
+        const rawVal = d ? (d[valKey] ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0) : 0;
+        const val = Number(rawVal);
+        if (isNaN(val)) return '';
+        const x = getX(i, displayData.length);
+        const y = getY(val);
+        if (isNaN(x) || isNaN(y)) return '';
+        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+      })
+      .filter(Boolean)
+      .join(' ');
   };
 
   const pricePath = generatePath('avg_price_sfl');
@@ -100,7 +112,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const sma30Path = !isAccumulatingHistory ? generatePath('sma_30d_sfl') : '';
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4">
         
         {/* Cabeçalho do Modal */}

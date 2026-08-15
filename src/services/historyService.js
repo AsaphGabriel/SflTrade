@@ -209,6 +209,21 @@ function createInitialResourcePoint(resourceId, currentPriceSfl = 0) {
 }
 
 /**
+ * Helper com timeout rápido para requisições ao Supabase (evita travamentos caso bloqueado por Brave Shields/Adblock)
+ */
+async function withTimeout(promise, timeoutMs = 2500) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Supabase request timeout')), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
  * Busca histórico da cotação do token $FLOWER (até 90 dias)
  */
 export async function fetchTokenHistory(days = 90, currentPrice = 0.05) {
@@ -219,18 +234,20 @@ export async function fetchTokenHistory(days = 90, currentPrice = 0.05) {
 
   // 1. Tentar consulta no Supabase (Dados Globais)
   try {
-    const { data, error } = await supabase
-      .from('token_price_history')
-      .select('*')
-      .gte('timestamp', isoStartDate)
-      .order('timestamp', { ascending: true });
+    const { data, error } = await withTimeout(
+      supabase
+        .from('token_price_history')
+        .select('*')
+        .gte('timestamp', isoStartDate)
+        .order('timestamp', { ascending: true })
+    );
 
     if (!error && Array.isArray(data) && data.length > 0) {
       setLocalCache(TOKEN_CACHE_KEY, data);
       return data;
     }
   } catch (err) {
-    console.warn('[HistoryService] Falha ao consultar Supabase token_price_history:', err.message);
+    console.warn('[HistoryService] Supabase token_price_history indisponível:', err.message);
   }
 
   // 2. Tentar histórico acumulado local real ('sfl_hourly_history' / 'sfl_daily_history')
@@ -274,29 +291,33 @@ export async function fetchResourceHistory(resourceId, days = 90, currentPriceSf
 
   // 1. Tentar consulta na View Agregada v_resource_daily_metrics do Supabase (Globais)
   try {
-    const { data, error } = await supabase
-      .from('v_resource_daily_metrics')
-      .select('*')
-      .eq('resource_id', resourceId)
-      .gte('day', dateStr)
-      .order('day', { ascending: true });
+    const { data, error } = await withTimeout(
+      supabase
+        .from('v_resource_daily_metrics')
+        .select('*')
+        .eq('resource_id', resourceId)
+        .gte('day', dateStr)
+        .order('day', { ascending: true })
+    );
 
     if (!error && Array.isArray(data) && data.length > 0) {
       setLocalCache(cacheKey, data);
       return data;
     }
   } catch (err) {
-    console.warn(`[HistoryService] Erro na View v_resource_daily_metrics para ${resourceId}:`, err.message);
+    console.warn(`[HistoryService] Supabase View v_resource_daily_metrics indisponível para ${resourceId}:`, err.message);
   }
 
   // 2. Tentar consulta na Tabela Bruta resource_price_history (Globais)
   try {
-    const { data, error } = await supabase
-      .from('resource_price_history')
-      .select('*')
-      .eq('resource_id', resourceId)
-      .gte('timestamp', startDate.toISOString())
-      .order('timestamp', { ascending: true });
+    const { data, error } = await withTimeout(
+      supabase
+        .from('resource_price_history')
+        .select('*')
+        .eq('resource_id', resourceId)
+        .gte('timestamp', startDate.toISOString())
+        .order('timestamp', { ascending: true })
+    );
 
     if (!error && Array.isArray(data) && data.length > 0) {
       const formatted = data.map(d => ({

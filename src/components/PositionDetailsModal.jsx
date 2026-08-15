@@ -49,7 +49,7 @@ const PositionDetailsModal = ({
   onUpdateCustomAvgPrice,
   onClose
 }) => {
-  if (!position) return null;
+  if (!position || !position.nome) return null;
 
   const {
     nome,
@@ -71,11 +71,11 @@ const PositionDetailsModal = ({
     setEditFlowerUsd(cotacaoMediaFlowerUsd ? cotacaoMediaFlowerUsd.toString() : '');
   }, [precoMedio, cotacaoMediaFlowerUsd]);
 
-  const resourceTxList = allTransactions
-    .filter(t => t.recurso && t.recurso.toLowerCase() === nome.toLowerCase())
-    .sort((a, b) => new Date(b.timestamp || b.created_at || b.id) - new Date(a.timestamp || a.created_at || a.id));
+  const resourceTxList = (allTransactions || [])
+    .filter(t => t && t.recurso && nome && t.recurso.toLowerCase() === nome.toLowerCase())
+    .sort((a, b) => new Date(b.timestamp || b.created_at || b.id || 0) - new Date(a.timestamp || a.created_at || a.id || 0));
 
-  const corLucroUsd = lucroAbsolutoUsd >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const corLucroUsd = (lucroAbsolutoUsd || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
   const iconUrl = getItemIcon(nome);
 
   const handleSaveCustomAvg = (e) => {
@@ -99,7 +99,7 @@ const PositionDetailsModal = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 z-50 animate-fade-in"
+      className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 z-50 animate-fadeIn"
       onClick={onClose}
     >
       <div 

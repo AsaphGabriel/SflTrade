@@ -172,7 +172,7 @@ const TransactionModal = ({
   const isBuy = type === 'buy';
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 z-50">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 z-50 animate-fadeIn">
       <div className="bg-modalbg border border-slate-700 rounded-2xl p-4 md:p-5 w-full max-w-md shadow-2xl relative max-h-[85vh] overflow-y-auto">
         <h3 className={`text-lg font-bold mb-3 ${isBuy ? 'text-emerald-400' : 'text-rose-400'}`}>
           {isBuy ? t('modalTitleBuy', currentLang) : t('modalTitleSell', currentLang)}
