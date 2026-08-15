@@ -30,8 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_resource_price_lookup
     ON public.resource_price_history (resource_id, timestamp DESC);
 
 -- 4. POLÍTICAS DE SEGURANÇA ROW LEVEL SECURITY (RLS)
--- Permite leitura pública (SELECT) para 'anon' e 'authenticated',
--- mas restringe escrita/atualização estritamente a chamadas autenticadas/service_role.
+-- Permite leitura pública (SELECT) e gravação de snapshots de preços (INSERT) para 'anon' e 'authenticated'.
 
 ALTER TABLE public.token_price_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.resource_price_history ENABLE ROW LEVEL SECURITY;
@@ -39,6 +38,8 @@ ALTER TABLE public.resource_price_history ENABLE ROW LEVEL SECURITY;
 -- Remover políticas legadas se existirem
 DROP POLICY IF EXISTS "Allow public read access on token_price_history" ON public.token_price_history;
 DROP POLICY IF EXISTS "Allow public read access on resource_price_history" ON public.resource_price_history;
+DROP POLICY IF EXISTS "Allow public insert on token_price_history" ON public.token_price_history;
+DROP POLICY IF EXISTS "Allow public insert on resource_price_history" ON public.resource_price_history;
 
 -- Políticas de leitura pública
 CREATE POLICY "Allow public read access on token_price_history"
@@ -51,23 +52,16 @@ CREATE POLICY "Allow public read access on resource_price_history"
     TO anon, authenticated
     USING (true);
 
--- ====================================================================
--- POLÍTICA OPCIONAL DE INSERÇÃO PÚBLICA (OPCIONAL PARA DESENVOLVIMENTO/TESTES)
--- Por padrão, o app funciona 100% gravando os dados reais diários localmente no localStorage ('sfl_daily_history').
--- Caso deseje permitir escrita direta do cliente no Supabase sem service_role, descomente as linhas abaixo:
---
--- DROP POLICY IF EXISTS "Allow public insert on token_price_history" ON public.token_price_history;
--- CREATE POLICY "Allow public insert on token_price_history"
---     ON public.token_price_history FOR INSERT
---     TO anon, authenticated
---     WITH CHECK (true);
---
--- DROP POLICY IF EXISTS "Allow public insert on resource_price_history" ON public.resource_price_history;
--- CREATE POLICY "Allow public insert on resource_price_history"
---     ON public.resource_price_history FOR INSERT
---     TO anon, authenticated
---     WITH CHECK (true);
--- ====================================================================
+-- Políticas de inserção global de preços coletados pelas instâncias do app
+CREATE POLICY "Allow public insert on token_price_history"
+    ON public.token_price_history FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+CREATE POLICY "Allow public insert on resource_price_history"
+    ON public.resource_price_history FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
 
 -- 5. FUNÇÃO DE LIMPEZA E EXPURGO AUTOMÁTICO (> 90 DIAS)
 CREATE OR REPLACE FUNCTION public.clean_old_price_history()

@@ -89,8 +89,8 @@ const App = () => {
   if (loading && Object.keys(marketData).length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-amber-400 font-bold">
-        <img src="https://sfl.world/img/source/Sunflower.png" alt="Loading" className="w-16 h-16 animate-pulse mb-4" />
-        <p>Carregando...</p>
+        <span className="text-4xl animate-bounce mb-3">🌻</span>
+        <p className="text-sm font-semibold">Carregando cotações...</p>
       </div>
     );
   }

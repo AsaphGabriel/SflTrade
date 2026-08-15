@@ -1,6 +1,31 @@
 # 📜 Memory Log - SflTrade
 
-## [2026-08-14] Hotfix: Eliminação de Loop Infinito de Sincronização e Tratamento de Erro 42501 (Supabase RLS)
+## [2026-08-14] Hotfix Definitivo: Eliminação de Travamento no Celular, Correção de Imagens no Service Worker e Disponibilização Global de Preços no Supabase
+
+### 1. 🛑 Causa Raiz do Travamento no Celular & Correções de Render Loop
+- **Eliminação de Loop em `searchFarm` (`useMarketData.js`)**:
+  - `updateIsland`, `updateVip`, `updateShrine` e `updateCurrency` não estavam com `useCallback`, fazendo com que `searchFarm` fosse recriada a cada render.
+  - O `useEffect` que executava `searchFarm(savedFarm)` disparava em loop infinito a 60fps, sobrecarregando a CPU móvel com centenas de requisições por segundo.
+  - **Correção**: Estabilizadas todas as funções com `useCallback` e adicionada trava `farmInitializedRef` para garantir execução única controlada.
+- **Memoização de Alta Performance (`portfolioData`)**:
+  - O cálculo de posições, DCA e PnL foi envolvido em `useMemo`, eliminando alocações contínuas de memória no thread principal.
+- **Isolamento de Efeitos em `refreshData`**:
+  - `recordDailySnapshot` foi retirado de dentro do setter de estado do React (`setMarketData(prev => ...)`), sendo executado de forma assíncrona desacoplada via `setTimeout`.
+
+### 2. 🖼️ Correção de Carregamento de Imagens e Service Worker (`sw.js` & `public/sw.js`)
+- **Falso Fallback de Imagens**: O Service Worker estava interceptando requisições de imagem e retornando `index.html` em caso de instabilidade, quebrando a decodificação dos PNGs e travando a renderização gráfica no navegador mobile.
+- **Bypass de APIs & Supabase**: Configurado o Service Worker (`v1.3.0`) para ignorar explicitamente requisições do Supabase, workers e APIs externas, atuando exclusivamente em assets estáticos e com fallback de imagens resiliente (sem injeção de HTML).
+- **Purga de Cache Automática**: Ao ativar a versão `v1.3.0`, o Service Worker purga todos os caches legados (`v1.2.7` etc.) que possuíam assets corrompidos.
+
+### 3. 🌐 Disponibilização Global de Preços no Supabase (`supabase_schema.sql` & `historyService.js`)
+- **Políticas RLS de Inserção Pública**: Adicionadas políticas `INSERT` para `anon` e `authenticated` em `token_price_history` e `resource_price_history` no [supabase_schema.sql](file:///C:/Users/asaph/Yggdrasil/02%20-%20Projetos/SflTrade/supabase_schema.sql), permitindo que os snapshots capturados pelas instâncias ativas do app alimentem a base de dados global na nuvem sem erro 42501.
+- **Gráficos e Indicadores Globais**: Usuários novos ou acessando de qualquer dispositivo agora recebem imediatamente os dados históricos consolidados e médias móveis globais do Supabase.
+
+### 4. 🚀 Build & Deploy
+- Compilação realizada com sucesso (`npm run build`).
+- Publicação efetuada na branch `gh-pages` (`npx gh-pages -d dist`).
+
+---
 
 ### 1. 🛑 Eliminação do Loop Infinito no React
 - **Remoção de `useEffect` Instável (`useMarketData.js`)**: Removida a sincronização contínua de portfólios disparada pela dependência `portfolioData` (que era recriada a cada render do componente).

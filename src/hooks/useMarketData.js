@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { t } from '../i18n';
 import {
   fetchWithFallback,
@@ -159,29 +159,29 @@ export default function useMarketData() {
   }, [syncCloud]);
 
   // Helper para salvar configs tanto local quanto remoto
-  const updateIsland = (val) => {
+  const updateIsland = useCallback((val) => {
     setSelectedIsland(val);
     localStorage.setItem('sfl_island', val);
     if (user) saveSettingsRemote(user.id, { selectedIsland: val, isVip, isShrine, selectedCurrency });
-  };
+  }, [user, isVip, isShrine, selectedCurrency]);
 
-  const updateVip = (val) => {
+  const updateVip = useCallback((val) => {
     setIsVip(val);
     localStorage.setItem('sfl_vip', String(val));
     if (user) saveSettingsRemote(user.id, { selectedIsland, isVip: val, isShrine, selectedCurrency });
-  };
+  }, [user, selectedIsland, isShrine, selectedCurrency]);
 
-  const updateShrine = (val) => {
+  const updateShrine = useCallback((val) => {
     setIsShrine(val);
     localStorage.setItem('sfl_shrine', String(val));
     if (user) saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine: val, selectedCurrency });
-  };
+  }, [user, selectedIsland, isVip, selectedCurrency]);
 
-  const updateCurrency = (val) => {
+  const updateCurrency = useCallback((val) => {
     setSelectedCurrency(val);
     localStorage.setItem('sfl_currency', val);
     if (user) saveSettingsRemote(user.id, { selectedIsland, isVip, isShrine, selectedCurrency: val });
-  };
+  }, [user, selectedIsland, isVip, isShrine]);
 
   // Cálculo da Taxa Efetiva
   const effectiveTax = (() => {
@@ -229,11 +229,11 @@ export default function useMarketData() {
       if (dataPrices) {
         const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
         if (p2pData) {
-          setMarketData(prev => {
-            const merged = { ...prev, ...p2pData };
-            recordDailySnapshot(fetchedUsd, merged);
-            return merged;
-          });
+          setMarketData(prev => ({ ...prev, ...p2pData }));
+          // Executa gravação e transmissão global de forma assíncrona fora da renderização
+          setTimeout(() => {
+            recordDailySnapshot(fetchedUsd, p2pData);
+          }, 50);
         }
 
         const updatedText = dataPrices.updated_text || dataPrices.data?.updated_text;
@@ -248,9 +248,9 @@ export default function useMarketData() {
     } catch (err) {
       console.warn('[MarketData] Erro ao buscar preços P2P:', err);
       setError(true);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [currentLang]);
 
   useEffect(() => {
@@ -295,9 +295,11 @@ export default function useMarketData() {
     }
   }, [updateIsland, updateVip, updateShrine]);
 
+  const farmInitializedRef = useRef(false);
   useEffect(() => {
     const savedFarm = localStorage.getItem('sfl_farm_id');
-    if (savedFarm) {
+    if (savedFarm && !farmInitializedRef.current) {
+      farmInitializedRef.current = true;
       searchFarm(savedFarm);
     }
   }, [searchFarm]);
@@ -311,7 +313,7 @@ export default function useMarketData() {
     }
   });
 
-  const updateCustomAvgPrice = (resourceName, avgSfl, flowerUsdRate) => {
+  const updateCustomAvgPrice = useCallback((resourceName, avgSfl, flowerUsdRate) => {
     setCustomAvgPrices(prev => {
       const updated = { ...prev };
       if (!resourceName) return updated;
@@ -333,10 +335,10 @@ export default function useMarketData() {
       localStorage.setItem('sfl_custom_avg_prices', JSON.stringify(updated));
       return updated;
     });
-  };
+  }, []);
 
-  // Cálculo de Posições do Portfólio
-  const portfolioData = (() => {
+  // Cálculo de Posições do Portfólio (Memoizado para alta performance e estabilidade)
+  const portfolioData = useMemo(() => {
     const estoque = {};
     const defaultUsdRate = currencyRates.usd || 0.087;
 
@@ -426,7 +428,7 @@ export default function useMarketData() {
           lucroPercentualMoeda
         };
       });
-  })();
+  }, [transactions, currencyRates, selectedCurrency, customAvgPrices, marketData, effectiveTax]);
 
   // Registrar Transação (Compra / Venda)
   const handleTransaction = (nuevaTransacao) => {
