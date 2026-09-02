@@ -113,3 +113,7 @@ SELECT
     ), 6) AS sma_30d_sfl
 FROM daily_base
 ORDER BY resource_id, day DESC;
+
+ALTER VIEW public.v_resource_daily_metrics SET (security_invoker = true);
+GRANT SELECT ON public.v_resource_daily_metrics TO anon, authenticated;
+
