@@ -71,28 +71,42 @@ const PositionDetailsModal = ({
     setEditFlowerUsd(cotacaoMediaFlowerUsd ? cotacaoMediaFlowerUsd.toString() : '');
   }, [precoMedio, cotacaoMediaFlowerUsd]);
 
-  const resourceTxList = (allTransactions || [])
-    .filter(t => t && t.recurso && nome && t.recurso.toLowerCase() === nome.toLowerCase())
-    .sort((a, b) => new Date(b.timestamp || b.created_at || b.id || 0) - new Date(a.timestamp || a.created_at || a.id || 0));
+  const resourceTxList = (Array.isArray(allTransactions) ? allTransactions : [])
+    .filter(t => t && t.recurso && nome && String(t.recurso).toLowerCase() === String(nome).toLowerCase())
+    .sort((a, b) => {
+      const timeA = new Date(a.timestamp || a.created_at || a.id || 0).getTime() || 0;
+      const timeB = new Date(b.timestamp || b.created_at || b.id || 0).getTime() || 0;
+      return timeB - timeA;
+    });
 
   const corLucroUsd = (lucroAbsolutoUsd || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
   const iconUrl = getItemIcon(nome);
 
   const handleSaveCustomAvg = (e) => {
     e.preventDefault();
-    const valSfl = editSfl !== '' ? parseFloat(editSfl) : null;
-    const valFlowerUsd = editFlowerUsd !== '' ? parseFloat(editFlowerUsd) : null;
-    if (onUpdateCustomAvgPrice) {
-      onUpdateCustomAvgPrice(nome, valSfl, valFlowerUsd);
+    try {
+      const valSfl = editSfl !== '' ? parseFloat(editSfl) : null;
+      const valFlowerUsd = editFlowerUsd !== '' ? parseFloat(editFlowerUsd) : null;
+      if (onUpdateCustomAvgPrice) {
+        onUpdateCustomAvgPrice(nome, valSfl, valFlowerUsd);
+      }
+    } catch (err) {
+      console.warn('[PositionDetailsModal] Erro ao salvar preço médio customizado:', err);
+    } finally {
+      setIsEditing(false);
     }
-    setIsEditing(false);
   };
 
   const handleResetCustomAvg = () => {
-    if (onUpdateCustomAvgPrice) {
-      onUpdateCustomAvgPrice(nome, null, null);
+    try {
+      if (onUpdateCustomAvgPrice) {
+        onUpdateCustomAvgPrice(nome, null, null);
+      }
+    } catch (err) {
+      console.warn('[PositionDetailsModal] Erro ao restaurar preço médio:', err);
+    } finally {
+      setIsEditing(false);
     }
-    setIsEditing(false);
   };
 
   const previewUnitUsd = (parseFloat(editSfl || 0) * parseFloat(editFlowerUsd || 0)).toFixed(4);
@@ -276,7 +290,7 @@ const PositionDetailsModal = ({
               </div>
             ) : (
               <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-                {resourceTxList.map((tx) => {
+                {resourceTxList.map((tx, idx) => {
                   const isBuy = tx.tipo === 'buy';
                   const dateFormatted = new Date(tx.timestamp || tx.created_at || tx.id).toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
                     day: '2-digit',
@@ -286,9 +300,10 @@ const PositionDetailsModal = ({
                   });
                   const cotacaoTx = tx.cotacao_entrada_usd || tx.token_price_usd_at_purchase || cotacaoMediaFlowerUsd || 0.05;
                   const totalUsd = tx.total_price_usd || (tx.totalPrice * cotacaoTx);
+                  const stableKey = tx.id || `${tx.recurso || 'tx'}-${tx.timestamp || 'ts'}-${idx}`;
 
                   return (
-                    <div key={tx.id || Math.random()} className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/80 text-[11px] flex justify-between items-center font-mono">
+                    <div key={stableKey} className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/80 text-[11px] flex justify-between items-center font-mono">
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>

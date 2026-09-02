@@ -49,8 +49,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
   // Métricas calculadas da janela selecionada com sanitização estrita de números
   const prices = displayData
-    .map(d => Number(d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? d.price ?? 0))
-    .filter(p => !isNaN(p) && p > 0);
+    .map(d => Number(d?.price_sfl ?? d?.avg_price_sfl ?? d?.price_usd ?? d?.price ?? 0))
+    .filter(p => !isNaN(p) && isFinite(p) && p > 0);
 
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
@@ -76,35 +76,42 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
   const yMin = minPrice > 0 ? minPrice * 0.95 : 0;
   const yMax = maxPrice > 0 ? maxPrice * 1.05 : 1;
-  const yRange = (yMax - yMin) || 1;
+  const yRange = (isFinite(yMax - yMin) && (yMax - yMin) !== 0) ? (yMax - yMin) : 1;
 
   const getX = (index, total) => {
-    if (total <= 1) return padding + chartWidth / 2;
-    return padding + (index / (total - 1)) * chartWidth;
+    if (!isFinite(index) || !isFinite(total) || total <= 1) return padding + chartWidth / 2;
+    const x = padding + (index / (total - 1)) * chartWidth;
+    return (isNaN(x) || !isFinite(x)) ? padding + chartWidth / 2 : x;
   };
 
   const getY = (val) => {
     const num = Number(val);
-    if (isNaN(num) || yRange === 0) return padding + chartHeight / 2;
+    if (isNaN(num) || !isFinite(num) || !isFinite(yRange) || yRange === 0) return padding + chartHeight / 2;
     const computed = svgHeight - padding - ((num - yMin) / yRange) * chartHeight;
-    return isNaN(computed) ? padding + chartHeight / 2 : computed;
+    return (isNaN(computed) || !isFinite(computed)) ? padding + chartHeight / 2 : computed;
   };
 
-  // Gerar Paths para o SVG
+  // Gerar Paths para o SVG com proteção try/catch
   const generatePath = (valKey) => {
-    if (!displayData || displayData.length <= 1) return '';
-    return displayData
-      .map((d, i) => {
-        const rawVal = d ? (d[valKey] ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0) : 0;
-        const val = Number(rawVal);
-        if (isNaN(val)) return '';
-        const x = getX(i, displayData.length);
-        const y = getY(val);
-        if (isNaN(x) || isNaN(y)) return '';
-        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-      })
-      .filter(Boolean)
-      .join(' ');
+    if (!displayData || !Array.isArray(displayData) || displayData.length <= 1) return '';
+    try {
+      const points = displayData
+        .map((d, i) => {
+          if (!d) return null;
+          const rawVal = d[valKey] ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
+          const val = Number(rawVal);
+          if (isNaN(val) || !isFinite(val)) return null;
+          const x = getX(i, displayData.length);
+          const y = getY(val);
+          if (isNaN(x) || !isFinite(x) || isNaN(y) || !isFinite(y)) return null;
+          return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+        })
+        .filter(Boolean);
+      return points.join(' ');
+    } catch (err) {
+      console.warn('[PriceChartModal] Erro ao gerar path SVG:', err);
+      return '';
+    }
   };
 
   const pricePath = generatePath('avg_price_sfl');
@@ -234,9 +241,11 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
                 {/* Pontos de Interação do Gráfico */}
                 {displayData.map((d, i) => {
-                  const val = d.avg_price_sfl || d.price_sfl || d.price_usd || 0;
+                  if (!d) return null;
+                  const val = Number(d.avg_price_sfl || d.price_sfl || d.price_usd || 0);
                   const cx = getX(i, displayData.length);
                   const cy = getY(val);
+                  if (isNaN(cx) || !isFinite(cx) || isNaN(cy) || !isFinite(cy)) return null;
 
                   return (
                     <circle
@@ -247,6 +256,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                       className="fill-emerald-400 hover:r-7 hover:fill-amber-400 transition-all cursor-pointer"
                       onMouseEnter={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
                       onMouseLeave={() => setHoveredPoint(null)}
+                      onTouchStart={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
                     />
                   );
                 })}

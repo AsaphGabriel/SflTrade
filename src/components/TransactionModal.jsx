@@ -37,39 +37,57 @@ const TransactionModal = ({
   const [maxStock, setMaxStock] = useState(0);
 
   const dropdownRef = useRef(null);
+  const initialProcessedRef = useRef('');
 
-  const handleSelectResource = useCallback((nomeRecurso) => {
-    setSelectedResource(nomeRecurso);
-    setResourceSearch(nomeRecurso);
-    setIsDropdownOpen(false);
+  const handleSelectResource = useCallback((nomeRecurso, currentQty = '') => {
+    try {
+      if (!nomeRecurso) return;
+      setSelectedResource(nomeRecurso);
+      setResourceSearch(nomeRecurso);
+      setIsDropdownOpen(false);
 
-    if (marketData[nomeRecurso] !== undefined) {
-      const precoApi = marketData[nomeRecurso];
-      setUnitPrice(precoApi);
-      if (quantity) {
-        setTotalPrice((parseFloat(quantity) * precoApi).toFixed(4));
-      }
-    }
+      const safeMarketData = marketData || {};
+      const safePortfolioData = Array.isArray(portfolioData) ? portfolioData : [];
 
-    if (type === 'sell') {
-      const itemEstoque = (portfolioData || []).find(p => p && p.nome && p.nome.toLowerCase() === nomeRecurso.toLowerCase());
-      if (itemEstoque && itemEstoque.qty > 0) {
-        setMaxStock(itemEstoque.qty);
-        setQuantity(itemEstoque.qty.toString());
-        if (marketData[nomeRecurso]) {
-          setTotalPrice((itemEstoque.qty * marketData[nomeRecurso]).toFixed(4));
+      if (safeMarketData[nomeRecurso] !== undefined) {
+        const precoApi = safeMarketData[nomeRecurso];
+        setUnitPrice(precoApi);
+        const qVal = parseFloat(currentQty || quantity) || 0;
+        if (qVal > 0) {
+          setTotalPrice((qVal * precoApi).toFixed(4));
         }
-      } else {
-        setMaxStock(0);
       }
+
+      if (type === 'sell') {
+        const itemEstoque = safePortfolioData.find(p => p && p.nome && p.nome.toLowerCase() === nomeRecurso.toLowerCase());
+        if (itemEstoque && itemEstoque.qty > 0) {
+          setMaxStock(itemEstoque.qty);
+          setQuantity(itemEstoque.qty.toString());
+          if (safeMarketData[nomeRecurso]) {
+            setTotalPrice((itemEstoque.qty * safeMarketData[nomeRecurso]).toFixed(4));
+          }
+        } else {
+          setMaxStock(0);
+        }
+      }
+    } catch (err) {
+      console.warn('[TransactionModal] Erro ao selecionar recurso:', err);
     }
-  }, [marketData, portfolioData, quantity, type]);
+  }, [marketData, portfolioData, type]);
 
   useEffect(() => {
-    if (initialResource) {
+    if (initialResource && initialProcessedRef.current !== initialResource) {
+      initialProcessedRef.current = initialResource;
       handleSelectResource(initialResource);
     }
   }, [initialResource, handleSelectResource]);
+
+  // Limpeza de estado de referência ao fechar/desmontar
+  useEffect(() => {
+    return () => {
+      initialProcessedRef.current = '';
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

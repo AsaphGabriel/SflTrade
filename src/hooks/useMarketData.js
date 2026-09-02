@@ -139,7 +139,12 @@ export default function useMarketData() {
     }
   }, [user]);
 
-  // Autenticação e Sincronização em Nuvem
+  const syncCloudRef = useRef(syncCloud);
+  useEffect(() => {
+    syncCloudRef.current = syncCloud;
+  }, [syncCloud]);
+
+  // Autenticação e Sincronização em Nuvem (executa uma única subscrição ao montar)
   useEffect(() => {
     const subscription = onAuthStateChange(async (event, session) => {
       const currentUser = session?.user || null;
@@ -147,7 +152,9 @@ export default function useMarketData() {
 
       if (currentUser && !initialSyncDone.current) {
         initialSyncDone.current = true;
-        await syncCloud(currentUser, false);
+        if (syncCloudRef.current) {
+          await syncCloudRef.current(currentUser, false);
+        }
       } else if (!currentUser) {
         initialSyncDone.current = false;
       }
@@ -156,7 +163,7 @@ export default function useMarketData() {
     return () => {
       if (subscription && subscription.unsubscribe) subscription.unsubscribe();
     };
-  }, [syncCloud]);
+  }, []);
 
   // Helper para salvar configs tanto local quanto remoto (desacoplado do clique)
   const updateIsland = useCallback((val) => {
