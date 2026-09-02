@@ -143,8 +143,10 @@ export async function fetchOfficialFarmData(farmId, apiKey) {
   }
 
   const url = `https://api.sunflower-land.com/community/farms/${farmId}`;
+  const cleanKey = apiKey.trim();
   const headers = {
-    'x-api-key': apiKey.trim()
+    'x-api-key': cleanKey,
+    'Authorization': cleanKey.startsWith('Bearer ') ? cleanKey : `Bearer ${cleanKey}`
   };
 
   return await fetchWithFallback(url, { headers });
