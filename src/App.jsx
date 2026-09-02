@@ -147,8 +147,9 @@ const App = () => {
             </div>
           )}
 
-          {(activeTab === 'info' || activeTab === 'perfil' || activeTab === 'profile') && (
+          {activeTab === 'info' && (
             <FarmDashboard
+              mode="info"
               farmData={farmData}
               marketData={marketData}
               flowerPrice={flowerPrice}
@@ -165,6 +166,30 @@ const App = () => {
               syncCloud={syncCloud}
               isSyncing={isSyncing}
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
+              onNavigateTab={setActiveTab}
+            />
+          )}
+
+          {(activeTab === 'perfil' || activeTab === 'profile') && (
+            <FarmDashboard
+              mode="perfil"
+              farmData={farmData}
+              marketData={marketData}
+              flowerPrice={flowerPrice}
+              selectedCurrency={selectedCurrency}
+              currentLang={currentLang}
+              farmId={farmId}
+              apiKey={apiKey}
+              setFarmId={setFarmId}
+              setApiKey={setApiKey}
+              onSaveProfile={handleSaveProfile}
+              profileMsg={profileMsg}
+              searchFarm={searchFarm}
+              user={user}
+              syncCloud={syncCloud}
+              isSyncing={isSyncing}
+              onOpenAuthModal={() => setIsAuthModalOpen(true)}
+              onNavigateTab={setActiveTab}
             />
           )}
         </main>

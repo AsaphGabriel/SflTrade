@@ -104,6 +104,7 @@ const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" 
 );
 
 const FarmDashboard = ({
+  mode = 'info', // 'info' (Painel & Inventário) ou 'perfil' (Configurações & Credenciais)
   farmData,
   marketData = {},
   flowerPrice = 0.087,
@@ -119,7 +120,8 @@ const FarmDashboard = ({
   user = null,
   syncCloud = () => {},
   isSyncing = false,
-  onOpenAuthModal = () => {}
+  onOpenAuthModal = () => {},
+  onNavigateTab = () => {}
 }) => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -242,6 +244,146 @@ const FarmDashboard = ({
   const isFromCache = farmData?.isFromCache || false;
   const officialError = farmData?.officialError || null;
 
+  // -------------------------------------------------------------
+  // MODO 1: PERFIL & CONFIGURAÇÕES (Aba 'perfil')
+  // -------------------------------------------------------------
+  if (mode === 'perfil') {
+    return (
+      <div className="space-y-6 animate-fade-in text-slate-100">
+        <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl flex items-center justify-between">
+          <h2 className="text-xl font-black text-amber-400 flex items-center gap-2">
+            <span>⚙️</span> {t('profileTab', currentLang)}
+          </h2>
+        </div>
+
+        {/* Card de Conta Supabase Cloud */}
+        <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <span>☁️</span>
+              <span>{t('authTitle', currentLang)}</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              {user ? (
+                <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  {t('authStatusConnected', currentLang, { email: user.email })}
+                </span>
+              ) : (
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+                  {t('authStatusGuest', currentLang)}
+                </span>
+              )}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            {user && (
+              <button
+                onClick={() => syncCloud(user, true)}
+                disabled={isSyncing}
+                className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-1"
+              >
+                {isSyncing ? <span className="animate-spin">⌛</span> : <span>🔄 Sincronizar</span>}
+              </button>
+            )}
+            <button
+              onClick={onOpenAuthModal}
+              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 ${
+                user 
+                  ? 'bg-slate-700 hover:bg-slate-600 text-amber-300 border border-slate-600' 
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold'
+              }`}
+            >
+              {user ? (
+                <><span>⚙️</span> <span>{currentLang === 'pt' ? 'Gerenciar Conta' : 'Manage Account'}</span></>
+              ) : (
+                <><span>⚡</span> <span>{currentLang === 'pt' ? 'Entrar / Sincronizar' : 'Sign In / Sync'}</span></>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Form de Credenciais (Farm ID e API Key) */}
+        <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
+          <h3 className="text-sm font-bold text-amber-400 border-b border-slate-700/60 pb-2 flex items-center justify-between">
+            <span className="flex items-center gap-2">🔑 Credenciais da API SFL</span>
+            <span className="text-[10px] text-slate-400 font-normal">Armazenamento local seguro no navegador</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">
+                Farm ID (ID da Fazenda)
+              </label>
+              <input
+                type="text"
+                value={farmId}
+                onChange={(e) => setFarmId(e.target.value)}
+                placeholder="Ex: 123456"
+                className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-300">
+                  Community API Key (sfl.ey...)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="text-[10px] text-amber-400 hover:underline font-semibold"
+                >
+                  {showApiKey ? t('hideKey', currentLang) : t('showKey', currentLang)}
+                </button>
+              </div>
+              <input
+                type={showApiKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={t('apiKeyPlaceholder', currentLang)}
+                className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            <button
+              onClick={onSaveProfile}
+              className="w-full sm:w-auto px-6 py-2.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+            >
+              <span>💾</span> {t('btnSave', currentLang)}
+            </button>
+
+            {profileMsg.text && (
+              <span className={`text-xs font-bold ${profileMsg.type === 'error' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {profileMsg.text}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Guia de Regras da API Key */}
+        <div className="bg-slate-800/60 rounded-2xl p-5 border border-slate-700/60 text-xs text-slate-300 space-y-2">
+          <h4 className="font-bold text-amber-400 flex items-center gap-1.5 text-sm">
+            <span>🛡️</span> Diretrizes Oficiais da Community API Key
+          </h4>
+          <ul className="list-disc list-inside space-y-1 text-slate-400">
+            <li><strong>Requisitos de Emissão:</strong> Exige status VIP ativo (Gold Pass) e Bumpkin nível 50+.</li>
+            <li><strong>Formato da Chave:</strong> Chave no formato JWT iniciada com o prefixo <code className="text-amber-300">sfl.ey...</code>.</li>
+            <li><strong>Rate Limit:</strong> Recomenda-se throttling de ~5 a 10s por requisição. Em caso de HTTP 429, aguarde o cooldown de 10s.</li>
+            <li><strong>Proxy Seguro:</strong> As requisições trafegam via Cloudflare Worker Proxy eliminando erros de CORS.</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // MODO 2: DASHBOARD DA FAZENDA, VALORAÇÃO & INVENTÁRIO (Aba 'info')
+  // -------------------------------------------------------------
   return (
     <div className="space-y-6 animate-fade-in text-slate-100">
 
@@ -302,116 +444,26 @@ const FarmDashboard = ({
         </div>
       )}
 
-      {/* BLOCO 1: CREDENCIAIS & CONEXÃO + SUPABASE CLOUD */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Form de Credenciais (Farm ID e API Key) */}
-        <div className="lg:col-span-2 bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
-          <h3 className="text-sm font-bold text-amber-400 border-b border-slate-700/60 pb-2 flex items-center justify-between">
-            <span className="flex items-center gap-2">🔑 {t('profileTab', currentLang)}</span>
-            <span className="text-[10px] text-slate-400 font-normal">Guarda local segura em localStorage</span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                Farm ID (ID da Fazenda)
-              </label>
-              <input
-                type="text"
-                value={farmId}
-                onChange={(e) => setFarmId(e.target.value)}
-                placeholder="Ex: 123456"
-                className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-slate-300">
-                  Community API Key (sfl.ey...)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="text-[10px] text-amber-400 hover:underline font-semibold"
-                >
-                  {showApiKey ? t('hideKey', currentLang) : t('showKey', currentLang)}
-                </button>
-              </div>
-              <input
-                type={showApiKey ? "text" : "password"}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={t('apiKeyPlaceholder', currentLang)}
-                className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+      {/* BANNER SE NÃO HOUVER FARM ID CADASTRADO */}
+      {!farmId && (
+        <div className="bg-slate-800/90 rounded-2xl p-6 border border-amber-500/40 shadow-xl text-center space-y-3">
+          <span className="text-3xl">🌾</span>
+          <h3 className="text-base font-bold text-amber-400">Nenhuma fazenda conectada</h3>
+          <p className="text-xs text-slate-300 max-w-md mx-auto">
+            Informe o seu <strong>Farm ID</strong> na aba de Perfil/Configurações para visualizar o painel completo da sua fazenda, inventário oficial e valoração em tempo real.
+          </p>
+          {onNavigateTab && (
             <button
-              onClick={onSaveProfile}
-              className="w-full sm:w-auto px-6 py-2.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              onClick={() => onNavigateTab('perfil')}
+              className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg transition"
             >
-              <span>💾</span> {t('btnSave', currentLang)}
+              ⚙️ Ir para Configurações / Perfil
             </button>
-
-            {profileMsg.text && (
-              <span className={`text-xs font-bold ${profileMsg.type === 'error' ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {profileMsg.text}
-              </span>
-            )}
-          </div>
+          )}
         </div>
+      )}
 
-        {/* Account Cloud Sync Box */}
-        <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-200 border-b border-slate-700/60 pb-2 flex items-center gap-2">
-              ☁️ {t('authTitle', currentLang)}
-            </h3>
-            <p className="text-xs text-slate-400 mt-2">
-              {user ? (
-                <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  {t('authStatusConnected', currentLang, { email: user.email })}
-                </span>
-              ) : (
-                <span className="text-slate-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-slate-500"></span>
-                  {t('authStatusGuest', currentLang)}
-                </span>
-              )}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {user && (
-              <button
-                onClick={() => syncCloud(user, true)}
-                disabled={isSyncing}
-                className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
-              >
-                {isSyncing ? <span className="animate-spin">⌛</span> : <span>🔄 Sincronizar</span>}
-              </button>
-            )}
-            <button
-              onClick={onOpenAuthModal}
-              className={`flex-1 px-3 py-2 rounded-xl font-extrabold text-xs shadow-md transition flex items-center justify-center gap-1.5 ${
-                user 
-                  ? 'bg-slate-700 hover:bg-slate-600 text-amber-300 border border-slate-600' 
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-              }`}
-            >
-              {user ? <span>⚙️ Gerenciar</span> : <span>⚡ Entrar</span>}
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      {/* BLOCO 2: VISÃO GERAL DA ILHA & ESTATÍSTICAS */}
+      {/* VISÃO GERAL DA ILHA & ESTATÍSTICAS */}
       {farmData?.land && (
         <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
@@ -449,7 +501,7 @@ const FarmDashboard = ({
         </div>
       )}
 
-      {/* BLOCO 3: VALORAÇÃO E PATRIMÔNIO ESTIMADO DA FAZENDA */}
+      {/* BLOCO DE VALORAÇÃO E PATRIMÔNIO ESTIMADO DA FAZENDA (ISOLADO NA ABA INFO) */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-2xl p-6 border border-amber-500/30 shadow-2xl space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-700/60 pb-4">
           <div>
@@ -486,7 +538,7 @@ const FarmDashboard = ({
           </div>
         </div>
 
-        {/* BLOCO 4: INVENTÁRIO OFICIAL DETALHADO (GRID E FILTROS) */}
+        {/* INVENTÁRIO OFICIAL DETALHADO (GRID E FILTROS) */}
         <div className="space-y-4 pt-2">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <h4 className="text-sm font-bold text-slate-200 flex items-center gap-2">
@@ -588,7 +640,7 @@ const FarmDashboard = ({
         </div>
       </div>
 
-      {/* BLOCO 5: PERFIL DO BUMPKIN & SKILLS ATIVAS */}
+      {/* PERFIL DO BUMPKIN & SKILLS ATIVAS */}
       {farmData?.bumpkin && (
         <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
