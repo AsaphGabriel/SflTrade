@@ -149,17 +149,22 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
             {currentLang === 'pt' ? 'Período:' : 'Period:'}
           </span>
           <div className="flex items-center gap-1">
-            {[7, 30, 90].map(days => (
+            {[
+              { days: 1, label: '24h' },
+              { days: 7, label: '7D' },
+              { days: 30, label: '30D' },
+              { days: 90, label: '90D' }
+            ].map(opt => (
               <button
-                key={days}
-                onClick={() => setTimeframe(days)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
-                  timeframe === days 
+                key={opt.days}
+                onClick={() => setTimeframe(opt.days)}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+                  timeframe === opt.days 
                     ? 'bg-amber-400 text-slate-900 shadow-md' 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
                 }`}
               >
-                {days}D
+                {opt.label}
               </button>
             ))}
           </div>

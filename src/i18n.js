@@ -57,6 +57,16 @@ export const translations = {
     cat_misc: "Misc & Badges",
     marketTabAll: "All",
     
+    // Destaques do Mercado (Movers)
+    moversTitle: "Market Highlights",
+    moversSubtitle: "Top price changes based on historical quotes",
+    topGainersTitle: "Top Gainers",
+    topLosersTitle: "Top Losers",
+    timeframeLabel: "Period:",
+    noMoversData: "Accumulating price history for this period...",
+    clickToViewChart: "Click to view historical chart",
+    basePriceLabel: "Base:",
+
     // NOVAS CHAVES (Perfil e Info)
     infoTitle: "Information & Dashboard",
     infoDataProvider: "Data provided by sfl.world & api.sunflower-land.com",
@@ -179,6 +189,16 @@ export const translations = {
     cat_minerals: "Minérios e Recursos",
     cat_misc: "Diversos e Emblemas",
     marketTabAll: "Todos",
+
+    // Destaques do Mercado (Movers)
+    moversTitle: "Destaques do Mercado",
+    moversSubtitle: "Maiores altas e baixas baseadas no histórico de cotações",
+    topGainersTitle: "Maiores Altas",
+    topLosersTitle: "Maiores Baixas",
+    timeframeLabel: "Período:",
+    noMoversData: "Acumulando histórico de preços para este período...",
+    clickToViewChart: "Clique para ver o gráfico histórico",
+    basePriceLabel: "Base:",
 
     // NOVAS CHAVES (Perfil e Info)
     infoTitle: "Informações e Painel",

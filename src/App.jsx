@@ -7,6 +7,8 @@ import TransactionModal from './components/TransactionModal';
 import AuthModal from './components/AuthModal';
 import BottomNav from './components/BottomNav';
 import FarmDashboard from './components/FarmDashboard';
+import MarketMoversCards from './components/MarketMoversCards';
+import PriceChartModal from './components/PriceChartModal';
 import { t } from './i18n';
 
 const App = () => {
@@ -14,6 +16,7 @@ const App = () => {
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
+  const [selectedChartResource, setSelectedChartResource] = useState(null);
   
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
   const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
@@ -138,6 +141,11 @@ const App = () => {
                 onUpdateCustomAvgPrice={updateCustomAvgPrice}
                 onOpenSell={openSell} 
               />
+              <MarketMoversCards
+                marketData={marketData}
+                currentLang={currentLang}
+                onSelectResource={(res) => setSelectedChartResource(res)}
+              />
               <ResourceGrid 
                 data={marketData} 
                 currentLang={currentLang} 
@@ -231,6 +239,15 @@ const App = () => {
           onAuthChange={(updatedUser) => setUser(updatedUser)}
           onSyncCloud={syncCloud}
           isSyncing={isSyncing}
+        />
+      )}
+
+      {selectedChartResource && (
+        <PriceChartModal
+          resourceId={selectedChartResource}
+          flowerPriceUsd={flowerPrice}
+          currentLang={currentLang}
+          onClose={() => setSelectedChartResource(null)}
         />
       )}
 

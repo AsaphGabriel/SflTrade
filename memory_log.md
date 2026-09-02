@@ -1,5 +1,30 @@
 # 📜 Memory Log - SflTrade
 
+## [2026-09-02] Adição dos Cards de Destaques do Mercado (Maiores Altas e Maiores Baixas)
+
+### 1. 📈 Novos Cards de Métricas de Variação de Preço (`MarketMoversCards.jsx`)
+- **Top 3 Recursos que Mais Valorizaram (🚀 Maiores Altas)**:
+  - Exibe os 3 recursos com maior valorização percentual calculada em relação ao ponto de referência temporal.
+  - Badges de ranking (#1 ouro, #2 prata, #3 bronze), imagem do recurso via `sfl.world` com fallback em SVG transparente, nome, cotação atual em SFL, preço base anterior e pill de variação percentual destacada em verde (`+XX.X%`).
+- **Top 3 Recursos que Mais Desvalorizaram (🔻 Maiores Baixas)**:
+  - Exibe os 3 recursos com maior queda/desvalorização percentual.
+  - Badges de ranking, dados do recurso e pill de variação percentual em vermelho (`-XX.X%`).
+- **Filtro de Período Dinâmico**:
+  - Opções selecionáveis: **`24h`**, **`7D`**, **`30D`** e **`90D`** (com `24h` selecionado por padrão).
+  - Consulta os dados históricos do Supabase (`v_resource_daily_metrics` e `resource_price_history`) com fallback local para `sfl_hourly_history`.
+  - Cache em memória com TTL de 3 minutos para transição instantânea entre filtros sem disparar requisições repetidas.
+- **Interatividade Total**:
+  - Ao clicar em qualquer recurso nos cards, abre diretamente o `PriceChartModal` com a série temporal e médias móveis (SMA) do item.
+
+### 2. 📊 Sincronização e Ajuste no `PriceChartModal.jsx` e `historyService.js`
+- Adicionada função `fetchMarketMovers` em `historyService.js` com cálculo resiliente a dados faltantes.
+- Atualizado o seletor de períodos do `PriceChartModal` para oferecer botões consistentes: `24h`, `7D`, `30D` e `90D`.
+
+### 3. 🚀 Build
+- Build de produção executado com sucesso (`npm run build`).
+
+---
+
 ## [2026-08-14] Hotfix Definitivo: Eliminação de Thread Lock (Congelamento de JS) em Transações, Edições e Modais
 
 ### 1. 🔍 Causa Raiz do Thread Lock (Congelamento de Thread JS)
