@@ -19,9 +19,9 @@ export function purgeLegacyMockCache() {
     const savedVer = localStorage.getItem(CACHE_VERSION_KEY);
     if (savedVer !== CURRENT_CACHE_VERSION) {
       console.log('[HistoryService] Atualizando estrutura de cache para histórico global Supabase...');
-      
+
       localStorage.removeItem(TOKEN_CACHE_KEY);
-      
+
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -30,7 +30,7 @@ export function purgeLegacyMockCache() {
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
-      
+
       localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
     }
   } catch (e) {
@@ -60,7 +60,7 @@ export function calculateMovingAverage(data = [], windowSize = 7, valueKey = 'pr
   const safeWindow = Math.max(1, windowSize);
   const result = [];
   let runningSum = 0;
-  
+
   for (let i = 0; i < data.length; i++) {
     const val = Number(data[i][valueKey] || data[i].price || 0) || 0;
     runningSum += val;
@@ -143,7 +143,7 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
 
     if (timeSinceLastPush >= SUPABASE_PUSH_THROTTLE_MS && Object.keys(cleanResources).length > 0) {
       localStorage.setItem(LAST_SUPABASE_PUSH_KEY, String(Date.now()));
-      
+
       // Envia cotação do token
       supabase
         .from('token_price_history')
@@ -264,13 +264,13 @@ export function aggregateHistoryByInterval(rawData = [], timeframe = '30D', fall
   const nowMs = Date.now();
   const sortedRaw = Array.isArray(rawData)
     ? [...rawData]
-        .map(item => {
-          const t = new Date(item.timestamp || item.day || 0).getTime();
-          const p = Number(item.price_sfl ?? item.avg_price_sfl ?? item.price_usd ?? item.price ?? 0);
-          return { ...item, t, p };
-        })
-        .filter(item => !isNaN(item.t) && item.t > 0 && !isNaN(item.p) && item.p > 0)
-        .sort((a, b) => a.t - b.t)
+      .map(item => {
+        const t = new Date(item.timestamp || item.day || 0).getTime();
+        const p = Number(item.price_sfl ?? item.avg_price_sfl ?? item.price_usd ?? item.price ?? 0);
+        return { ...item, t, p };
+      })
+      .filter(item => !isNaN(item.t) && item.t > 0 && !isNaN(item.p) && item.p > 0)
+      .sort((a, b) => a.t - b.t)
     : [];
 
   const buckets = [];
@@ -612,7 +612,7 @@ export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h
         if (rawHourly) {
           const historyList = JSON.parse(rawHourly);
           if (Array.isArray(historyList) && historyList.length > 0) {
-            const sorted = [...historyList].sort((a, b) => 
+            const sorted = [...historyList].sort((a, b) =>
               (new Date(a.timestamp || a.day).getTime()) - (new Date(b.timestamp || b.day).getTime())
             );
 
