@@ -505,150 +505,161 @@ export async function fetchResourceHistory(resourceId, timeframe = '30D', curren
 
 /**
  * 5. DESTAQUES DO MERCADO: TOP 3 MAIORES ALTAS E TOP 3 MAIORES BAIXAS
- * Calcula variação percentual dos recursos em relação ao registro de referência (24h atrás, 7D atrás, 30D atrás, 90D atrás).
+ * Otimizado para usar a cotação real instantânea e comparar com a referência histórica exata do período.
  */
-const MOVERS_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutos
-const moversCache = {};
+const BASELINE_CACHE_TTL_MS = 3 * 60 * 1000; // Cache de 3 min apenas para a consulta de baseline no Supabase
+const baselineCache = {};
 
 export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h') {
   const tfStr = String(timeframe).toUpperCase();
   let safeTimeframe = '24h';
   let hoursBack = 24;
+  let minAgeMs = 12 * 60 * 60 * 1000; // Mínimo de 12h de idade para ser considerado baseline de 24h
 
   if (tfStr === '7D' || tfStr === '7') {
     safeTimeframe = '7D';
     hoursBack = 7 * 24;
+    minAgeMs = 3.5 * 24 * 60 * 60 * 1000;
   } else if (tfStr === '30D' || tfStr === '30') {
     safeTimeframe = '30D';
     hoursBack = 30 * 24;
+    minAgeMs = 15 * 24 * 60 * 60 * 1000;
   } else if (tfStr === '90D' || tfStr === '90') {
     safeTimeframe = '90D';
     hoursBack = 90 * 24;
+    minAgeMs = 45 * 24 * 60 * 60 * 1000;
   }
 
   const nowMs = Date.now();
-  const cached = moversCache[safeTimeframe];
-  if (cached && (Date.now() - cached.timestamp < MOVERS_CACHE_TTL_MS)) {
-    return cached.data;
-  }
-
   const targetTimeMs = nowMs - hoursBack * 60 * 60 * 1000;
 
-  const baselineMap = {};
-
-  // 1. Consulta no Supabase
-  try {
-    if (hoursBack <= 168) {
-      // Para 24h e 7D, busca registros mais próximos do instante targetTimeMs
-      const { data: rawHistory, error: rawError } = await withTimeout(
-        supabase
-          .from('resource_price_history')
-          .select('resource_id, price_sfl, timestamp')
-          .gte('timestamp', new Date(targetTimeMs - 24 * 60 * 60 * 1000).toISOString())
-          .order('timestamp', { ascending: true })
-          .limit(3000),
-        3000
-      );
-
-      if (!rawError && Array.isArray(rawHistory) && rawHistory.length > 0) {
-        const byRes = {};
-        rawHistory.forEach(r => {
-          if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
-          byRes[r.resource_id].push(r);
-        });
-
-        Object.entries(byRes).forEach(([resId, rows]) => {
-          let closest = rows[0];
-          let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
-          for (const row of rows) {
-            const diff = Math.abs(new Date(row.timestamp).getTime() - targetTimeMs);
-            if (diff < minDiff) {
-              minDiff = diff;
-              closest = row;
-            }
-          }
-          if (closest && closest.price_sfl > 0) {
-            baselineMap[resId] = Number(closest.price_sfl);
-          }
-        });
-      }
-    } else {
-      // Para 30D e 90D, busca na View agregada v_resource_daily_metrics
-      const targetDateStr = new Date(targetTimeMs).toISOString().split('T')[0];
-      const { data: dailyMetrics, error: dailyError } = await withTimeout(
-        supabase
-          .from('v_resource_daily_metrics')
-          .select('resource_id, day, avg_price_sfl')
-          .order('day', { ascending: true }),
-        3000
-      );
-
-      if (!dailyError && Array.isArray(dailyMetrics) && dailyMetrics.length > 0) {
-        const byRes = {};
-        dailyMetrics.forEach(r => {
-          if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
-          byRes[r.resource_id].push(r);
-        });
-
-        Object.entries(byRes).forEach(([resId, rows]) => {
-          const pastRows = rows.filter(r => r.day <= targetDateStr);
-          if (pastRows.length > 0) {
-            baselineMap[resId] = Number(pastRows[pastRows.length - 1].avg_price_sfl);
-          } else if (rows.length > 0) {
-            baselineMap[resId] = Number(rows[0].avg_price_sfl);
-          }
-        });
-      }
-    }
-  } catch (err) {
-    console.warn(`[HistoryService] Supabase indisponível para movers (${safeTimeframe}):`, err?.message || err);
-  }
-
-  // 2. Fallback local (localStorage)
-  if (Object.keys(baselineMap).length === 0) {
+  // 1. Reutiliza ou busca mapa de baseline histórica (somente a consulta do banco é armazenada em cache)
+  let baselineMap = {};
+  const cachedBaseline = baselineCache[safeTimeframe];
+  if (cachedBaseline && (nowMs - cachedBaseline.timestamp < BASELINE_CACHE_TTL_MS)) {
+    baselineMap = cachedBaseline.map;
+  } else {
     try {
-      const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
-      if (rawHourly) {
-        const historyList = JSON.parse(rawHourly);
-        if (Array.isArray(historyList) && historyList.length > 0) {
-          const sorted = [...historyList].sort((a, b) => 
-            (new Date(a.timestamp || a.day).getTime()) - (new Date(b.timestamp || b.day).getTime())
-          );
+      if (hoursBack <= 168) {
+        // Para 24h e 7D, busca registros históricos na tabela de snapshots com limite temporal de 24h atrás
+        const { data: rawHistory, error: rawError } = await withTimeout(
+          supabase
+            .from('resource_price_history')
+            .select('resource_id, price_sfl, timestamp')
+            .gte('timestamp', new Date(targetTimeMs - 24 * 60 * 60 * 1000).toISOString())
+            .order('timestamp', { ascending: true })
+            .limit(3000),
+          3000
+        );
 
-          let bestSnapshot = sorted[0];
-          let minDiff = Math.abs(new Date(bestSnapshot.timestamp || bestSnapshot.day).getTime() - targetTimeMs);
+        if (!rawError && Array.isArray(rawHistory) && rawHistory.length > 0) {
+          const byRes = {};
+          rawHistory.forEach(r => {
+            if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
+            byRes[r.resource_id].push(r);
+          });
 
-          for (const snap of sorted) {
-            const snapTime = new Date(snap.timestamp || snap.day).getTime();
-            const diff = Math.abs(snapTime - targetTimeMs);
-            if (diff < minDiff) {
-              minDiff = diff;
-              bestSnapshot = snap;
-            }
-          }
-
-          if (bestSnapshot && bestSnapshot.resources) {
-            Object.entries(bestSnapshot.resources).forEach(([resId, price]) => {
-              if (Number(price) > 0) {
-                baselineMap[resId] = Number(price);
+          Object.entries(byRes).forEach(([resId, rows]) => {
+            let closest = rows[0];
+            let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
+            for (const row of rows) {
+              const diff = Math.abs(new Date(row.timestamp).getTime() - targetTimeMs);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = row;
               }
-            });
-          }
+            }
+            const closestAge = nowMs - new Date(closest.timestamp).getTime();
+            if (closest && closest.price_sfl > 0 && closestAge >= minAgeMs) {
+              baselineMap[resId] = Number(closest.price_sfl);
+            }
+          });
+        }
+      } else {
+        // Para 30D e 90D, busca na View agregada v_resource_daily_metrics
+        const targetDateStr = new Date(targetTimeMs).toISOString().split('T')[0];
+        const { data: dailyMetrics, error: dailyError } = await withTimeout(
+          supabase
+            .from('v_resource_daily_metrics')
+            .select('resource_id, day, avg_price_sfl')
+            .order('day', { ascending: true }),
+          3000
+        );
+
+        if (!dailyError && Array.isArray(dailyMetrics) && dailyMetrics.length > 0) {
+          const byRes = {};
+          dailyMetrics.forEach(r => {
+            if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
+            byRes[r.resource_id].push(r);
+          });
+
+          Object.entries(byRes).forEach(([resId, rows]) => {
+            const pastRows = rows.filter(r => r.day <= targetDateStr);
+            if (pastRows.length > 0) {
+              baselineMap[resId] = Number(pastRows[pastRows.length - 1].avg_price_sfl);
+            }
+          });
         }
       }
-    } catch (e) {
-      console.warn('[HistoryService] Erro ao carregar baseline local para movers:', e);
+    } catch (err) {
+      console.warn(`[HistoryService] Supabase indisponível para movers (${safeTimeframe}):`, err?.message || err);
     }
+
+    // Fallback local caso Supabase não tenha retornado baselines
+    if (Object.keys(baselineMap).length === 0) {
+      try {
+        const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
+        if (rawHourly) {
+          const historyList = JSON.parse(rawHourly);
+          if (Array.isArray(historyList) && historyList.length > 0) {
+            const sorted = [...historyList].sort((a, b) => 
+              (new Date(a.timestamp || a.day).getTime()) - (new Date(b.timestamp || b.day).getTime())
+            );
+
+            let bestSnapshot = sorted[0];
+            let minDiff = Math.abs(new Date(bestSnapshot.timestamp || bestSnapshot.day).getTime() - targetTimeMs);
+
+            for (const snap of sorted) {
+              const snapTime = new Date(snap.timestamp || snap.day).getTime();
+              const diff = Math.abs(snapTime - targetTimeMs);
+              if (diff < minDiff) {
+                minDiff = diff;
+                bestSnapshot = snap;
+              }
+            }
+
+            const bestAge = nowMs - new Date(bestSnapshot.timestamp || bestSnapshot.day).getTime();
+            if (bestSnapshot && bestSnapshot.resources && bestAge >= minAgeMs) {
+              Object.entries(bestSnapshot.resources).forEach(([resId, price]) => {
+                if (Number(price) > 0) {
+                  baselineMap[resId] = Number(price);
+                }
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[HistoryService] Erro ao carregar baseline local para movers:', e);
+      }
+    }
+
+    baselineCache[safeTimeframe] = {
+      timestamp: nowMs,
+      map: baselineMap
+    };
   }
 
-  // 3. Calcula variações percentuais para cada recurso
+  // 2. Calcula as variações percentuais usando a cotação real AO VIVO enviada em currentMarketData
   const variations = [];
 
   Object.entries(currentMarketData).forEach(([resourceId, rawCurrent]) => {
     const currentPrice = Number(rawCurrent);
-    const basePrice = Number(baselineMap[resourceId]);
+    if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) return;
 
-    if (currentPrice > 0 && basePrice > 0) {
+    // Se houver baseline histórica válida de períodos anteriores, calcula a variação real
+    const basePrice = Number(baselineMap[resourceId] || currentPrice);
+
+    if (basePrice > 0) {
       const diff = currentPrice - basePrice;
       const changePct = (diff / basePrice) * 100;
 
@@ -667,25 +678,18 @@ export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h
   // Ordena por maior variação positiva
   variations.sort((a, b) => b.changePct - a.changePct);
 
-  // Top 3 que mais valorizaram
-  const topGainers = variations.slice(0, 3);
+  // Top 3 que mais valorizaram (apenas os que tiveram variação real)
+  const topGainers = variations.filter(v => v.changePct > 0).slice(0, 3);
 
-  // Top 3 que mais desvalorizaram
-  const topLosers = [...variations].reverse().slice(0, 3);
+  // Top 3 que mais desvalorizaram (apenas os que tiveram variação negativa real)
+  const topLosers = [...variations].filter(v => v.changePct < 0).reverse().slice(0, 3);
 
-  const result = {
+  return {
     timeframe: safeTimeframe,
-    topGainers,
-    topLosers,
+    topGainers: topGainers.length > 0 ? topGainers : variations.slice(0, 3),
+    topLosers: topLosers.length > 0 ? topLosers : [...variations].reverse().slice(0, 3),
     hasData: variations.length > 0
   };
-
-  moversCache[safeTimeframe] = {
-    timestamp: Date.now(),
-    data: result
-  };
-
-  return result;
 }
 
 
