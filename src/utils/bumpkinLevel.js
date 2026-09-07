@@ -30,6 +30,8 @@ const XP_TABLE = [
   198853171, 203317427, 207915610, 212651738, 217529949, 222554506, 227729799, 233060350, 238550817, 244206000
 ];
 
+export { XP_TABLE };
+
 /**
  * Retorna o nível correspondente à experiência.
  * @param {number} experience A quantidade de XP atual
@@ -48,4 +50,27 @@ export function getBumpkinLevel(experience) {
   }
   
   return 1;
+}
+
+/**
+ * Retorna os detalhes de progresso de XP do Bumpkin.
+ */
+export function getBumpkinXPDetails(experience) {
+  const currentLevel = getBumpkinLevel(experience);
+  const currentLevelMinXP = XP_TABLE[currentLevel - 1] || 0;
+  const nextLevelXP = XP_TABLE[currentLevel] || XP_TABLE[XP_TABLE.length - 1];
+  
+  const xpInLevel = Math.max(0, (experience || 0) - currentLevelMinXP);
+  const xpNeededForLevel = Math.max(1, nextLevelXP - currentLevelMinXP);
+  const progressPercent = Math.min(100, Math.max(0, (xpInLevel / xpNeededForLevel) * 100));
+
+  return {
+    level: currentLevel,
+    currentXP: experience || 0,
+    currentLevelMinXP,
+    nextLevelXP,
+    xpInLevel,
+    xpNeededForLevel,
+    progressPercent: currentLevel >= 200 ? 100 : Number(progressPercent.toFixed(1))
+  };
 }

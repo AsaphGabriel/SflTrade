@@ -42,24 +42,28 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   }, [resourceId, isToken, flowerPriceUsd]);
 
   // Filtra dados para a janela temporal selecionada (7, 30, 90 dias)
-  const displayData = history.slice(-timeframe);
+  const displayData = Array.isArray(history) ? history.slice(-timeframe) : [];
 
   // Verifica se há apenas 1 registro inicial (acumulando dados a partir de hoje)
-  const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d.isInitialData);
+  const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d && d.isInitialData);
 
-  // Métricas calculadas da janela selecionada
-  const prices = displayData.map(d => d.price_sfl || d.avg_price_sfl || d.price_usd || d.price || 0);
+  // Métricas calculadas da janela selecionada com sanitização estrita de números
+  const prices = displayData
+    .map(d => Number(d?.price_sfl ?? d?.avg_price_sfl ?? d?.price_usd ?? d?.price ?? 0))
+    .filter(p => !isNaN(p) && isFinite(p) && p > 0);
+
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
   const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
 
   // Médias móveis (exibidas como null / '-' se estiver acumulando dados iniciais)
-  const latestSma7 = (!isAccumulatingHistory && displayData.length >= 7)
-    ? (displayData[displayData.length - 1].sma_7d_sfl || displayData[displayData.length - 1].sma_7d)
+  const latestItem = displayData.length > 0 ? displayData[displayData.length - 1] : null;
+  const latestSma7 = (!isAccumulatingHistory && displayData.length >= 7 && latestItem)
+    ? Number(latestItem.sma_7d_sfl ?? latestItem.sma_7d ?? 0)
     : null;
 
-  const latestSma30 = (!isAccumulatingHistory && displayData.length >= 30)
-    ? (displayData[displayData.length - 1].sma_30d_sfl || displayData[displayData.length - 1].sma_30d)
+  const latestSma30 = (!isAccumulatingHistory && displayData.length >= 30 && latestItem)
+    ? Number(latestItem.sma_30d_sfl ?? latestItem.sma_30d ?? 0)
     : null;
 
   // Cálculo de Coordenadas para Gráfico SVG Responsivo
@@ -72,27 +76,42 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
   const yMin = minPrice > 0 ? minPrice * 0.95 : 0;
   const yMax = maxPrice > 0 ? maxPrice * 1.05 : 1;
-  const yRange = yMax - yMin || 1;
+  const yRange = (isFinite(yMax - yMin) && (yMax - yMin) !== 0) ? (yMax - yMin) : 1;
 
   const getX = (index, total) => {
-    if (total <= 1) return padding + chartWidth / 2;
-    return padding + (index / (total - 1)) * chartWidth;
+    if (!isFinite(index) || !isFinite(total) || total <= 1) return padding + chartWidth / 2;
+    const x = padding + (index / (total - 1)) * chartWidth;
+    return (isNaN(x) || !isFinite(x)) ? padding + chartWidth / 2 : x;
   };
 
   const getY = (val) => {
-    if (yRange === 0) return padding + chartHeight / 2;
-    return svgHeight - padding - ((val - yMin) / yRange) * chartHeight;
+    const num = Number(val);
+    if (isNaN(num) || !isFinite(num) || !isFinite(yRange) || yRange === 0) return padding + chartHeight / 2;
+    const computed = svgHeight - padding - ((num - yMin) / yRange) * chartHeight;
+    return (isNaN(computed) || !isFinite(computed)) ? padding + chartHeight / 2 : computed;
   };
 
-  // Gerar Paths para o SVG
+  // Gerar Paths para o SVG com proteção try/catch
   const generatePath = (valKey) => {
-    if (!displayData || displayData.length <= 1) return '';
-    return displayData.map((d, i) => {
-      const val = d[valKey] || d.price_sfl || d.avg_price_sfl || d.price_usd || 0;
-      const x = getX(i, displayData.length);
-      const y = getY(val);
-      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    }).join(' ');
+    if (!displayData || !Array.isArray(displayData) || displayData.length <= 1) return '';
+    try {
+      const points = displayData
+        .map((d, i) => {
+          if (!d) return null;
+          const rawVal = d[valKey] ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
+          const val = Number(rawVal);
+          if (isNaN(val) || !isFinite(val)) return null;
+          const x = getX(i, displayData.length);
+          const y = getY(val);
+          if (isNaN(x) || !isFinite(x) || isNaN(y) || !isFinite(y)) return null;
+          return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+        })
+        .filter(Boolean);
+      return points.join(' ');
+    } catch (err) {
+      console.warn('[PriceChartModal] Erro ao gerar path SVG:', err);
+      return '';
+    }
   };
 
   const pricePath = generatePath('avg_price_sfl');
@@ -100,7 +119,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const sma30Path = !isAccumulatingHistory ? generatePath('sma_30d_sfl') : '';
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4">
         
         {/* Cabeçalho do Modal */}
@@ -130,17 +149,22 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
             {currentLang === 'pt' ? 'Período:' : 'Period:'}
           </span>
           <div className="flex items-center gap-1">
-            {[7, 30, 90].map(days => (
+            {[
+              { days: 1, label: '24h' },
+              { days: 7, label: '7D' },
+              { days: 30, label: '30D' },
+              { days: 90, label: '90D' }
+            ].map(opt => (
               <button
-                key={days}
-                onClick={() => setTimeframe(days)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
-                  timeframe === days 
+                key={opt.days}
+                onClick={() => setTimeframe(opt.days)}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+                  timeframe === opt.days 
                     ? 'bg-amber-400 text-slate-900 shadow-md' 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
                 }`}
               >
-                {days}D
+                {opt.label}
               </button>
             ))}
           </div>
@@ -222,9 +246,11 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
                 {/* Pontos de Interação do Gráfico */}
                 {displayData.map((d, i) => {
-                  const val = d.avg_price_sfl || d.price_sfl || d.price_usd || 0;
+                  if (!d) return null;
+                  const val = Number(d.avg_price_sfl || d.price_sfl || d.price_usd || 0);
                   const cx = getX(i, displayData.length);
                   const cy = getY(val);
+                  if (isNaN(cx) || !isFinite(cx) || isNaN(cy) || !isFinite(cy)) return null;
 
                   return (
                     <circle
@@ -235,6 +261,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                       className="fill-emerald-400 hover:r-7 hover:fill-amber-400 transition-all cursor-pointer"
                       onMouseEnter={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
                       onMouseLeave={() => setHoveredPoint(null)}
+                      onTouchStart={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
                     />
                   );
                 })}

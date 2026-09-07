@@ -20,7 +20,9 @@ const Header = ({
   onOpenSell,
   onSearchFarm,
   updatedTimeText = "• Updated just now",
-  savedFarmId
+  savedFarmId,
+  user,
+  onOpenAuthModal
 }) => {
   const [farmSearch, setFarmSearch] = useState('');
   const [convQty, setConvQty] = useState('');
@@ -83,6 +85,25 @@ const Header = ({
         {/* Controles do Header */}
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           
+          {/* Status de Autenticação / Botão de Login Cloud */}
+          <button
+            onClick={onOpenAuthModal}
+            className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 hover:border-amber-400/50 transition cursor-pointer text-xs font-semibold"
+            title={user ? `Conectado como ${user.email}` : 'Clique para entrar ou cadastrar'}
+          >
+            {user ? (
+              <span className="text-emerald-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="truncate max-w-[110px]">{user.email}</span>
+              </span>
+            ) : (
+              <span className="text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+                <span>☁️ {currentLang === 'pt' ? 'Entrar' : 'Sign In'}</span>
+              </span>
+            )}
+          </button>
+
           {/* Seletor de Idioma */}
           <div className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
             <span className="text-xs">🌐</span>
