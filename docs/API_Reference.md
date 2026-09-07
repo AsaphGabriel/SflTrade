@@ -63,6 +63,16 @@ Para gerar e utilizar uma API Key oficial (`sfl.ey...`):
 - **Autenticação:** Requer cabeçalho `x-api-key: sfl.ey...` e/ou `Authorization: Bearer sfl.ey...`.
 - **Retorno:** Estado completo e verificado da fazenda, nível do Bumpkin, inventário detalhado e status VIP.
 
+### 5. Cotações, Floor Price e Boosts de NFTs (`GET /v1/nfts`)
+- **URL Completa:** `https://sfl.world/api/v1/nfts`
+- **Acesso via Worker Proxy:** `https://sfltrade.asaphgabrielsousa.workers.dev/?url=https%3A%2F%2Fsfl.world%2Fapi%2Fv1%2Fnfts`
+- **Autenticação:** Nenhuma (Endpoint público indexado do Marketplace Polygon).
+- **Estrutura de Retorno:**
+  - `collectibles`: Array de 480+ NFTs colecionáveis/placeables da fazenda (id, floor, lastSalePrice, supply, name, have_boost, boost_text).
+  - `wearables`: Array de 360+ itens vestíveis/equipamentos do Bumpkin (id, floor, lastSalePrice, supply, name, have_boost, boost_text).
+  - `updatedAt`: Timestamp Unix em milissegundos da última consolidação dos preços.
+- **Utilidade Estratégica:** Permite calcular o **Net Worth de NFTs (Valoração de Colecionáveis e Roupas)** cruzando com o inventário oficial da fazenda (`farm.collectibles` / `farm.wardrobe`).
+
 ---
 
 ## 🧩 Arquitetura de Estado e Serviços no Front-end
