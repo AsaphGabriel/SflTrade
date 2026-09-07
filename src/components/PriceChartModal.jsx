@@ -3,7 +3,7 @@ import { fetchResourceHistory, fetchTokenHistory } from '../services/historyServ
 import { t } from '../i18n';
 
 const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, currentLang = 'en', onClose }) => {
-  const [timeframe, setTimeframe] = useState(30); // 7, 30, 90 dias
+  const [timeframe, setTimeframe] = useState('30D'); // '24h', '7D', '30D', '90D'
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -19,9 +19,9 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
       try {
         let data = [];
         if (isToken) {
-          data = await fetchTokenHistory(90, flowerPriceUsd);
+          data = await fetchTokenHistory(timeframe, flowerPriceUsd);
         } else if (resourceId) {
-          data = await fetchResourceHistory(resourceId, 90);
+          data = await fetchResourceHistory(resourceId, timeframe);
         }
 
         if (isMounted) {
@@ -39,12 +39,12 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
     return () => {
       isMounted = false;
     };
-  }, [resourceId, isToken, flowerPriceUsd]);
+  }, [resourceId, isToken, flowerPriceUsd, timeframe]);
 
-  // Filtra dados para a janela temporal selecionada (7, 30, 90 dias)
-  const displayData = Array.isArray(history) ? history.slice(-timeframe) : [];
+  // Dados pre-agregados pela amostragem do período selecionado
+  const displayData = Array.isArray(history) ? history : [];
 
-  // Verifica se há apenas 1 registro inicial (acumulando dados a partir de hoje)
+  // Verifica se há apenas 1 registro inicial ou preenchido por fallback
   const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d && d.isInitialData);
 
   // Métricas calculadas da janela selecionada com sanitização estrita de números
@@ -56,7 +56,12 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
   const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
 
-  // Médias móveis (exibidas como null / '-' se estiver acumulando dados iniciais)
+  // Cálculo da Média Automática do Período Exibido
+  const avgPeriodPrice = prices.length > 0
+    ? prices.reduce((acc, curr) => acc + curr, 0) / prices.length
+    : 0;
+
+  // Médias móveis (exibidas como null / '-' se não houver registros suficientes)
   const latestItem = displayData.length > 0 ? displayData[displayData.length - 1] : null;
   const latestSma7 = (!isAccumulatingHistory && displayData.length >= 7 && latestItem)
     ? Number(latestItem.sma_7d_sfl ?? latestItem.sma_7d ?? 0)
@@ -91,6 +96,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
     return (isNaN(computed) || !isFinite(computed)) ? padding + chartHeight / 2 : computed;
   };
 
+  const yAvg = (avgPeriodPrice > 0) ? getY(avgPeriodPrice) : null;
+
   // Gerar Paths para o SVG com proteção try/catch
   const generatePath = (valKey) => {
     if (!displayData || !Array.isArray(displayData) || displayData.length <= 1) return '';
@@ -115,8 +122,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   };
 
   const pricePath = generatePath('avg_price_sfl');
-  const sma7Path = !isAccumulatingHistory ? generatePath('sma_7d_sfl') : '';
-  const sma30Path = !isAccumulatingHistory ? generatePath('sma_30d_sfl') : '';
+  const sma7Path = !isAccumulatingHistory && displayData.length >= 7 ? generatePath('sma_7d_sfl') : '';
+  const sma30Path = !isAccumulatingHistory && displayData.length >= 30 ? generatePath('sma_30d_sfl') : '';
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn">
@@ -131,7 +138,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                 {titleName} - {currentLang === 'pt' ? 'Histórico de Preços' : 'Price History'}
               </h3>
               <p className="text-[11px] text-slate-400">
-                {currentLang === 'pt' ? 'Série temporal & Médias Móveis (SMA)' : 'Time-series & Moving Averages (SMA)'}
+                {currentLang === 'pt' ? 'Série temporal & Linha de Média Automática' : 'Time-series & Automatic Average Line'}
               </p>
             </div>
           </div>
@@ -143,24 +150,24 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
           </button>
         </div>
 
-        {/* Seleção de Janela Temporal (7d, 30d, 90d) */}
+        {/* Seleção de Janela Temporal (24h, 7D, 30D, 90D) */}
         <div className="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-xl border border-slate-700/50">
           <span className="text-xs text-slate-400 pl-2 font-semibold">
             {currentLang === 'pt' ? 'Período:' : 'Period:'}
           </span>
           <div className="flex items-center gap-1">
             {[
-              { days: 1, label: '24h' },
-              { days: 7, label: '7D' },
-              { days: 30, label: '30D' },
-              { days: 90, label: '90D' }
+              { id: '24h', label: '24h' },
+              { id: '7D', label: '7D' },
+              { id: '30D', label: '30D' },
+              { id: '90D', label: '90D' }
             ].map(opt => (
               <button
-                key={opt.days}
-                onClick={() => setTimeframe(opt.days)}
+                key={opt.id}
+                onClick={() => setTimeframe(opt.id)}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
-                  timeframe === opt.days 
-                    ? 'bg-amber-400 text-slate-900 shadow-md' 
+                  String(timeframe).toUpperCase() === opt.id.toUpperCase() 
+                    ? 'bg-amber-400 text-slate-900 shadow-md scale-105' 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
                 }`}
               >
@@ -176,34 +183,36 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
             <span>ℹ️</span>
             <span>
               {currentLang === 'pt' 
-                ? 'Coletando histórico diário. Dados acumulados a partir de hoje.' 
-                : 'Collecting daily history. Data accumulated starting today.'}
+                ? 'Coletando histórico do período. Dados acumulados a partir do banco global.' 
+                : 'Collecting period history. Accumulated data from global database.'}
             </span>
           </div>
         )}
 
-        {/* Cards de Métricas (Preço Atual, SMA 7d, SMA 30d, Min/Max) */}
+        {/* Cards de Métricas (Preço Atual, Média do Período, SMA 7d, Min/Max) */}
         <div className="grid grid-cols-4 gap-2 text-center text-xs">
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-slate-400 block font-semibold">
               {currentLang === 'pt' ? 'Atual' : 'Latest'}
             </span>
-            <span className="font-mono font-bold text-amber-400">
+            <span className="font-mono font-bold text-emerald-400">
               {latestPrice ? `${latestPrice.toFixed(3)} ${unitSymbol}` : '-'}
             </span>
           </div>
 
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
-            <span className="text-[10px] text-amber-300 block font-semibold">SMA 7d</span>
-            <span className="font-mono font-bold text-amber-300">
-              {latestSma7 !== null ? `${latestSma7.toFixed(3)} ${unitSymbol}` : '-'}
+            <span className="text-[10px] text-amber-400 block font-semibold">
+              {currentLang === 'pt' ? 'Média Período' : 'Period Avg'}
+            </span>
+            <span className="font-mono font-bold text-amber-400">
+              {avgPeriodPrice ? `${avgPeriodPrice.toFixed(3)} ${unitSymbol}` : '-'}
             </span>
           </div>
 
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
-            <span className="text-[10px] text-indigo-300 block font-semibold">SMA 30d</span>
+            <span className="text-[10px] text-indigo-300 block font-semibold">SMA 7d</span>
             <span className="font-mono font-bold text-indigo-300">
-              {latestSma30 !== null ? `${latestSma30.toFixed(3)} ${unitSymbol}` : '-'}
+              {latestSma7 !== null ? `${latestSma7.toFixed(3)} ${unitSymbol}` : '-'}
             </span>
           </div>
 
@@ -229,7 +238,32 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                 <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
                 <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
 
-                {/* Curva de Preço Diário (Verde Esmeralda) */}
+                {/* LINHA DE MÉDIA AUTOMÁTICA (Amarelo Dourado Tracejado) */}
+                {yAvg !== null && isFinite(yAvg) && (
+                  <g>
+                    <line
+                      x1={padding}
+                      y1={yAvg}
+                      x2={svgWidth - padding}
+                      y2={yAvg}
+                      stroke="#f59e0b"
+                      strokeWidth="1.8"
+                      strokeDasharray="6 3"
+                    />
+                    <text
+                      x={svgWidth - padding - 4}
+                      y={yAvg - 5}
+                      fill="#f59e0b"
+                      fontSize="10"
+                      fontWeight="bold"
+                      textAnchor="end"
+                    >
+                      {currentLang === 'pt' ? 'Média' : 'Avg'}: {avgPeriodPrice.toFixed(3)} {unitSymbol}
+                    </text>
+                  </g>
+                )}
+
+                {/* Curva de Preço (Verde Esmeralda) */}
                 {pricePath && (
                   <path d={pricePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
                 )}
@@ -257,8 +291,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                       key={i}
                       cx={cx}
                       cy={cy}
-                      r="5"
-                      className="fill-emerald-400 hover:r-7 hover:fill-amber-400 transition-all cursor-pointer"
+                      r="4.5"
+                      className="fill-emerald-400 hover:r-6.5 hover:fill-amber-400 transition-all cursor-pointer"
                       onMouseEnter={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
                       onMouseLeave={() => setHoveredPoint(null)}
                       onTouchStart={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
@@ -269,29 +303,28 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
               {/* Tooltip Dinâmico ao passar o cursor */}
               {hoveredPoint && (
-                <div className="absolute top-4 left-4 bg-slate-800/95 border border-slate-700 text-slate-100 text-xs px-3 py-1.5 rounded-xl shadow-xl backdrop-blur-md pointer-events-none">
+                <div className="absolute top-4 left-4 bg-slate-800/95 border border-slate-700 text-slate-100 text-xs px-3 py-1.5 rounded-xl shadow-xl backdrop-blur-md pointer-events-none z-10">
                   <div className="font-semibold text-amber-400">{hoveredPoint.day || hoveredPoint.timestamp?.split('T')[0]}</div>
                   <div className="font-mono">Preço: {Number(hoveredPoint.val).toFixed(4)} {unitSymbol}</div>
                   {hoveredPoint.sma_7d_sfl && <div className="font-mono text-amber-300 text-[10px]">SMA 7d: {Number(hoveredPoint.sma_7d_sfl).toFixed(4)}</div>}
-                  {hoveredPoint.sma_30d_sfl && <div className="font-mono text-indigo-300 text-[10px]">SMA 30d: {Number(hoveredPoint.sma_30d_sfl).toFixed(4)}</div>}
                 </div>
               )}
             </>
           )}
 
           {/* Legenda do Gráfico */}
-          <div className="flex justify-center items-center gap-4 mt-2 text-[10px]">
+          <div className="flex justify-center items-center gap-4 mt-2 text-[10px] flex-wrap">
             <span className="flex items-center gap-1 text-emerald-400 font-bold">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
-              {currentLang === 'pt' ? 'Preço Diário' : 'Daily Price'}
+              {currentLang === 'pt' ? 'Preço' : 'Price'}
             </span>
-            <span className="flex items-center gap-1 text-amber-300 font-bold">
-              <span className="w-2.5 h-0.5 bg-amber-300 inline-block"></span>
-              SMA 7d
+            <span className="flex items-center gap-1 text-amber-500 font-bold">
+              <span className="w-3 h-0.5 bg-amber-500 inline-block"></span>
+              {currentLang === 'pt' ? 'Média Automática' : 'Auto Average'}
             </span>
             <span className="flex items-center gap-1 text-indigo-300 font-bold">
               <span className="w-2.5 h-0.5 bg-indigo-300 inline-block"></span>
-              SMA 30d
+              SMA 7d
             </span>
           </div>
         </div>
