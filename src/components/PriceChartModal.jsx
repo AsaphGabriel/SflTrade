@@ -61,15 +61,11 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
     ? prices.reduce((acc, curr) => acc + curr, 0) / prices.length
     : 0;
 
-  // Médias móveis (exibidas como null / '-' se não houver registros suficientes)
-  const latestItem = displayData.length > 0 ? displayData[displayData.length - 1] : null;
-  const latestSma7 = (!isAccumulatingHistory && displayData.length >= 7 && latestItem)
-    ? Number(latestItem.sma_7d_sfl ?? latestItem.sma_7d ?? 0)
-    : null;
-
-  const latestSma30 = (!isAccumulatingHistory && displayData.length >= 30 && latestItem)
-    ? Number(latestItem.sma_30d_sfl ?? latestItem.sma_30d ?? 0)
-    : null;
+  // Cálculo da Variação Percentual do Período (Primeiro Ponto -> Último Ponto)
+  const firstPrice = prices.length > 0 ? prices[0] : 0;
+  const periodChangePct = (firstPrice > 0 && latestPrice > 0)
+    ? ((latestPrice - firstPrice) / firstPrice) * 100
+    : 0;
 
   // Cálculo de Coordenadas para Gráfico SVG Responsivo
   const svgWidth = 500;
@@ -98,7 +94,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
 
   const yAvg = (avgPeriodPrice > 0) ? getY(avgPeriodPrice) : null;
 
-  // Gerar Paths para o SVG com proteção try/catch
+  // Gerar Path para a linha de preço
   const generatePath = (valKey) => {
     if (!displayData || !Array.isArray(displayData) || displayData.length <= 1) return '';
     try {
@@ -122,8 +118,6 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   };
 
   const pricePath = generatePath('avg_price_sfl');
-  const sma7Path = !isAccumulatingHistory && displayData.length >= 7 ? generatePath('sma_7d_sfl') : '';
-  const sma30Path = !isAccumulatingHistory && displayData.length >= 30 ? generatePath('sma_30d_sfl') : '';
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn">
@@ -189,7 +183,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
           </div>
         )}
 
-        {/* Cards de Métricas (Preço Atual, Média do Período, SMA 7d, Min/Max) */}
+        {/* Cards de Métricas (Preço Atual, Média do Período, Variação %, Min/Max) */}
         <div className="grid grid-cols-4 gap-2 text-center text-xs">
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-slate-400 block font-semibold">
@@ -210,9 +204,11 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
           </div>
 
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
-            <span className="text-[10px] text-indigo-300 block font-semibold">SMA 7d</span>
-            <span className="font-mono font-bold text-indigo-300">
-              {latestSma7 !== null ? `${latestSma7.toFixed(3)} ${unitSymbol}` : '-'}
+            <span className="text-[10px] text-slate-400 block font-semibold">
+              {currentLang === 'pt' ? 'Variação' : 'Change'}
+            </span>
+            <span className={`font-mono font-bold ${periodChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {periodChangePct !== 0 ? `${periodChangePct >= 0 ? '+' : ''}${periodChangePct.toFixed(2)}%` : '0.00%'}
             </span>
           </div>
 
@@ -268,16 +264,6 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                   <path d={pricePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
                 )}
 
-                {/* Curva SMA 7d (Amarelo) */}
-                {sma7Path && (
-                  <path d={sma7Path} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="4 2" />
-                )}
-
-                {/* Curva SMA 30d (Índigo) */}
-                {sma30Path && (
-                  <path d={sma30Path} fill="none" stroke="#818cf8" strokeWidth="1.5" strokeDasharray="2 2" />
-                )}
-
                 {/* Pontos de Interação do Gráfico */}
                 {displayData.map((d, i) => {
                   if (!d) return null;
@@ -306,25 +292,20 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
                 <div className="absolute top-4 left-4 bg-slate-800/95 border border-slate-700 text-slate-100 text-xs px-3 py-1.5 rounded-xl shadow-xl backdrop-blur-md pointer-events-none z-10">
                   <div className="font-semibold text-amber-400">{hoveredPoint.day || hoveredPoint.timestamp?.split('T')[0]}</div>
                   <div className="font-mono">Preço: {Number(hoveredPoint.val).toFixed(4)} {unitSymbol}</div>
-                  {hoveredPoint.sma_7d_sfl && <div className="font-mono text-amber-300 text-[10px]">SMA 7d: {Number(hoveredPoint.sma_7d_sfl).toFixed(4)}</div>}
                 </div>
               )}
             </>
           )}
 
           {/* Legenda do Gráfico */}
-          <div className="flex justify-center items-center gap-4 mt-2 text-[10px] flex-wrap">
-            <span className="flex items-center gap-1 text-emerald-400 font-bold">
+          <div className="flex justify-center items-center gap-6 mt-2 text-[10px] flex-wrap">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
               {currentLang === 'pt' ? 'Preço' : 'Price'}
             </span>
-            <span className="flex items-center gap-1 text-amber-500 font-bold">
+            <span className="flex items-center gap-1.5 text-amber-500 font-bold">
               <span className="w-3 h-0.5 bg-amber-500 inline-block"></span>
               {currentLang === 'pt' ? 'Média Automática' : 'Auto Average'}
-            </span>
-            <span className="flex items-center gap-1 text-indigo-300 font-bold">
-              <span className="w-2.5 h-0.5 bg-indigo-300 inline-block"></span>
-              SMA 7d
             </span>
           </div>
         </div>
