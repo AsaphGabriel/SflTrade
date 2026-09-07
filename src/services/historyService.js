@@ -235,7 +235,7 @@ async function withTimeout(promise, timeoutMs = 2500) {
  * - 24h: 24 pontos (1 a cada 1 hora)
  * - 7D:  14 pontos (1 a cada 12 horas)
  * - 30D: 30 pontos (1 a cada 1 dia)
- * - 90D: 90 pontos (1 a cada 1 dia)
+ * - 90D: 30 pontos (1 a cada 3 dias = 90 dias total)
  */
 export function aggregateHistoryByInterval(rawData = [], timeframe = '30D', fallbackPrice = 0) {
   let tfStr = String(timeframe).toUpperCase();
@@ -257,64 +257,75 @@ export function aggregateHistoryByInterval(rawData = [], timeframe = '30D', fall
     numBuckets = 30;
     stepMs = 24 * 60 * 60 * 1000; // 24 horas
   } else if (tfStr === '90D' || tfStr === '90') {
-    numBuckets = 90;
-    stepMs = 24 * 60 * 60 * 1000; // 24 horas
+    numBuckets = 30;
+    stepMs = 3 * 24 * 60 * 60 * 1000; // 3 dias (72 horas) para 90 dias em 30 resultados
   }
 
   const nowMs = Date.now();
   const sortedRaw = Array.isArray(rawData)
-    ? [...rawData].sort((a, b) => {
-        const tA = new Date(a.timestamp || a.day || 0).getTime();
-        const tB = new Date(b.timestamp || b.day || 0).getTime();
-        return tA - tB;
-      })
+    ? [...rawData]
+        .map(item => {
+          const t = new Date(item.timestamp || item.day || 0).getTime();
+          const p = Number(item.price_sfl ?? item.avg_price_sfl ?? item.price_usd ?? item.price ?? 0);
+          return { ...item, t, p };
+        })
+        .filter(item => !isNaN(item.t) && item.t > 0 && !isNaN(item.p) && item.p > 0)
+        .sort((a, b) => a.t - b.t)
     : [];
-
-  // Encontra preço mais recente disponível para inicializar fallback
-  let lastKnownPrice = Number(fallbackPrice || 0);
-  if (sortedRaw.length > 0) {
-    const lastItem = sortedRaw[sortedRaw.length - 1];
-    const p = Number(lastItem.price_sfl ?? lastItem.avg_price_sfl ?? lastItem.price_usd ?? lastItem.price ?? 0);
-    if (!isNaN(p) && p > 0) lastKnownPrice = p;
-  }
 
   const buckets = [];
 
   for (let i = 0; i < numBuckets; i++) {
     const bucketStartMs = nowMs - (numBuckets - i) * stepMs;
     const bucketEndMs = nowMs - (numBuckets - i - 1) * stepMs;
+    const bucketMidMs = (bucketStartMs + bucketEndMs) / 2;
     const bucketEndDate = new Date(bucketEndMs);
 
     // Filtra pontos da série bruta dentro da janela do bucket
-    const matches = sortedRaw.filter(item => {
-      const t = new Date(item.timestamp || item.day || 0).getTime();
-      return t >= bucketStartMs && t < bucketEndMs;
-    });
+    const matches = sortedRaw.filter(item => item.t >= bucketStartMs && item.t < bucketEndMs);
 
     let avgVal = 0;
+    let isFallback = false;
+
     if (matches.length > 0) {
-      const sum = matches.reduce((acc, curr) => {
-        const v = Number(curr.price_sfl ?? curr.avg_price_sfl ?? curr.price_usd ?? curr.price ?? 0);
-        return acc + (isNaN(v) ? 0 : v);
-      }, 0);
+      const sum = matches.reduce((acc, curr) => acc + curr.p, 0);
       avgVal = sum / matches.length;
-      lastKnownPrice = avgVal;
+    } else if (sortedRaw.length > 0) {
+      // Interpolação entre o ponto anterior mais próximo e o ponto posterior mais próximo
+      let prec = null;
+      let succ = null;
+
+      for (const item of sortedRaw) {
+        if (item.t < bucketMidMs) {
+          prec = item;
+        } else if (item.t > bucketMidMs && !succ) {
+          succ = item;
+          break;
+        }
+      }
+
+      if (prec && succ) {
+        const ratio = (bucketMidMs - prec.t) / (succ.t - prec.t);
+        avgVal = prec.p + ratio * (succ.p - prec.p);
+      } else if (prec) {
+        avgVal = prec.p;
+      } else if (succ) {
+        avgVal = succ.p;
+      } else {
+        avgVal = Number(fallbackPrice || 0);
+      }
+      isFallback = true;
     } else {
-      // Se não há pontos no bucket, usa a interpolação pelo último preço conhecido
-      avgVal = lastKnownPrice;
+      avgVal = Number(fallbackPrice || 0);
+      isFallback = true;
     }
 
-    // Formatação de data / hora do rótulo
+    // Formatação do rótulo de data/hora
     let labelDateStr = bucketEndDate.toISOString().split('T')[0];
-    if (numBuckets === 24) {
+    if (numBuckets === 24 && stepMs === 3600000) {
       const hours = String(bucketEndDate.getHours()).padStart(2, '0');
       const mins = String(bucketEndDate.getMinutes()).padStart(2, '0');
       labelDateStr = `${hours}:${mins}`;
-    } else if (numBuckets === 14) {
-      const m = String(bucketEndDate.getMonth() + 1).padStart(2, '0');
-      const d = String(bucketEndDate.getDate()).padStart(2, '0');
-      const hours = String(bucketEndDate.getHours()).padStart(2, '0');
-      labelDateStr = `${m}-${d} ${hours}h`;
     } else {
       const m = String(bucketEndDate.getMonth() + 1).padStart(2, '0');
       const d = String(bucketEndDate.getDate()).padStart(2, '0');
@@ -328,7 +339,7 @@ export function aggregateHistoryByInterval(rawData = [], timeframe = '30D', fall
       avg_price_sfl: Number(avgVal.toFixed(6)),
       price_sfl: Number(avgVal.toFixed(6)),
       price_usd: Number(avgVal.toFixed(6)),
-      isInitialData: matches.length === 0
+      isInitialData: isFallback
     });
   }
 
