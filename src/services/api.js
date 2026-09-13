@@ -163,33 +163,70 @@ export function normalizeFarmResponse(rawData, source) {
     const f = rawData.farm || rawData;
     const computedLevel = f.bumpkin?.experience ? getBumpkinLevel(f.bumpkin.experience) : (f.bumpkin?.level || f.level || 1);
 
-    // Unifica inventário: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
-    const fullInventory = { ...(f.inventory || {}) };
+    // Unifica inventário sem duplicar: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
+    const fullInventory = {};
 
+    const findExistingKey = (target, name) => {
+      if (!name) return null;
+      const targetLower = name.trim().toLowerCase();
+      return Object.keys(target).find(k => k.trim().toLowerCase() === targetLower);
+    };
+
+    const setOrMax = (target, name, count) => {
+      if (!name || count <= 0) return;
+      const cleanName = name.trim();
+      const existingKey = findExistingKey(target, cleanName);
+      if (existingKey) {
+        target[existingKey] = Math.max(Number(target[existingKey]) || 0, count);
+      } else {
+        target[cleanName] = count;
+      }
+    };
+
+    // 1. Inventário base (baú / itens totais)
+    if (f.inventory && typeof f.inventory === 'object') {
+      Object.entries(f.inventory).forEach(([itemName, rawQty]) => {
+        const count = Number(rawQty) || 0;
+        if (count > 0 && itemName) {
+          setOrMax(fullInventory, itemName, count);
+        }
+      });
+    }
+
+    // 2. Collectibles (posicionados no mapa).
+    // No Sunflower Land, f.inventory já contém a contagem total de itens/collectibles.
+    // Usamos Math.max para preencher caso falte no inventário base, sem nunca somar/dobrar.
     if (f.collectibles && typeof f.collectibles === 'object') {
       Object.entries(f.collectibles).forEach(([collName, items]) => {
         const count = Array.isArray(items) ? items.length : Number(items || 0);
-        if (count > 0) {
-          fullInventory[collName] = (Number(fullInventory[collName]) || 0) + count;
+        if (count > 0 && collName) {
+          setOrMax(fullInventory, collName, count);
         }
       });
     }
 
+    // 3. Wardrobe (wearables do Bumpkin)
     if (f.wardrobe && typeof f.wardrobe === 'object') {
       Object.entries(f.wardrobe).forEach(([wName, qty]) => {
         const count = Number(qty) || 0;
-        if (count > 0) {
-          const keyName = wName.toLowerCase() === 'parsnip' ? 'Parsnip (Wearable)' : wName;
-          fullInventory[keyName] = (Number(fullInventory[keyName]) || 0) + count;
+        if (count > 0 && wName) {
+          const cleanName = wName.trim();
+          const isParsnip = cleanName.toLowerCase() === 'parsnip';
+          const keyName = isParsnip ? 'Parsnip (Wearable)' : cleanName;
+          setOrMax(fullInventory, keyName, count);
         }
       });
     }
 
+    // 4. Bumpkin equipped (wearables atualmente vestidos)
     if (f.bumpkin?.equipped && typeof f.bumpkin.equipped === 'object') {
       Object.values(f.bumpkin.equipped).forEach(eqItem => {
         if (eqItem && typeof eqItem === 'string') {
-          const keyName = eqItem.toLowerCase() === 'parsnip' ? 'Parsnip (Wearable)' : eqItem;
-          if (!fullInventory[keyName] || Number(fullInventory[keyName]) <= 0) {
+          const cleanName = eqItem.trim();
+          const isParsnip = cleanName.toLowerCase() === 'parsnip';
+          const keyName = isParsnip ? 'Parsnip (Wearable)' : cleanName;
+          const existingKey = findExistingKey(fullInventory, keyName);
+          if (!existingKey || Number(fullInventory[existingKey]) <= 0) {
             fullInventory[keyName] = 1;
           }
         }

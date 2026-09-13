@@ -165,69 +165,97 @@ const FarmDashboard = ({
     }
   };
 
-  // Processamento do Inventário e Valoração Financeira
+  // Processamento do Inventário e Valoração Financeira com Deduplicação Canônica
   const inventoryAnalysis = useMemo(() => {
     const rawInventory = farmData?.land?.inventory || {};
-    const items = [];
-    let totalStockSfl = 0;
-    let pricedItemsCount = 0;
+    const aggregated = new Map();
     const nftByName = nftMarketData?.byName || {};
 
     Object.entries(rawInventory).forEach(([itemName, rawQty]) => {
       const qty = Number(rawQty);
-      if (qty <= 0) return;
+      if (qty <= 0 || !itemName) return;
+
+      const trimmedName = itemName.trim();
+      const lowerName = trimmedName.toLowerCase();
 
       // Distinção estrita: o vegetal agrícola 'Parsnip' usa mercado P2P e 'Parsnip (Wearable)' usa Floor Price
-      const isCropParsnip = itemName.toLowerCase() === 'parsnip';
+      const isCropParsnip = lowerName === 'parsnip';
 
       // 1. Verifica se é um NFT rastreado (Floor Price)
       const nftMeta = !isCropParsnip
-        ? (nftByName[itemName] || Object.values(nftByName).find(
-            nft => (nft.displayName && nft.displayName.toLowerCase() === itemName.toLowerCase()) ||
-                   (nft.name && nft.name.toLowerCase() === itemName.toLowerCase() && nft.name.toLowerCase() !== 'parsnip')
+        ? (nftByName[trimmedName] || Object.values(nftByName).find(
+            nft => (nft.displayName && nft.displayName.toLowerCase() === lowerName) ||
+                   (nft.name && nft.name.toLowerCase() === lowerName && nft.name.toLowerCase() !== 'parsnip')
           ))
         : null;
 
+      let canonicalKey = '';
+      let canonicalName = trimmedName;
       let unitPriceSfl = 0;
       let isNft = false;
       let boostText = '';
       let nftImage = null;
+      let category = 'other';
 
       if (nftMeta) {
+        canonicalKey = `nft_${nftMeta.collection || 'nft'}_${nftMeta.id ?? nftMeta.name.toLowerCase()}`;
+        canonicalName = nftMeta.displayName || nftMeta.name;
         unitPriceSfl = Number(nftMeta.floor || nftMeta.currentPrice || 0);
         isNft = true;
         boostText = nftMeta.boost_text || '';
         nftImage = nftMeta.image || (nftMeta.collection === 'wearables'
           ? `https://sunflower-land.com/play/wearables/images/${nftMeta.id}.png`
           : `https://sunflower-land.com/play/erc1155/images/${nftMeta.id}.webp`);
+        category = 'power_ups';
       } else {
         // 2. Busca preço unitário no mercado de recursos P2P (case-insensitive)
-        unitPriceSfl = marketData[itemName] || 0;
-        if (!unitPriceSfl) {
-          const matchedKey = Object.keys(marketData).find(k => k.toLowerCase() === itemName.toLowerCase());
-          if (matchedKey) unitPriceSfl = marketData[matchedKey];
+        canonicalKey = `res_${lowerName}`;
+        const matchedKey = Object.keys(marketData).find(k => k.toLowerCase() === lowerName);
+        if (matchedKey) {
+          canonicalName = matchedKey;
+          unitPriceSfl = marketData[matchedKey] || 0;
+        } else {
+          unitPriceSfl = marketData[trimmedName] || 0;
         }
+        category = getItemCategory(canonicalName);
       }
 
-      const totalValSfl = qty * unitPriceSfl;
-      const totalValFiat = totalValSfl * flowerPrice;
-      const category = isNft ? 'power_ups' : getItemCategory(itemName);
+      if (aggregated.has(canonicalKey)) {
+        // Se já existe no mapa, consolida com Math.max para evitar contagem duplicada
+        // de instâncias espelhadas entre baú, ilha posicionada ou wardrobe
+        const existing = aggregated.get(canonicalKey);
+        existing.qty = Math.max(existing.qty, qty);
+        existing.totalValSfl = existing.qty * existing.unitPriceSfl;
+        existing.totalValFiat = existing.totalValSfl * flowerPrice;
+        if (!existing.nftImage && nftImage) existing.nftImage = nftImage;
+        if (!existing.boostText && boostText) existing.boostText = boostText;
+      } else {
+        const totalValSfl = qty * unitPriceSfl;
+        const totalValFiat = totalValSfl * flowerPrice;
 
-      if (unitPriceSfl > 0) pricedItemsCount++;
-      totalStockSfl += totalValSfl;
+        aggregated.set(canonicalKey, {
+          id: canonicalKey,
+          name: canonicalName,
+          qty,
+          unitPriceSfl,
+          totalValSfl,
+          totalValFiat,
+          category,
+          isNft,
+          boostText,
+          nftImage,
+          emoji: getItemEmoji(canonicalName)
+        });
+      }
+    });
 
-      items.push({
-        name: itemName,
-        qty,
-        unitPriceSfl,
-        totalValSfl,
-        totalValFiat,
-        category,
-        isNft,
-        boostText,
-        nftImage,
-        emoji: getItemEmoji(itemName)
-      });
+    const items = Array.from(aggregated.values());
+    let totalStockSfl = 0;
+    let pricedItemsCount = 0;
+
+    items.forEach(item => {
+      if (item.unitPriceSfl > 0) pricedItemsCount++;
+      totalStockSfl += item.totalValSfl;
     });
 
     const sflBalance = parseFloat(farmData?.land?.balance || 0);
@@ -629,7 +657,7 @@ const FarmDashboard = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-96 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
               {filteredInventory.map(item => (
                 <div
-                  key={item.name}
+                  key={item.id || item.name}
                   className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-1">
