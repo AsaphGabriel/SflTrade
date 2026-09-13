@@ -105,34 +105,41 @@ const ResourceGrid = ({
   searchTerm: externalSearchTerm = null,
   onSearchTermChange = null
 }) => {
+  // ── Categoria ───────────────────────────────────────────────────────────────
   const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
-  const currentCategoryFilter = categoryFilter !== null && categoryFilter !== undefined
+  const currentCategoryFilter = (categoryFilter !== null && categoryFilter !== undefined)
     ? categoryFilter
     : internalCategoryFilter;
 
   const handleSelectCategory = (catId) => {
     setInternalCategoryFilter(catId);
-    if (onCategoryFilterChange) {
-      onCategoryFilterChange(catId);
-    }
+    if (onCategoryFilterChange) onCategoryFilterChange(catId);
   };
 
+  // ── Busca — fonte única de verdade ──────────────────────────────────────────
+  // Quando operado em modo controlado (parent fornece onSearchTermChange), o
+  // termo de busca efetivo É o externalSearchTerm. Nunca mantemos estado interno
+  // para evitar race conditions entre renders do parent e do filho.
   const [internalSearchTerm, setInternalSearchTerm] = useState('');
-  const searchTerm = externalSearchTerm !== null && externalSearchTerm !== undefined
-    ? externalSearchTerm
-    : internalSearchTerm;
+  const isControlled = onSearchTermChange !== null;
+  const searchTerm = isControlled
+    ? (externalSearchTerm ?? '')   // controlado: sempre usa o valor do parent
+    : internalSearchTerm;          // autônomo: usa estado interno
 
   const handleSearchChange = (val) => {
-    setInternalSearchTerm(val);
-    // Ao iniciar uma busca, redefine a categoria para 'all' para manter consistência visual
-    if (val.trim() && currentCategoryFilter !== 'all') {
-      setInternalCategoryFilter('all');
-      if (onCategoryFilterChange) {
-        onCategoryFilterChange('all');
+    if (isControlled) {
+      // Modo controlado: reseta aba se necessário, propaga pro parent
+      if (val.trim() && currentCategoryFilter !== 'all') {
+        setInternalCategoryFilter('all');
+        if (onCategoryFilterChange) onCategoryFilterChange('all');
       }
-    }
-    if (onSearchTermChange) {
       onSearchTermChange(val);
+    } else {
+      // Modo autônomo: gerencia estado interno
+      if (val.trim() && currentCategoryFilter !== 'all') {
+        setInternalCategoryFilter('all');
+      }
+      setInternalSearchTerm(val);
     }
   };
 

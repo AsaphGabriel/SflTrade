@@ -11,7 +11,7 @@ const CURRENT_CACHE_VERSION = 'v1.5.0_global_supabase';
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de TTL para cache local
 const SUPABASE_PUSH_THROTTLE_MS = 15 * 60 * 1000; // Envia no máximo a cada 15 minutos para não sobrecarregar
-const SUPABASE_NFT_PUSH_THROTTLE_MS = 4 * 60 * 60 * 1000; // 4 horas de throttle para NFTs (preserva quota gratuita)
+const SUPABASE_NFT_PUSH_THROTTLE_MS = 60 * 60 * 1000; // 1 hora de throttle para NFTs
 const NFT_HOURLY_HISTORY_KEY = 'sfl_nft_hourly_history';
 
 /**
@@ -855,6 +855,29 @@ export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl 
       price_usd: price * 0.05,
       isInitialData: true
     }];
+  } else if (currentFloorSfl > 0) {
+    // Filtro de sanidade: descarta pontos históricos com valores impossíveis
+    // (dados corrompidos de IDs de NFTs reciclados para itens diferentes no passado)
+    const sanityMin = currentFloorSfl / 20;
+    const sanityMax = currentFloorSfl * 20;
+    const sanityFiltered = rawPoints.filter(p => {
+      const v = Number(p.floor_sfl || p.price_sfl || p.avg_floor_sfl || p.avg_price_sfl || 0);
+      return v > 0 && v >= sanityMin && v <= sanityMax;
+    });
+    if (sanityFiltered.length > 0) {
+      rawPoints = sanityFiltered;
+    } else {
+      // Todos os dados históricos são suspeitos — usa apenas o ponto atual
+      const now = new Date();
+      const price = Number(currentFloorSfl);
+      rawPoints = [{
+        timestamp: now.toISOString(),
+        day: now.toISOString().split('T')[0],
+        floor_sfl: price,
+        price_sfl: price,
+        isInitialData: true
+      }];
+    }
   }
 
   const aggregated = aggregateHistoryByInterval(rawPoints, timeframe, currentFloorSfl);
