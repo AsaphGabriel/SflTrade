@@ -669,6 +669,7 @@ export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h
       if (isFinite(changePct) && !isNaN(changePct)) {
         variations.push({
           resource: resourceId,
+          name: resourceId,
           currentPrice,
           basePrice,
           diff,

@@ -27,7 +27,8 @@ const TransactionModal = ({
   nftMarketData = { list: [], byName: {} },
   portfolioData = [],
   currentLang = 'en',
-  initialResource = ''
+  initialResource = '',
+  initialResourceMeta = null
 }) => {
   const [resourceSearch, setResourceSearch] = useState(initialResource || '');
   const [selectedResource, setSelectedResource] = useState(initialResource || '');
@@ -65,13 +66,20 @@ const TransactionModal = ({
         if (qVal > 0) {
           setTotalPrice((qVal * precoApi).toFixed(4));
         }
-      } else if (nftMarketData?.byName && nftMarketData.byName[nomeRecurso]) {
-        const nftItem = nftMarketData.byName[nomeRecurso];
+      } else if (nftMarketData?.byName && (nftMarketData.byName[nomeRecurso] || nftMarketData.byName[nomeRecurso.toLowerCase()])) {
+        const nftItem = nftMarketData.byName[nomeRecurso] || nftMarketData.byName[nomeRecurso.toLowerCase()];
         const precoFloor = Number(nftItem.floor || 0);
         setUnitPrice(precoFloor);
         const qVal = parseFloat(currentQty || quantity) || (type === 'buy' ? 1 : 0);
         if (qVal > 0) {
           setTotalPrice((qVal * precoFloor).toFixed(4));
+        }
+      } else if (initialResourceMeta?.unitPrice) {
+        const precoMeta = Number(initialResourceMeta.unitPrice || 0);
+        setUnitPrice(precoMeta);
+        const qVal = parseFloat(currentQty || quantity) || (type === 'buy' ? 1 : 0);
+        if (qVal > 0) {
+          setTotalPrice((qVal * precoMeta).toFixed(4));
         }
       }
 
@@ -80,7 +88,7 @@ const TransactionModal = ({
         if (itemEstoque && itemEstoque.qty > 0) {
           setMaxStock(itemEstoque.qty);
           setQuantity(itemEstoque.qty.toString());
-          const precoRef = safeMarketData[nomeRecurso] || (nftMarketData?.byName?.[nomeRecurso]?.floor) || itemEstoque.precoP2P || 0;
+          const precoRef = safeMarketData[nomeRecurso] || (nftMarketData?.byName?.[nomeRecurso]?.floor) || initialResourceMeta?.unitPrice || itemEstoque.precoP2P || 0;
           if (precoRef) {
             setTotalPrice((itemEstoque.qty * precoRef).toFixed(4));
           }
@@ -91,7 +99,7 @@ const TransactionModal = ({
     } catch (err) {
       console.warn('[TransactionModal] Erro ao selecionar recurso:', err);
     }
-  }, [marketData, nftMarketData, portfolioData, type]);
+  }, [marketData, nftMarketData, portfolioData, type, initialResourceMeta]);
 
   useEffect(() => {
     if (initialResource && initialProcessedRef.current !== initialResource) {
@@ -179,11 +187,12 @@ const TransactionModal = ({
       return;
     }
 
-    const nftItem = nftMarketData?.byName?.[recursoFinal];
+    const nftItem = nftMarketData?.byName?.[recursoFinal] || nftMarketData?.byName?.[recursoFinal.toLowerCase()] ||
+      Object.values(nftMarketData?.byName || {}).find(n => n.name?.toLowerCase() === recursoFinal.toLowerCase() || n.displayName?.toLowerCase() === recursoFinal.toLowerCase());
     const itemEstoque = (portfolioData || []).find(p => p && p.nome && p.nome.toLowerCase() === recursoFinal.toLowerCase());
-    const isNft = Boolean(nftItem || itemEstoque?.isNft);
-    const nftId = nftItem?.id || itemEstoque?.nft_id || null;
-    const boostText = nftItem?.boost_text || itemEstoque?.boost_text || '';
+    const isNft = Boolean(initialResourceMeta?.isNft || nftItem || itemEstoque?.isNft);
+    const nftId = initialResourceMeta?.nft_id || nftItem?.id || itemEstoque?.nft_id || null;
+    const boostText = initialResourceMeta?.boost_text || nftItem?.boost_text || itemEstoque?.boost_text || '';
 
     onSubmit({
       tipo: type,
@@ -201,8 +210,13 @@ const TransactionModal = ({
 
   const isItemNft = Boolean(
     initialResourceMeta?.isNft ||
-    (selectedResource && selectedResource.toLowerCase() !== 'parsnip' && nftMarketData?.byName && (nftMarketData.byName[selectedResource] || nftMarketData.byName[selectedResource.toLowerCase()])) ||
-    (selectedResource && selectedResource.toLowerCase() === 'parsnip (wearable)')
+    (selectedResource && selectedResource.toLowerCase() === 'parsnip (wearable)') ||
+    (selectedResource && selectedResource.toLowerCase() !== 'parsnip' && nftMarketData?.byName && (
+      nftMarketData.byName[selectedResource] ||
+      nftMarketData.byName[selectedResource.toLowerCase()] ||
+      Object.values(nftMarketData.byName).find(n => n.name?.toLowerCase() === selectedResource.toLowerCase() || n.displayName?.toLowerCase() === selectedResource.toLowerCase())
+    )) ||
+    ((portfolioData || []).find(p => p && p.nome && p.nome.toLowerCase() === selectedResource?.toLowerCase())?.isNft)
   );
   const currentTaxRate = isItemNft ? 0.10 : effectiveTax;
 

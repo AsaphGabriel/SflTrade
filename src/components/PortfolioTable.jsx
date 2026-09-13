@@ -123,7 +123,7 @@ const PortfolioTable = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (onOpenSell) onOpenSell(item.nome);
+                    if (onOpenSell) onOpenSell(item.nome, item);
                   }}
                   className="bg-rose-950/80 hover:bg-rose-600/30 text-rose-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-800/60 transition"
                 >
@@ -262,7 +262,7 @@ const PortfolioTable = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (onOpenSell) onOpenSell(item.nome);
+                        if (onOpenSell) onOpenSell(item.nome, item);
                       }}
                       className="bg-rose-950/60 hover:bg-rose-600/30 text-rose-400 text-xs px-2.5 py-1 rounded-lg border border-rose-800/50 transition"
                     >

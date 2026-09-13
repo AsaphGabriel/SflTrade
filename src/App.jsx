@@ -16,6 +16,7 @@ const App = () => {
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
+  const [modalResourceMeta, setModalResourceMeta] = useState(null);
   const [selectedChartResource, setSelectedChartResource] = useState(null);
   
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
@@ -101,13 +102,15 @@ const App = () => {
     if (farmId) searchFarm(farmId, keyStr, true);
   };
 
-  const openBuy = (recurso = '') => {
+  const openBuy = (recurso = '', meta = null) => {
     setModalResource(recurso);
+    setModalResourceMeta(meta);
     setIsBuyModalOpen(true);
   };
 
-  const openSell = (recurso = '') => {
+  const openSell = (recurso = '', meta = null) => {
     setModalResource(recurso);
+    setModalResourceMeta(meta);
     setIsSellModalOpen(true);
   };
 
@@ -169,7 +172,7 @@ const App = () => {
                 currentLang={currentLang}
                 activeCategory={activeMoversCategory}
                 onCategoryChange={handleMoversCategoryChange}
-                onSelectResource={(res, meta) => setSelectedChartResource(meta || res)}
+                onSelectResource={(res, meta) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
               />
               <ResourceGrid 
                 data={marketData} 
@@ -236,7 +239,7 @@ const App = () => {
       {isBuyModalOpen && (
         <TransactionModal
           isOpen={true}
-          onClose={() => setIsBuyModalOpen(false)}
+          onClose={() => { setIsBuyModalOpen(false); setModalResourceMeta(null); }}
           type="buy"
           onSubmit={handleTransaction}
           effectiveTax={effectiveTax}
@@ -245,12 +248,13 @@ const App = () => {
           portfolioData={portfolioData}
           currentLang={currentLang}
           initialResource={modalResource}
+          initialResourceMeta={modalResourceMeta}
         />
       )}
       {isSellModalOpen && (
         <TransactionModal
           isOpen={true}
-          onClose={() => setIsSellModalOpen(false)}
+          onClose={() => { setIsSellModalOpen(false); setModalResourceMeta(null); }}
           type="sell"
           onSubmit={handleTransaction}
           effectiveTax={effectiveTax}
@@ -259,6 +263,7 @@ const App = () => {
           portfolioData={portfolioData}
           currentLang={currentLang}
           initialResource={modalResource}
+          initialResourceMeta={modalResourceMeta}
         />
       )}
 
