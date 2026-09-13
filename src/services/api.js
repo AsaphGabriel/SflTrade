@@ -179,7 +179,8 @@ export function normalizeFarmResponse(rawData, source) {
       Object.entries(f.wardrobe).forEach(([wName, qty]) => {
         const count = Number(qty) || 0;
         if (count > 0) {
-          fullInventory[wName] = (Number(fullInventory[wName]) || 0) + count;
+          const keyName = wName.toLowerCase() === 'parsnip' ? 'Parsnip (Wearable)' : wName;
+          fullInventory[keyName] = (Number(fullInventory[keyName]) || 0) + count;
         }
       });
     }
@@ -187,8 +188,9 @@ export function normalizeFarmResponse(rawData, source) {
     if (f.bumpkin?.equipped && typeof f.bumpkin.equipped === 'object') {
       Object.values(f.bumpkin.equipped).forEach(eqItem => {
         if (eqItem && typeof eqItem === 'string') {
-          if (!fullInventory[eqItem] || Number(fullInventory[eqItem]) <= 0) {
-            fullInventory[eqItem] = 1;
+          const keyName = eqItem.toLowerCase() === 'parsnip' ? 'Parsnip (Wearable)' : eqItem;
+          if (!fullInventory[keyName] || Number(fullInventory[keyName]) <= 0) {
+            fullInventory[keyName] = 1;
           }
         }
       });
@@ -314,11 +316,16 @@ export async function fetchNftMarketData(forceRefresh = false) {
 
     const boostWearables = wearables
       .filter(item => item && item.have_boost === 1)
-      .map(item => ({
-        ...item,
-        collection: 'wearables',
-        image: `https://sunflower-land.com/play/wearables/images/${item.id}.png`
-      }));
+      .map(item => {
+        const isParsnipWearable = item.name && item.name.toLowerCase() === 'parsnip';
+        const displayName = isParsnipWearable ? 'Parsnip (Wearable)' : item.name;
+        return {
+          ...item,
+          displayName,
+          collection: 'wearables',
+          image: `https://sunflower-land.com/play/wearables/images/${item.id}.png`
+        };
+      });
 
     const allBoosts = [...boostCollectibles, ...boostWearables];
 
@@ -327,6 +334,9 @@ export async function fetchNftMarketData(forceRefresh = false) {
     allBoosts.forEach(nft => {
       if (nft.name) {
         byName[nft.name] = nft;
+        if (nft.displayName && nft.displayName !== nft.name) {
+          byName[nft.displayName] = nft;
+        }
       }
       if (nft.id !== undefined) {
         byId[nft.id] = nft;

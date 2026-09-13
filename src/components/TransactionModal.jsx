@@ -199,10 +199,17 @@ const TransactionModal = ({
     onClose();
   };
 
+  const isItemNft = Boolean(
+    initialResourceMeta?.isNft ||
+    (selectedResource && selectedResource.toLowerCase() !== 'parsnip' && nftMarketData?.byName && (nftMarketData.byName[selectedResource] || nftMarketData.byName[selectedResource.toLowerCase()])) ||
+    (selectedResource && selectedResource.toLowerCase() === 'parsnip (wearable)')
+  );
+  const currentTaxRate = isItemNft ? 0.10 : effectiveTax;
+
   const qtyNum = parseFloat(quantity) || 0;
   const unitNum = parseFloat(unitPrice) || 0;
   const bruto = qtyNum * unitNum;
-  const valorTaxa = bruto * effectiveTax;
+  const valorTaxa = bruto * currentTaxRate;
   const liquido = bruto - valorTaxa;
 
   const isBuy = type === 'buy';
@@ -342,7 +349,7 @@ const TransactionModal = ({
               </div>
               <div className="flex justify-between text-rose-400">
                 <span>
-                  {t('taxFee', currentLang, { tax: `${(effectiveTax * 100).toFixed(1)}%` })}
+                  {t('taxFee', currentLang, { tax: `${(currentTaxRate * 100).toFixed(1)}%` })}
                 </span>
                 <span className="font-mono">-{formatarPreco(valorTaxa)} SFL</span>
               </div>

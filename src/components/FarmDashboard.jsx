@@ -177,10 +177,16 @@ const FarmDashboard = ({
       const qty = Number(rawQty);
       if (qty <= 0) return;
 
+      // Distinção estrita: o vegetal agrícola 'Parsnip' usa mercado P2P e 'Parsnip (Wearable)' usa Floor Price
+      const isCropParsnip = itemName.toLowerCase() === 'parsnip';
+
       // 1. Verifica se é um NFT rastreado (Floor Price)
-      const nftMeta = nftByName[itemName] || Object.values(nftByName).find(
-        nft => nft.name && nft.name.toLowerCase() === itemName.toLowerCase()
-      );
+      const nftMeta = !isCropParsnip
+        ? (nftByName[itemName] || Object.values(nftByName).find(
+            nft => (nft.displayName && nft.displayName.toLowerCase() === itemName.toLowerCase()) ||
+                   (nft.name && nft.name.toLowerCase() === itemName.toLowerCase() && nft.name.toLowerCase() !== 'parsnip')
+          ))
+        : null;
 
       let unitPriceSfl = 0;
       let isNft = false;

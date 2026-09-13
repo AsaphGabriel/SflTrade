@@ -233,19 +233,19 @@ const ResourceGrid = ({
                       <div 
                         key={nft.id || nft.name} 
                         className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between"
-                        onClick={() => setSelectedChartResource({ name: nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
+                        onClick={() => setSelectedChartResource({ name: nft.displayName || nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
                         title={currentLang === 'pt' ? 'Clique para ver gráfico de Floor Price e médias móveis' : 'Click to view Floor Price and moving average chart'}
                       >
                         <div>
                           <div className="market-card-img-wrap">
                             <img
                               src={iconUrl}
-                              alt={nft.name}
+                              alt={nft.displayName || nft.name}
                               onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
                             />
                           </div>
                           <div className="market-card-info">
-                            <div className="market-card-name truncate" title={nft.name}>{nft.name}</div>
+                            <div className="market-card-name truncate" title={nft.displayName || nft.name}>{nft.displayName || nft.name}</div>
                             <div className="market-card-price text-amber-300 font-bold">{formatarPreco(nft.floor)} SFL</div>
                             {nft.boost_text && (
                               <div className="text-[9px] sm:text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded mt-1 max-w-full text-center leading-tight line-clamp-1" title={nft.boost_text}>
@@ -259,7 +259,7 @@ const ResourceGrid = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onOpenBuy) onOpenBuy(nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
+                              if (onOpenBuy) onOpenBuy(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
                             className="btn-buy-card"
                           >
@@ -268,7 +268,7 @@ const ResourceGrid = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onOpenSell) onOpenSell(nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
+                              if (onOpenSell) onOpenSell(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
                             className="btn-sell-card"
                           >
