@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sfl-tracker-v1.4.0';
+const CACHE_NAME = 'sfl-tracker-v1.5.0';
 const ASSETS_TO_CACHE = [
   '/SflTrade/',
   '/SflTrade/index.html',
@@ -73,12 +73,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. Para imagens externas (ex: sfl.world/img/...)
+  // 4. Para imagens externas (ex: sfl.world/img/..., sunflower-land.com/play/...)
   if (
     event.request.destination === 'image' ||
     url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.svg')
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.webp')
   ) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
