@@ -8,11 +8,21 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const [loading, setLoading] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
+  // Lock scroll do body enquanto o modal está aberto (evita zoom/shift em mobile)
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   const isNftObj = typeof resourceId === 'object' && resourceId !== null && (resourceId.isNft || resourceId.nft_id !== undefined || resourceId.floor !== undefined);
-  const targetName = isNftObj ? resourceId.name : (isToken ? '$FLOWER Token' : (typeof resourceId === 'string' ? resourceId : resourceId?.name || ''));
+  const targetName = isNftObj
+    ? (resourceId.displayName || resourceId.name || resourceId.resource || '')
+    : (isToken ? '$FLOWER Token' : (typeof resourceId === 'string' ? resourceId : (resourceId?.resource || resourceId?.name || '')));
   const targetNftId = isNftObj ? (resourceId.nft_id ?? resourceId.id) : null;
   const targetBoost = isNftObj ? resourceId.boost_text : null;
   const targetFloor = isNftObj ? Number(resourceId.floor ?? resourceId.currentPrice ?? 0) : 0;
+  const currentPriceRef = typeof resourceId === 'object' && resourceId !== null ? Number(resourceId.currentPrice || resourceId.price || 0) : 0;
 
   const titleName = targetName;
   const unitSymbol = isToken ? '$' : 'SFL';
@@ -28,8 +38,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
           data = await fetchTokenHistory(timeframe, flowerPriceUsd);
         } else if (isNftObj && targetNftId !== null) {
           data = await fetchNftHistory(targetNftId, timeframe, targetFloor);
-        } else if (resourceId) {
-          data = await fetchResourceHistory(typeof resourceId === 'string' ? resourceId : resourceId.name, timeframe);
+        } else if (targetName) {
+          data = await fetchResourceHistory(targetName, timeframe, currentPriceRef);
         }
 
         if (isMounted) {
@@ -47,7 +57,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
     return () => {
       isMounted = false;
     };
-  }, [resourceId, isToken, flowerPriceUsd, timeframe, isNftObj, targetNftId, targetFloor]);
+  }, [resourceId, isToken, flowerPriceUsd, timeframe, isNftObj, targetNftId, targetFloor, targetName, currentPriceRef]);
 
   // Dados pre-agregados pela amostragem do período selecionado
   const displayData = Array.isArray(history) ? history : [];
@@ -128,8 +138,8 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const pricePath = generatePath('avg_price_sfl');
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4">
+    <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center p-4 z-50 animate-fadeIn overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4 my-auto max-h-[90dvh] overflow-y-auto">
         
         {/* Cabeçalho do Modal */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-3">

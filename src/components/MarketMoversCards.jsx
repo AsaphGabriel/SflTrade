@@ -25,8 +25,26 @@ const TIMEFRAMES = [
   { id: '90D', label: '90D' }
 ];
 
-const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, currentLang = 'en', onSelectResource }) => {
-  const [activeCategory, setActiveCategory] = useState('resources'); // 'resources' | 'power_ups'
+const MarketMoversCards = ({
+  marketData = {},
+  nftMarketData = { list: [] },
+  currentLang = 'en',
+  onSelectResource,
+  activeCategory: externalActiveCategory = null,
+  onCategoryChange = null
+}) => {
+  const [internalCategory, setInternalCategory] = useState('resources');
+  const activeCategory = externalActiveCategory !== null && externalActiveCategory !== undefined
+    ? externalActiveCategory
+    : internalCategory;
+
+  const handleCategorySwitch = (cat) => {
+    setInternalCategory(cat);
+    if (onCategoryChange) {
+      onCategoryChange(cat);
+    }
+  };
+
   const [timeframe, setTimeframe] = useState('24h');
   const [moversData, setMoversData] = useState({ topGainers: [], topLosers: [], hasData: false });
   const [loading, setLoading] = useState(true);
@@ -96,7 +114,7 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
           {/* Seletor de Categoria: [Recursos | Power Ups] */}
           <div className="flex items-center gap-1 bg-slate-800/90 p-1 rounded-xl border border-slate-700/60 shadow-inner self-start sm:self-center">
             <button
-              onClick={() => setActiveCategory('resources')}
+              onClick={() => handleCategorySwitch('resources')}
               className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
                 activeCategory === 'resources'
                   ? 'bg-amber-400 text-slate-900 shadow-md scale-105'
@@ -106,7 +124,7 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
               {t('tabResources', currentLang)}
             </button>
             <button
-              onClick={() => setActiveCategory('power_ups')}
+              onClick={() => handleCategorySwitch('power_ups')}
               className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
                 activeCategory === 'power_ups'
                   ? 'bg-amber-400 text-slate-900 shadow-md scale-105'
@@ -181,7 +199,11 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
                       <div className="flex items-center gap-2.5 min-w-0">
                         {renderRankBadge(idx)}
                         <img
-                          src={getItemIcon(item.resource || item.name)}
+                          src={item.image || (item.isNft
+                            ? (item.collection === 'wearables'
+                                ? `https://sunflower-land.com/play/wearables/images/${item.nft_id || item.id}.png`
+                                : `https://sunflower-land.com/play/erc1155/images/${item.nft_id || item.id}.webp`)
+                            : getItemIcon(item.resource || item.name))}
                           alt={item.resource || item.name}
                           className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
                           onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
@@ -192,7 +214,7 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
                               {item.resource || item.name}
                             </span>
                             {item.boost_text && (
-                              <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded shrink-0">
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
                                 {item.boost_text}
                               </span>
                             )}
@@ -267,7 +289,11 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
                       <div className="flex items-center gap-2.5 min-w-0">
                         {renderRankBadge(idx)}
                         <img
-                          src={getItemIcon(item.resource || item.name)}
+                          src={item.image || (item.isNft
+                            ? (item.collection === 'wearables'
+                                ? `https://sunflower-land.com/play/wearables/images/${item.nft_id || item.id}.png`
+                                : `https://sunflower-land.com/play/erc1155/images/${item.nft_id || item.id}.webp`)
+                            : getItemIcon(item.resource || item.name))}
                           alt={item.resource || item.name}
                           className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
                           onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
@@ -278,7 +304,7 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
                               {item.resource || item.name}
                             </span>
                             {item.boost_text && (
-                              <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded shrink-0">
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
                                 {item.boost_text}
                               </span>
                             )}

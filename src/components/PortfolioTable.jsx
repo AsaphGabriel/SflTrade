@@ -82,7 +82,11 @@ const PortfolioTable = ({
         {data.map(item => {
           const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
           const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
-          const iconUrl = getItemIcon(item.nome);
+          const iconUrl = item.image || (item.isNft
+            ? (item.collection === 'wearables'
+                ? `https://sunflower-land.com/play/wearables/images/${item.nft_id}.png`
+                : `https://sunflower-land.com/play/erc1155/images/${item.nft_id}.webp`)
+            : getItemIcon(item.nome));
 
           return (
             <div 
@@ -119,7 +123,7 @@ const PortfolioTable = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (onOpenSell) onOpenSell(item.nome);
+                    if (onOpenSell) onOpenSell(item.nome, item);
                   }}
                   className="bg-rose-950/80 hover:bg-rose-600/30 text-rose-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-800/60 transition"
                 >
@@ -188,7 +192,11 @@ const PortfolioTable = ({
             {data.map(item => {
               const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
               const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
-              const iconUrl = getItemIcon(item.nome);
+              const iconUrl = item.image || (item.isNft
+                ? (item.collection === 'wearables'
+                    ? `https://sunflower-land.com/play/wearables/images/${item.nft_id}.png`
+                    : `https://sunflower-land.com/play/erc1155/images/${item.nft_id}.webp`)
+                : getItemIcon(item.nome));
 
               return (
                 <tr 
@@ -254,7 +262,7 @@ const PortfolioTable = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (onOpenSell) onOpenSell(item.nome);
+                        if (onOpenSell) onOpenSell(item.nome, item);
                       }}
                       className="bg-rose-950/60 hover:bg-rose-600/30 text-rose-400 text-xs px-2.5 py-1 rounded-lg border border-rose-800/50 transition"
                     >

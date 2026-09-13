@@ -62,13 +62,15 @@ function getItemIcon(itemName) {
 }
 
 function getCategoryIcon(catId, sampleNft = '') {
+  if (catId === 'power_ups') {
+    return 'https://sunflower-land.com/play/erc1155/images/2129.webp';
+  }
   const assetMap = {
     crops: 'Sunflower',
     fruits: 'Apple',
     animals: 'Egg',
     minerals: 'Wood',
-    misc: 'Sunflorian Emblem',
-    power_ups: sampleNft || 'Stone Beetle'
+    misc: 'Sunflorian Emblem'
   };
   const itemName = assetMap[catId];
   return itemName ? getItemIcon(itemName) : '';
@@ -92,8 +94,27 @@ function obterCategoriaItem(nomeItem) {
   return 'misc';
 }
 
-const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', onOpenBuy, onOpenSell }) => {
-  const [currentCategoryFilter, setCurrentCategoryFilter] = useState('all');
+const ResourceGrid = ({
+  data = {},
+  nftData = { list: [] },
+  currentLang = 'en',
+  onOpenBuy,
+  onOpenSell,
+  categoryFilter = null,
+  onCategoryFilterChange = null
+}) => {
+  const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
+  const currentCategoryFilter = categoryFilter !== null && categoryFilter !== undefined
+    ? categoryFilter
+    : internalCategoryFilter;
+
+  const handleSelectCategory = (catId) => {
+    setInternalCategoryFilter(catId);
+    if (onCategoryFilterChange) {
+      onCategoryFilterChange(catId);
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChartResource, setSelectedChartResource] = useState(null);
 
@@ -155,7 +176,7 @@ const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', o
               className={`category-tab ${isActive ? 'active' : ''}`}
               role="tab"
               aria-selected={isActive}
-              onClick={() => setCurrentCategoryFilter(tab.id)}
+              onClick={() => handleSelectCategory(tab.id)}
             >
               {iconUrl && (
                 <img
@@ -204,28 +225,30 @@ const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', o
 
                 <div className="category-grid">
                   {nftsToRender.map(nft => {
-                    const iconUrl = getItemIcon(nft.name);
+                    const iconUrl = nft.image || (nft.collection === 'wearables'
+                      ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
+                      : `https://sunflower-land.com/play/erc1155/images/${nft.id}.webp`);
 
                     return (
                       <div 
                         key={nft.id || nft.name} 
                         className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between"
-                        onClick={() => setSelectedChartResource({ name: nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
+                        onClick={() => setSelectedChartResource({ name: nft.displayName || nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
                         title={currentLang === 'pt' ? 'Clique para ver gráfico de Floor Price e médias móveis' : 'Click to view Floor Price and moving average chart'}
                       >
                         <div>
                           <div className="market-card-img-wrap">
                             <img
                               src={iconUrl}
-                              alt={nft.name}
+                              alt={nft.displayName || nft.name}
                               onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
                             />
                           </div>
                           <div className="market-card-info">
-                            <div className="market-card-name truncate" title={nft.name}>{nft.name}</div>
+                            <div className="market-card-name truncate" title={nft.displayName || nft.name}>{nft.displayName || nft.name}</div>
                             <div className="market-card-price text-amber-300 font-bold">{formatarPreco(nft.floor)} SFL</div>
                             {nft.boost_text && (
-                              <div className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded mt-1 truncate max-w-full text-center" title={nft.boost_text}>
+                              <div className="text-[9px] sm:text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded mt-1 max-w-full text-center leading-tight line-clamp-1" title={nft.boost_text}>
                                 {nft.boost_text}
                               </div>
                             )}
@@ -236,7 +259,7 @@ const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', o
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onOpenBuy) onOpenBuy(nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
+                              if (onOpenBuy) onOpenBuy(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
                             className="btn-buy-card"
                           >
@@ -245,7 +268,7 @@ const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', o
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onOpenSell) onOpenSell(nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
+                              if (onOpenSell) onOpenSell(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
                             className="btn-sell-card"
                           >

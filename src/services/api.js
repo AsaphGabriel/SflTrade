@@ -163,6 +163,76 @@ export function normalizeFarmResponse(rawData, source) {
     const f = rawData.farm || rawData;
     const computedLevel = f.bumpkin?.experience ? getBumpkinLevel(f.bumpkin.experience) : (f.bumpkin?.level || f.level || 1);
 
+    // Unifica inventário sem duplicar: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
+    const fullInventory = {};
+
+    const findExistingKey = (target, name) => {
+      if (!name) return null;
+      const targetLower = name.trim().toLowerCase();
+      return Object.keys(target).find(k => k.trim().toLowerCase() === targetLower);
+    };
+
+    const setOrMax = (target, name, count) => {
+      if (!name || count <= 0) return;
+      const cleanName = name.trim();
+      const existingKey = findExistingKey(target, cleanName);
+      if (existingKey) {
+        target[existingKey] = Math.max(Number(target[existingKey]) || 0, count);
+      } else {
+        target[cleanName] = count;
+      }
+    };
+
+    // 1. Inventário base (baú / itens totais)
+    if (f.inventory && typeof f.inventory === 'object') {
+      Object.entries(f.inventory).forEach(([itemName, rawQty]) => {
+        const count = Number(rawQty) || 0;
+        if (count > 0 && itemName) {
+          setOrMax(fullInventory, itemName, count);
+        }
+      });
+    }
+
+    // 2. Collectibles (posicionados no mapa).
+    // No Sunflower Land, f.inventory já contém a contagem total de itens/collectibles.
+    // Usamos Math.max para preencher caso falte no inventário base, sem nunca somar/dobrar.
+    if (f.collectibles && typeof f.collectibles === 'object') {
+      Object.entries(f.collectibles).forEach(([collName, items]) => {
+        const count = Array.isArray(items) ? items.length : Number(items || 0);
+        if (count > 0 && collName) {
+          setOrMax(fullInventory, collName, count);
+        }
+      });
+    }
+
+    // 3. Wardrobe (wearables do Bumpkin)
+    if (f.wardrobe && typeof f.wardrobe === 'object') {
+      Object.entries(f.wardrobe).forEach(([wName, qty]) => {
+        const count = Number(qty) || 0;
+        if (count > 0 && wName) {
+          const cleanName = wName.trim();
+          const isParsnip = cleanName.toLowerCase() === 'parsnip';
+          const keyName = isParsnip ? 'Parsnip (Wearable)' : cleanName;
+          setOrMax(fullInventory, keyName, count);
+        }
+      });
+    }
+
+    // 4. Bumpkin equipped (wearables atualmente vestidos)
+    if (f.bumpkin?.equipped && typeof f.bumpkin.equipped === 'object') {
+      Object.values(f.bumpkin.equipped).forEach(eqItem => {
+        if (eqItem && typeof eqItem === 'string') {
+          const cleanName = eqItem.trim();
+          const isParsnip = cleanName.toLowerCase() === 'parsnip';
+          const keyName = isParsnip ? 'Parsnip (Wearable)' : cleanName;
+          const existingKey = findExistingKey(fullInventory, keyName);
+          if (!existingKey || Number(fullInventory[existingKey]) <= 0) {
+            fullInventory[keyName] = 1;
+          }
+        }
+      });
+    }
+
     return {
       source: 'official',
       land: {
@@ -178,7 +248,9 @@ export function normalizeFarmResponse(rawData, source) {
         taxResource: 0.15,
         verified: true,
         vip: Boolean(f.inventory?.['Gold Pass'] || f.vip),
-        inventory: f.inventory || {}
+        inventory: fullInventory,
+        collectibles: f.collectibles || {},
+        wardrobe: f.wardrobe || {}
       },
       bumpkin: f.bumpkin ? {
         level: computedLevel,
@@ -273,11 +345,24 @@ export async function fetchNftMarketData(forceRefresh = false) {
 
     const boostCollectibles = collectibles
       .filter(item => item && item.have_boost === 1)
-      .map(item => ({ ...item, collection: 'collectibles' }));
+      .map(item => ({
+        ...item,
+        collection: 'collectibles',
+        image: `https://sunflower-land.com/play/erc1155/images/${item.id}.webp`
+      }));
 
     const boostWearables = wearables
       .filter(item => item && item.have_boost === 1)
-      .map(item => ({ ...item, collection: 'wearables' }));
+      .map(item => {
+        const isParsnipWearable = item.name && item.name.toLowerCase() === 'parsnip';
+        const displayName = isParsnipWearable ? 'Parsnip (Wearable)' : item.name;
+        return {
+          ...item,
+          displayName,
+          collection: 'wearables',
+          image: `https://sunflower-land.com/play/wearables/images/${item.id}.png`
+        };
+      });
 
     const allBoosts = [...boostCollectibles, ...boostWearables];
 
@@ -286,6 +371,9 @@ export async function fetchNftMarketData(forceRefresh = false) {
     allBoosts.forEach(nft => {
       if (nft.name) {
         byName[nft.name] = nft;
+        if (nft.displayName && nft.displayName !== nft.name) {
+          byName[nft.displayName] = nft;
+        }
       }
       if (nft.id !== undefined) {
         byId[nft.id] = nft;

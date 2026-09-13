@@ -378,7 +378,7 @@ export default function useMarketData() {
     transactions.forEach(t => {
       const item = t.recurso;
       if (!item) return;
-      const key = item.toLowerCase();
+      const key = t.isNft ? `${item.toLowerCase()}_nft` : item.toLowerCase();
       if (!estoque[key]) {
         estoque[key] = {
           nome: item,
@@ -437,12 +437,20 @@ export default function useMarketData() {
         const custoTotal = item.qty * precoMedio;
         const custoTotalUsd = custoTotal * cotacaoMediaFlowerUsd;
 
-        let precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === key)] || 0;
-        if (!precoP2P && nftMarketData?.byName && nftMarketData.byName[item.nome]) {
-          precoP2P = Number(nftMarketData.byName[item.nome].floor || 0);
+        const isNftItem = Boolean(item.isNft || (item.nome.toLowerCase() !== 'parsnip' && nftMarketData?.byName?.[item.nome]));
+        let precoP2P = 0;
+
+        if (isNftItem) {
+          const nftEntry = nftMarketData?.byName?.[item.nome] || nftMarketData?.byName?.[item.nome.toLowerCase()];
+          precoP2P = Number(nftEntry?.floor || 0);
+        } else {
+          precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === item.nome.toLowerCase())] || 0;
         }
 
-        const precoVendaLiquidoUnitario = precoP2P * (1 - effectiveTax);
+        // Regra de Negócio: A taxa de venda de NFTs é sempre fixa em 10% (0.10)
+        const applicableTax = isNftItem ? 0.10 : effectiveTax;
+
+        const precoVendaLiquidoUnitario = precoP2P * (1 - applicableTax);
         const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
         
         const lucroAbsoluto = valorVendaLiquidoTotal - custoTotal;
@@ -457,15 +465,25 @@ export default function useMarketData() {
         const lucroAbsolutoMoeda = valorVendaLiquidoTotalMoeda - custoTotalMoeda;
         const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
 
-        const isNftItem = Boolean(item.isNft || (nftMarketData?.byName && nftMarketData.byName[item.nome]));
-        const boostText = item.boost_text || nftMarketData?.byName?.[item.nome]?.boost_text || '';
-        const nftId = item.nft_id || nftMarketData?.byName?.[item.nome]?.id || null;
+        const nftMeta = isNftItem
+          ? (nftMarketData?.byName?.[item.nome] || nftMarketData?.byName?.[item.nome.toLowerCase()])
+          : null;
+        const boostText = item.boost_text || nftMeta?.boost_text || '';
+        const nftId = item.nft_id || nftMeta?.id || null;
+        const collection = item.collection || nftMeta?.collection || 'collectibles';
+        const image = item.image || nftMeta?.image || (nftId
+          ? (collection === 'wearables'
+              ? `https://sunflower-land.com/play/wearables/images/${nftId}.png`
+              : `https://sunflower-land.com/play/erc1155/images/${nftId}.webp`)
+          : null);
 
         return {
           ...item,
           isNft: isNftItem,
           boost_text: boostText,
           nft_id: nftId,
+          collection,
+          image,
           precoMedio,
           precoMedioUsd,
           cotacaoMediaFlowerUsd,

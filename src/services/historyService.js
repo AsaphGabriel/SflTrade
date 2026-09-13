@@ -669,6 +669,7 @@ export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h
       if (isFinite(changePct) && !isNaN(changePct)) {
         variations.push({
           resource: resourceId,
+          name: resourceId,
           currentPrice,
           basePrice,
           diff,
@@ -733,8 +734,6 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
     const timeSinceLastPush = Date.now() - lastPush;
 
     if (timeSinceLastPush >= SUPABASE_NFT_PUSH_THROTTLE_MS) {
-      localStorage.setItem(LAST_SUPABASE_NFT_PUSH_KEY, String(Date.now()));
-
       const rows = nftList.map(n => ({
         nft_id: n.id,
         name: n.name,
@@ -743,7 +742,7 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
         floor_usd: Number(n.floor || 0) * currentTokenUsd,
         last_sale_sfl: n.lastSalePrice !== undefined && n.lastSalePrice !== null ? Number(n.lastSalePrice) : null,
         supply: n.supply || null,
-        boost_text: n.boost_text || null,
+        have_boost: n.have_boost ?? 1,
         timestamp: now.toISOString()
       }));
 
@@ -755,6 +754,7 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
             if (error) {
               console.warn('[HistoryService] Erro ao gravar nft_price_history no Supabase:', error.message || error);
             } else {
+              localStorage.setItem(LAST_SUPABASE_NFT_PUSH_KEY, String(Date.now()));
               console.log(`[HistoryService] ${rows.length} snapshots de NFTs gravados com sucesso no Supabase!`);
             }
           })
@@ -973,6 +973,9 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
           nft_id: nft.id,
           name: nft.name,
           collection: nft.collection,
+          image: nft.image || (nft.collection === 'wearables'
+            ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
+            : `https://sunflower-land.com/play/erc1155/images/${nft.id}.webp`),
           boost_text: nft.boost_text,
           currentPrice: currentFloor,
           basePrice: baseFloor,

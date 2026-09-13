@@ -16,12 +16,34 @@ const App = () => {
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
+  const [modalResourceMeta, setModalResourceMeta] = useState(null);
   const [selectedChartResource, setSelectedChartResource] = useState(null);
   
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
   const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
   
   const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
+
+  const [activeMoversCategory, setActiveMoversCategory] = useState('resources');
+  const [resourceCategoryFilter, setResourceCategoryFilter] = useState('all');
+
+  const handleMoversCategoryChange = (cat) => {
+    setActiveMoversCategory(cat);
+    if (cat === 'power_ups') {
+      setResourceCategoryFilter('power_ups');
+    } else {
+      setResourceCategoryFilter('all');
+    }
+  };
+
+  const handleResourceCategoryChange = (catId) => {
+    setResourceCategoryFilter(catId);
+    if (catId === 'power_ups') {
+      setActiveMoversCategory('power_ups');
+    } else {
+      setActiveMoversCategory('resources');
+    }
+  };
 
   const {
     user,
@@ -80,13 +102,15 @@ const App = () => {
     if (farmId) searchFarm(farmId, keyStr, true);
   };
 
-  const openBuy = (recurso = '') => {
+  const openBuy = (recurso = '', meta = null) => {
     setModalResource(recurso);
+    setModalResourceMeta(meta);
     setIsBuyModalOpen(true);
   };
 
-  const openSell = (recurso = '') => {
+  const openSell = (recurso = '', meta = null) => {
     setModalResource(recurso);
+    setModalResourceMeta(meta);
     setIsSellModalOpen(true);
   };
 
@@ -146,12 +170,16 @@ const App = () => {
                 marketData={marketData}
                 nftMarketData={nftMarketData}
                 currentLang={currentLang}
-                onSelectResource={(res, meta) => setSelectedChartResource(meta || res)}
+                activeCategory={activeMoversCategory}
+                onCategoryChange={handleMoversCategoryChange}
+                onSelectResource={(res, meta) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
               />
               <ResourceGrid 
                 data={marketData} 
                 nftData={nftMarketData}
                 currentLang={currentLang} 
+                categoryFilter={resourceCategoryFilter}
+                onCategoryFilterChange={handleResourceCategoryChange}
                 onOpenBuy={openBuy} 
                 onOpenSell={openSell} 
               />
@@ -163,6 +191,7 @@ const App = () => {
               mode="info"
               farmData={farmData}
               marketData={marketData}
+              nftMarketData={nftMarketData}
               flowerPrice={flowerPrice}
               selectedCurrency={selectedCurrency}
               currentLang={currentLang}
@@ -186,6 +215,7 @@ const App = () => {
               mode="perfil"
               farmData={farmData}
               marketData={marketData}
+              nftMarketData={nftMarketData}
               flowerPrice={flowerPrice}
               selectedCurrency={selectedCurrency}
               currentLang={currentLang}
@@ -209,7 +239,7 @@ const App = () => {
       {isBuyModalOpen && (
         <TransactionModal
           isOpen={true}
-          onClose={() => setIsBuyModalOpen(false)}
+          onClose={() => { setIsBuyModalOpen(false); setModalResourceMeta(null); }}
           type="buy"
           onSubmit={handleTransaction}
           effectiveTax={effectiveTax}
@@ -218,12 +248,13 @@ const App = () => {
           portfolioData={portfolioData}
           currentLang={currentLang}
           initialResource={modalResource}
+          initialResourceMeta={modalResourceMeta}
         />
       )}
       {isSellModalOpen && (
         <TransactionModal
           isOpen={true}
-          onClose={() => setIsSellModalOpen(false)}
+          onClose={() => { setIsSellModalOpen(false); setModalResourceMeta(null); }}
           type="sell"
           onSubmit={handleTransaction}
           effectiveTax={effectiveTax}
@@ -232,6 +263,7 @@ const App = () => {
           portfolioData={portfolioData}
           currentLang={currentLang}
           initialResource={modalResource}
+          initialResourceMeta={modalResourceMeta}
         />
       )}
 
