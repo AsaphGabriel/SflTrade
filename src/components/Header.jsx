@@ -79,6 +79,9 @@ const Header = ({
             <span className="text-[11px] text-slate-500 font-mono italic">
               {updatedTimeText}
             </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400 font-semibold" title="Versao da aplicacao">
+              v1.9.3
+            </span>
           </div>
         </div>
 

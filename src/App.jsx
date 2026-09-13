@@ -26,6 +26,7 @@ const App = () => {
 
   const [activeMoversCategory, setActiveMoversCategory] = useState('resources');
   const [resourceCategoryFilter, setResourceCategoryFilter] = useState('all');
+  const [marketSearchTerm, setMarketSearchTerm] = useState('');
 
   const handleMoversCategoryChange = (cat) => {
     setActiveMoversCategory(cat);
@@ -166,20 +167,24 @@ const App = () => {
                 onUpdateCustomAvgPrice={updateCustomAvgPrice}
                 onOpenSell={openSell} 
               />
-              <MarketMoversCards
-                marketData={marketData}
-                nftMarketData={nftMarketData}
-                currentLang={currentLang}
-                activeCategory={activeMoversCategory}
-                onCategoryChange={handleMoversCategoryChange}
-                onSelectResource={(res, meta) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
-              />
+              {!marketSearchTerm.trim() && (
+                <MarketMoversCards
+                  marketData={marketData}
+                  nftMarketData={nftMarketData}
+                  currentLang={currentLang}
+                  activeCategory={activeMoversCategory}
+                  onCategoryChange={handleMoversCategoryChange}
+                  onSelectResource={(res, meta) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
+                />
+              )}
               <ResourceGrid 
                 data={marketData} 
                 nftData={nftMarketData}
                 currentLang={currentLang} 
                 categoryFilter={resourceCategoryFilter}
                 onCategoryFilterChange={handleResourceCategoryChange}
+                searchTerm={marketSearchTerm}
+                onSearchTermChange={setMarketSearchTerm}
                 onOpenBuy={openBuy} 
                 onOpenSell={openSell} 
               />

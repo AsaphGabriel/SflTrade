@@ -101,7 +101,9 @@ const ResourceGrid = ({
   onOpenBuy,
   onOpenSell,
   categoryFilter = null,
-  onCategoryFilterChange = null
+  onCategoryFilterChange = null,
+  searchTerm: externalSearchTerm = null,
+  onSearchTermChange = null
 }) => {
   const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
   const currentCategoryFilter = categoryFilter !== null && categoryFilter !== undefined
@@ -115,7 +117,18 @@ const ResourceGrid = ({
     }
   };
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  const searchTerm = externalSearchTerm !== null && externalSearchTerm !== undefined
+    ? externalSearchTerm
+    : internalSearchTerm;
+
+  const handleSearchChange = (val) => {
+    setInternalSearchTerm(val);
+    if (onSearchTermChange) {
+      onSearchTermChange(val);
+    }
+  };
+
   const [selectedChartResource, setSelectedChartResource] = useState(null);
 
   // Agrupamento de itens por categoria
@@ -131,35 +144,38 @@ const ResourceGrid = ({
   const nftList = Array.isArray(nftData?.list) ? nftData.list : [];
   const firstNftName = nftList.length > 0 ? nftList[0].name : 'Stone Beetle';
 
-  const isSearching = searchTerm.trim() !== '';
+  const term = searchTerm.trim().toLowerCase();
+  const isSearching = Boolean(term);
 
-  // Quando há busca ativa, avalia todas as categorias para permitir filtrar recursos e NFTs juntos (elimina o bloqueio de filtro duplo).
-  // Se não houver busca ativa, respeita estritamente a aba de categoria selecionada.
-  const categoriesToRender = (isSearching || currentCategoryFilter === 'all')
+  // Helper para verificar correspondencia de NFT
+  const matchesNft = (item) => {
+    if (!isSearching) return true;
+    const nameMatch = item.name && item.name.toLowerCase().includes(term);
+    const displayMatch = item.displayName && item.displayName.toLowerCase().includes(term);
+    const boostMatch = item.boost_text && item.boost_text.toLowerCase().includes(term);
+    const collectionMatch = item.collection && item.collection.toLowerCase().includes(term);
+    return Boolean(nameMatch || displayMatch || boostMatch || collectionMatch);
+  };
+
+  // Quando ha busca ativa, avalia todas as categorias se a aba for "all"
+  const categoriesToRender = (isSearching && currentCategoryFilter === 'all')
     ? CATEGORIAS_MERCADO
-    : CATEGORIAS_MERCADO.filter(cat => cat.id === currentCategoryFilter);
+    : (currentCategoryFilter === 'all'
+        ? CATEGORIAS_MERCADO
+        : CATEGORIAS_MERCADO.filter(cat => cat.id === currentCategoryFilter));
 
-  // Total de correspondências durante a busca (para empty state)
+  // Total de correspondencias durante a busca
   const totalMatches = isSearching
-    ? categoriesToRender.reduce((acc, cat) => {
-        const term = searchTerm.trim().toLowerCase();
+    ? CATEGORIAS_MERCADO.reduce((acc, cat) => {
         if (cat.isNftCategory) {
-          const count = nftList.filter(item => {
-            const nameMatch = item.name && item.name.toLowerCase().includes(term);
-            const displayMatch = item.displayName && item.displayName.toLowerCase().includes(term);
-            const boostMatch = item.boost_text && item.boost_text.toLowerCase().includes(term);
-            const collectionMatch = item.collection && item.collection.toLowerCase().includes(term);
-            return Boolean(nameMatch || displayMatch || boostMatch || collectionMatch);
-          }).length;
-          return acc + count;
+          return acc + nftList.filter(matchesNft).length;
         } else {
-          const count = (grupos[cat.id] || []).filter(item => item.toLowerCase().includes(term)).length;
-          return acc + count;
+          return acc + (grupos[cat.id] || []).filter(item => item.toLowerCase().includes(term)).length;
         }
       }, 0)
     : 1;
 
-  // Construção da lista de Abas
+  // Construcao da lista de Abas
   const tabs = [
     { id: 'all', key: 'marketTabAll' },
     ...CATEGORIAS_MERCADO.map(cat => ({ id: cat.id, key: cat.titleKey, isNft: cat.isNftCategory }))
@@ -167,7 +183,7 @@ const ResourceGrid = ({
 
   return (
     <section className="mb-8">
-      {/* Topo da Seção de Mercado com Busca */}
+      {/* Topo da Secao de Mercado com Busca */}
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-lg font-bold text-slate-200">
           {t('marketTitle', currentLang)}
@@ -176,30 +192,41 @@ const ResourceGrid = ({
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={t('searchPlaceholder', currentLang)}
             className="bg-cardbg border border-slate-700 text-white rounded-xl pl-3 pr-7 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-48 md:w-64"
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
+              onClick={() => handleSearchChange('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold leading-none"
               title={currentLang === 'pt' ? 'Limpar busca' : 'Clear search'}
             >
-              ×
+              x
             </button>
           )}
         </div>
       </div>
 
-      {/* Barra de Abas Amarelas por Categoria */}
+      {/* Barra de Abas Amarelas por Categoria com Contagens Dinamicas */}
       <div id="category-tabs" className="category-tabs-bar scrollbar-hide" role="tablist">
         {tabs.map(tab => {
-          const count = tab.id === 'all'
-            ? (Object.keys(data).length + nftList.length)
-            : tab.isNft
-            ? nftList.length
-            : (CATEGORIAS_MERCADO.find(c => c.id === tab.id)?.itens.filter(i => data[i] !== undefined).length || 0);
+          let count = 0;
+          if (isSearching) {
+            if (tab.id === 'all') {
+              count = totalMatches;
+            } else if (tab.isNft) {
+              count = nftList.filter(matchesNft).length;
+            } else {
+              count = (grupos[tab.id] || []).filter(item => item.toLowerCase().includes(term)).length;
+            }
+          } else {
+            count = tab.id === 'all'
+              ? (Object.keys(data).length + nftList.length)
+              : tab.isNft
+              ? nftList.length
+              : (CATEGORIAS_MERCADO.find(c => c.id === tab.id)?.itens.filter(i => data[i] !== undefined).length || 0);
+          }
 
           const isActive = currentCategoryFilter === tab.id;
           const iconUrl = tab.id !== 'all' ? getCategoryIcon(tab.id, firstNftName) : '';
@@ -230,20 +257,9 @@ const ResourceGrid = ({
       {/* Grade Principal de Categorias e Cartões */}
       <div className="market-categories-container">
         {categoriesToRender.map(cat => {
-          // Renderização especial para categoria de Power Ups (NFTs)
+          // Renderizacao especial para categoria de Power Ups (NFTs)
           if (cat.isNftCategory) {
-            let nftsToRender = [...nftList];
-
-            if (isSearching) {
-              const term = searchTerm.trim().toLowerCase();
-              nftsToRender = nftsToRender.filter(item => {
-                const nameMatch = item.name && item.name.toLowerCase().includes(term);
-                const displayMatch = item.displayName && item.displayName.toLowerCase().includes(term);
-                const boostMatch = item.boost_text && item.boost_text.toLowerCase().includes(term);
-                const collectionMatch = item.collection && item.collection.toLowerCase().includes(term);
-                return Boolean(nameMatch || displayMatch || boostMatch || collectionMatch);
-              });
-            }
+            let nftsToRender = isSearching ? nftList.filter(matchesNft) : [...nftList];
 
             if (nftsToRender.length === 0) return null;
 
