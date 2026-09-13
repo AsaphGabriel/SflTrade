@@ -62,13 +62,15 @@ function getItemIcon(itemName) {
 }
 
 function getCategoryIcon(catId, sampleNft = '') {
+  if (catId === 'power_ups') {
+    return 'https://sunflower-land.com/play/erc1155/images/2129.webp';
+  }
   const assetMap = {
     crops: 'Sunflower',
     fruits: 'Apple',
     animals: 'Egg',
     minerals: 'Wood',
-    misc: 'Sunflorian Emblem',
-    power_ups: sampleNft || 'Stone Beetle'
+    misc: 'Sunflorian Emblem'
   };
   const itemName = assetMap[catId];
   return itemName ? getItemIcon(itemName) : '';
@@ -92,8 +94,27 @@ function obterCategoriaItem(nomeItem) {
   return 'misc';
 }
 
-const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', onOpenBuy, onOpenSell }) => {
-  const [currentCategoryFilter, setCurrentCategoryFilter] = useState('all');
+const ResourceGrid = ({
+  data = {},
+  nftData = { list: [] },
+  currentLang = 'en',
+  onOpenBuy,
+  onOpenSell,
+  categoryFilter = null,
+  onCategoryFilterChange = null
+}) => {
+  const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
+  const currentCategoryFilter = categoryFilter !== null && categoryFilter !== undefined
+    ? categoryFilter
+    : internalCategoryFilter;
+
+  const handleSelectCategory = (catId) => {
+    setInternalCategoryFilter(catId);
+    if (onCategoryFilterChange) {
+      onCategoryFilterChange(catId);
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChartResource, setSelectedChartResource] = useState(null);
 
@@ -155,7 +176,7 @@ const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', o
               className={`category-tab ${isActive ? 'active' : ''}`}
               role="tab"
               aria-selected={isActive}
-              onClick={() => setCurrentCategoryFilter(tab.id)}
+              onClick={() => handleSelectCategory(tab.id)}
             >
               {iconUrl && (
                 <img
@@ -204,7 +225,9 @@ const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', o
 
                 <div className="category-grid">
                   {nftsToRender.map(nft => {
-                    const iconUrl = getItemIcon(nft.name);
+                    const iconUrl = nft.image || (nft.collection === 'wearables'
+                      ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
+                      : `https://sunflower-land.com/play/erc1155/images/${nft.id}.webp`);
 
                     return (
                       <div 

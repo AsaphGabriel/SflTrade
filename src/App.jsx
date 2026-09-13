@@ -23,6 +23,27 @@ const App = () => {
   
   const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
 
+  const [activeMoversCategory, setActiveMoversCategory] = useState('resources');
+  const [resourceCategoryFilter, setResourceCategoryFilter] = useState('all');
+
+  const handleMoversCategoryChange = (cat) => {
+    setActiveMoversCategory(cat);
+    if (cat === 'power_ups') {
+      setResourceCategoryFilter('power_ups');
+    } else {
+      setResourceCategoryFilter('all');
+    }
+  };
+
+  const handleResourceCategoryChange = (catId) => {
+    setResourceCategoryFilter(catId);
+    if (catId === 'power_ups') {
+      setActiveMoversCategory('power_ups');
+    } else {
+      setActiveMoversCategory('resources');
+    }
+  };
+
   const {
     user,
     setUser,
@@ -146,12 +167,16 @@ const App = () => {
                 marketData={marketData}
                 nftMarketData={nftMarketData}
                 currentLang={currentLang}
+                activeCategory={activeMoversCategory}
+                onCategoryChange={handleMoversCategoryChange}
                 onSelectResource={(res, meta) => setSelectedChartResource(meta || res)}
               />
               <ResourceGrid 
                 data={marketData} 
                 nftData={nftMarketData}
                 currentLang={currentLang} 
+                categoryFilter={resourceCategoryFilter}
+                onCategoryFilterChange={handleResourceCategoryChange}
                 onOpenBuy={openBuy} 
                 onOpenSell={openSell} 
               />

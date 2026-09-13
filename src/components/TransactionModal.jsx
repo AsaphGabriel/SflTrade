@@ -251,7 +251,7 @@ const TransactionModal = ({
                     >
                       <span className="font-bold flex items-center gap-1.5">
                         <img
-                          src={getItemIcon(rec)}
+                          src={nftMarketData?.byName?.[rec]?.image || getItemIcon(rec)}
                           alt={rec}
                           className="w-4 h-4 rounded-sm object-cover"
                           onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}

@@ -80,7 +80,11 @@ const PositionDetailsModal = ({
     });
 
   const corLucroUsd = (lucroAbsolutoUsd || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
-  const iconUrl = getItemIcon(nome);
+  const iconUrl = position?.image || (position?.isNft
+    ? (position.collection === 'wearables'
+        ? `https://sunflower-land.com/play/wearables/images/${position.nft_id}.png`
+        : `https://sunflower-land.com/play/erc1155/images/${position.nft_id}.webp`)
+    : getItemIcon(nome));
 
   const handleSaveCustomAvg = (e) => {
     e.preventDefault();

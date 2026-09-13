@@ -457,15 +457,24 @@ export default function useMarketData() {
         const lucroAbsolutoMoeda = valorVendaLiquidoTotalMoeda - custoTotalMoeda;
         const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
 
-        const isNftItem = Boolean(item.isNft || (nftMarketData?.byName && nftMarketData.byName[item.nome]));
-        const boostText = item.boost_text || nftMarketData?.byName?.[item.nome]?.boost_text || '';
-        const nftId = item.nft_id || nftMarketData?.byName?.[item.nome]?.id || null;
+        const nftMeta = nftMarketData?.byName?.[item.nome];
+        const isNftItem = Boolean(item.isNft || nftMeta);
+        const boostText = item.boost_text || nftMeta?.boost_text || '';
+        const nftId = item.nft_id || nftMeta?.id || null;
+        const collection = item.collection || nftMeta?.collection || 'collectibles';
+        const image = item.image || nftMeta?.image || (nftId
+          ? (collection === 'wearables'
+              ? `https://sunflower-land.com/play/wearables/images/${nftId}.png`
+              : `https://sunflower-land.com/play/erc1155/images/${nftId}.webp`)
+          : null);
 
         return {
           ...item,
           isNft: isNftItem,
           boost_text: boostText,
           nft_id: nftId,
+          collection,
+          image,
           precoMedio,
           precoMedioUsd,
           cotacaoMediaFlowerUsd,

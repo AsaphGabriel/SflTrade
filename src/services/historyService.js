@@ -973,6 +973,9 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
           nft_id: nft.id,
           name: nft.name,
           collection: nft.collection,
+          image: nft.image || (nft.collection === 'wearables'
+            ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
+            : `https://sunflower-land.com/play/erc1155/images/${nft.id}.webp`),
           boost_text: nft.boost_text,
           currentPrice: currentFloor,
           basePrice: baseFloor,

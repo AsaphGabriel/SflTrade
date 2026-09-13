@@ -273,11 +273,19 @@ export async function fetchNftMarketData(forceRefresh = false) {
 
     const boostCollectibles = collectibles
       .filter(item => item && item.have_boost === 1)
-      .map(item => ({ ...item, collection: 'collectibles' }));
+      .map(item => ({
+        ...item,
+        collection: 'collectibles',
+        image: `https://sunflower-land.com/play/erc1155/images/${item.id}.webp`
+      }));
 
     const boostWearables = wearables
       .filter(item => item && item.have_boost === 1)
-      .map(item => ({ ...item, collection: 'wearables' }));
+      .map(item => ({
+        ...item,
+        collection: 'wearables',
+        image: `https://sunflower-land.com/play/wearables/images/${item.id}.png`
+      }));
 
     const allBoosts = [...boostCollectibles, ...boostWearables];
 

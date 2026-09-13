@@ -82,7 +82,11 @@ const PortfolioTable = ({
         {data.map(item => {
           const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
           const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
-          const iconUrl = getItemIcon(item.nome);
+          const iconUrl = item.image || (item.isNft
+            ? (item.collection === 'wearables'
+                ? `https://sunflower-land.com/play/wearables/images/${item.nft_id}.png`
+                : `https://sunflower-land.com/play/erc1155/images/${item.nft_id}.webp`)
+            : getItemIcon(item.nome));
 
           return (
             <div 
@@ -188,7 +192,11 @@ const PortfolioTable = ({
             {data.map(item => {
               const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
               const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
-              const iconUrl = getItemIcon(item.nome);
+              const iconUrl = item.image || (item.isNft
+                ? (item.collection === 'wearables'
+                    ? `https://sunflower-land.com/play/wearables/images/${item.nft_id}.png`
+                    : `https://sunflower-land.com/play/erc1155/images/${item.nft_id}.webp`)
+                : getItemIcon(item.nome));
 
               return (
                 <tr 
