@@ -100,7 +100,19 @@ const PortfolioTable = ({
                     onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
                   />
                   <div>
-                    <span className="text-sm font-bold text-slate-100">{item.nome}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-sm font-bold text-slate-100">{item.nome}</span>
+                      {item.isNft && (
+                        <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 border border-amber-500/30 px-1 py-0.2 rounded uppercase">
+                          NFT
+                        </span>
+                      )}
+                      {item.boost_text && (
+                        <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-1 py-0.2 rounded">
+                          {item.boost_text}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-slate-400 font-mono block">x{formatarPreco(item.qty)}</span>
                   </div>
                 </div>
@@ -192,7 +204,19 @@ const PortfolioTable = ({
                       className="w-5 h-5 rounded-sm object-cover align-middle inline-block"
                       onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
                     />
-                    {item.nome}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>{item.nome}</span>
+                      {item.isNft && (
+                        <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 border border-amber-500/30 px-1 py-0.2 rounded uppercase">
+                          NFT
+                        </span>
+                      )}
+                      {item.boost_text && (
+                        <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-1 py-0.2 rounded" title={item.boost_text}>
+                          {item.boost_text}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 font-mono">{formatarPreco(item.qty)}</td>
                   <td className="p-3 font-semibold font-mono">

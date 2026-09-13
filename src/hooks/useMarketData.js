@@ -3,9 +3,10 @@ import { t } from '../i18n';
 import {
   fetchWithFallback,
   resolveFarmIdFromUsername,
-  fetchFarmDataSmart
+  fetchFarmDataSmart,
+  fetchNftMarketData
 } from '../services/api';
-import { recordDailySnapshot } from '../services/historyService';
+import { recordDailySnapshot, recordNftSnapshot } from '../services/historyService';
 import { onAuthStateChange } from '../services/authService';
 import {
   fetchRemoteUserData,
@@ -51,6 +52,7 @@ export default function useMarketData() {
 
   // Dados do Mercado e Estado Geral
   const [marketData, setMarketData] = useState(DADOS_PRECOS_INICIAIS);
+  const [nftMarketData, setNftMarketData] = useState({ list: [], byName: {}, byId: {} });
   const [currencyRates, setCurrencyRates] = useState({ usd: 0.0679, brl: 0.4419, eur: 0.0754, sgd: 0.1117, pol: 1.194 });
   const [updatedTimeText, setUpdatedTimeText] = useState('');
   const [transactions, setTransactions] = useState(() => JSON.parse(localStorage.getItem('sfl_transactions')) || []);
@@ -266,6 +268,19 @@ export default function useMarketData() {
     } catch (err) {
       console.warn('[MarketData] Erro ao buscar preços P2P:', err);
       setError(true);
+    }
+
+    // Busca cotações de NFTs com buffs (have_boost === 1)
+    try {
+      const nftRes = await fetchNftMarketData();
+      if (nftRes && Array.isArray(nftRes.list)) {
+        setNftMarketData(nftRes);
+        setTimeout(() => {
+          recordNftSnapshot(fetchedUsd, nftRes.list);
+        }, 100);
+      }
+    } catch (err) {
+      console.warn('[MarketData] Erro ao buscar NFTs com boost:', err);
     } finally {
       setLoading(false);
     }
@@ -365,7 +380,20 @@ export default function useMarketData() {
       if (!item) return;
       const key = item.toLowerCase();
       if (!estoque[key]) {
-        estoque[key] = { nome: item, qty: 0, custoTotal: 0, custoTotalUsd: 0 };
+        estoque[key] = {
+          nome: item,
+          qty: 0,
+          custoTotal: 0,
+          custoTotalUsd: 0,
+          isNft: Boolean(t.isNft),
+          nft_id: t.nft_id || null,
+          boost_text: t.boost_text || ''
+        };
+      }
+      if (t.isNft) {
+        estoque[key].isNft = true;
+        if (t.boost_text) estoque[key].boost_text = t.boost_text;
+        if (t.nft_id) estoque[key].nft_id = t.nft_id;
       }
       if (t.tipo === 'buy') {
         estoque[key].qty += t.qty;
@@ -409,7 +437,11 @@ export default function useMarketData() {
         const custoTotal = item.qty * precoMedio;
         const custoTotalUsd = custoTotal * cotacaoMediaFlowerUsd;
 
-        const precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === key)] || 0;
+        let precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find(k => k.toLowerCase() === key)] || 0;
+        if (!precoP2P && nftMarketData?.byName && nftMarketData.byName[item.nome]) {
+          precoP2P = Number(nftMarketData.byName[item.nome].floor || 0);
+        }
+
         const precoVendaLiquidoUnitario = precoP2P * (1 - effectiveTax);
         const valorVendaLiquidoTotal = item.qty * precoVendaLiquidoUnitario;
         
@@ -425,8 +457,15 @@ export default function useMarketData() {
         const lucroAbsolutoMoeda = valorVendaLiquidoTotalMoeda - custoTotalMoeda;
         const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
 
+        const isNftItem = Boolean(item.isNft || (nftMarketData?.byName && nftMarketData.byName[item.nome]));
+        const boostText = item.boost_text || nftMarketData?.byName?.[item.nome]?.boost_text || '';
+        const nftId = item.nft_id || nftMarketData?.byName?.[item.nome]?.id || null;
+
         return {
           ...item,
+          isNft: isNftItem,
+          boost_text: boostText,
+          nft_id: nftId,
           precoMedio,
           precoMedioUsd,
           cotacaoMediaFlowerUsd,
@@ -446,7 +485,7 @@ export default function useMarketData() {
           lucroPercentualMoeda
         };
       });
-  }, [transactions, currencyRates, selectedCurrency, customAvgPrices, marketData, effectiveTax]);
+  }, [transactions, currencyRates, selectedCurrency, customAvgPrices, marketData, nftMarketData, effectiveTax]);
 
   // Registrar Transação (Compra / Venda) com desacoplamento assíncrono
   const handleTransaction = useCallback((nuevaTransacao) => {
@@ -500,6 +539,7 @@ export default function useMarketData() {
     selectedCurrency,
     setSelectedCurrency: updateCurrency,
     marketData,
+    nftMarketData,
     portfolioData,
     transactions,
     farmData,

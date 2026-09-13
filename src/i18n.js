@@ -55,7 +55,13 @@ export const translations = {
     cat_animals: "Animal Production",
     cat_minerals: "Minerals & Resources",
     cat_misc: "Misc & Badges",
+    cat_power_ups: "Power Ups",
     marketTabAll: "All",
+    tabResources: "Resources",
+    tabPowerUps: "Power Ups",
+    buffLabel: "Buff",
+    floorPrice: "Floor Price",
+    supplyLabel: "Supply",
     
     // Destaques do Mercado (Movers)
     moversTitle: "Market Highlights",
@@ -188,8 +194,14 @@ export const translations = {
     cat_animals: "Produção Animal",
     cat_minerals: "Minérios e Recursos",
     cat_misc: "Diversos e Emblemas",
+    cat_power_ups: "Power Ups",
     marketTabAll: "Todos",
-
+    tabResources: "Recursos",
+    tabPowerUps: "Power Ups",
+    buffLabel: "Buff",
+    floorPrice: "Preço Floor",
+    supplyLabel: "Circulante",
+    
     // Destaques do Mercado (Movers)
     moversTitle: "Destaques do Mercado",
     moversSubtitle: "Maiores altas e baixas baseadas no histórico de cotações",

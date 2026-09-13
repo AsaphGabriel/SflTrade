@@ -43,6 +43,7 @@ const App = () => {
     selectedCurrency,
     setSelectedCurrency,
     marketData,
+    nftMarketData,
     portfolioData,
     transactions,
     farmData,
@@ -143,11 +144,13 @@ const App = () => {
               />
               <MarketMoversCards
                 marketData={marketData}
+                nftMarketData={nftMarketData}
                 currentLang={currentLang}
-                onSelectResource={(res) => setSelectedChartResource(res)}
+                onSelectResource={(res, meta) => setSelectedChartResource(meta || res)}
               />
               <ResourceGrid 
                 data={marketData} 
+                nftData={nftMarketData}
                 currentLang={currentLang} 
                 onOpenBuy={openBuy} 
                 onOpenSell={openSell} 
@@ -211,6 +214,7 @@ const App = () => {
           onSubmit={handleTransaction}
           effectiveTax={effectiveTax}
           marketData={marketData}
+          nftMarketData={nftMarketData}
           portfolioData={portfolioData}
           currentLang={currentLang}
           initialResource={modalResource}
@@ -224,6 +228,7 @@ const App = () => {
           onSubmit={handleTransaction}
           effectiveTax={effectiveTax}
           marketData={marketData}
+          nftMarketData={nftMarketData}
           portfolioData={portfolioData}
           currentLang={currentLang}
           initialResource={modalResource}

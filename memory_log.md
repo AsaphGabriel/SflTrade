@@ -1,5 +1,28 @@
 # 📜 Memory Log - SflTrade
 
+## [2026-09-07] Reestruturação das Amostragens de Séries Temporais, Média Automática e Correção de Baseline dos Movers
+
+### 1. 📊 Reestruturação dos Filtros e Amostragem Temporais (`historyService.js` / `PriceChartModal.jsx`)
+- **Amostragem Exata por Período (`aggregateHistoryByInterval`)**:
+  - `24h`: 24 resultados (1 a cada 1 hora).
+  - `7D`: 14 resultados (1 a cada 12 horas).
+  - `30D`: 30 resultados (1 a cada 1 dia).
+  - `90D`: 30 resultados (1 a cada 3 dias = 90 dias total).
+- **Interpolação Resiliente de Dados Passados**:
+  - Corrigida a projeção fantasma do preço recente para o passado em bancos sem histórico antigo. Buckets anteriores ao primeiro registro real utilizam o primeiro preço histórico conhecido (`succ.p`).
+- **Linha Média Automática & Variação %**:
+  - Adicionada no SVG do gráfico uma linha guia horizontal amarela tracejada indicando a média simples do período visível (`Média: [Valor]`).
+  - Removidas as linhas e métricas estáticas e confusas de SMA 7d / 30d, substituindo o card do modal pela **Variação % Dinâmica** do período.
+
+### 2. 🚀 Correção dos Cards de Destaques do Mercado (`fetchMarketMovers`)
+- **Cotação Ao Vivo Instantânea**: Forçado o uso direto da cotação real do payload ao vivo da API (`currentMarketData`) para evitar que a renderização inicial com dados de contingência offline ficasse presa em cache.
+- **Validação de Idade Mínima do Baseline (`minAgeMs`)**: Exigida antiguidade mínima no banco (12h para 24h) para evitar comparar cotações atuais com snapshots criados há poucos minutos.
+
+### 3. 🌐 Deploy & Git
+- Comitado na branch `develop` e publicado no **GitHub Pages** (`gh-pages`).
+
+---
+
 ## [2026-09-02] Adição dos Cards de Destaques do Mercado (Maiores Altas e Maiores Baixas)
 
 ### 1. 📈 Novos Cards de Métricas de Variação de Preço (`MarketMoversCards.jsx`)

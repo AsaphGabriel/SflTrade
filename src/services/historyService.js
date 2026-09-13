@@ -5,11 +5,14 @@ const RESOURCE_CACHE_KEY_PREFIX = 'sfl_res_history_cache_';
 const DAILY_HISTORY_KEY = 'sfl_daily_history';
 const HOURLY_HISTORY_KEY = 'sfl_hourly_history';
 const LAST_SUPABASE_PUSH_KEY = 'sfl_last_supabase_history_push';
+const LAST_SUPABASE_NFT_PUSH_KEY = 'sfl_last_supabase_nft_push';
 const CACHE_VERSION_KEY = 'sfl_history_cache_ver';
 const CURRENT_CACHE_VERSION = 'v1.5.0_global_supabase';
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de TTL para cache local
 const SUPABASE_PUSH_THROTTLE_MS = 15 * 60 * 1000; // Envia no máximo a cada 15 minutos para não sobrecarregar
+const SUPABASE_NFT_PUSH_THROTTLE_MS = 4 * 60 * 60 * 1000; // 4 horas de throttle para NFTs (preserva quota gratuita)
+const NFT_HOURLY_HISTORY_KEY = 'sfl_nft_hourly_history';
 
 /**
  * 1. LIMPEZA AUTOMÁTICA DE CACHE LEGADO
@@ -19,9 +22,9 @@ export function purgeLegacyMockCache() {
     const savedVer = localStorage.getItem(CACHE_VERSION_KEY);
     if (savedVer !== CURRENT_CACHE_VERSION) {
       console.log('[HistoryService] Atualizando estrutura de cache para histórico global Supabase...');
-      
+
       localStorage.removeItem(TOKEN_CACHE_KEY);
-      
+
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -30,7 +33,7 @@ export function purgeLegacyMockCache() {
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
-      
+
       localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
     }
   } catch (e) {
@@ -60,7 +63,7 @@ export function calculateMovingAverage(data = [], windowSize = 7, valueKey = 'pr
   const safeWindow = Math.max(1, windowSize);
   const result = [];
   let runningSum = 0;
-  
+
   for (let i = 0; i < data.length; i++) {
     const val = Number(data[i][valueKey] || data[i].price || 0) || 0;
     runningSum += val;
@@ -143,7 +146,7 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
 
     if (timeSinceLastPush >= SUPABASE_PUSH_THROTTLE_MS && Object.keys(cleanResources).length > 0) {
       localStorage.setItem(LAST_SUPABASE_PUSH_KEY, String(Date.now()));
-      
+
       // Envia cotação do token
       supabase
         .from('token_price_history')
@@ -231,13 +234,145 @@ async function withTimeout(promise, timeoutMs = 2500) {
 }
 
 /**
- * Busca histórico da cotação do token $FLOWER (até 90 dias)
+ * Utilitário de agregação de séries temporais para amostragem exata por filtro:
+ * - 24h: 24 pontos (1 a cada 1 hora)
+ * - 7D:  14 pontos (1 a cada 12 horas)
+ * - 30D: 30 pontos (1 a cada 1 dia)
+ * - 90D: 30 pontos (1 a cada 3 dias = 90 dias total)
  */
-export async function fetchTokenHistory(days = 90, currentPrice = 0.05) {
+export function aggregateHistoryByInterval(rawData = [], timeframe = '30D', fallbackPrice = 0) {
+  let tfStr = String(timeframe).toUpperCase();
+  if (timeframe === 1) tfStr = '24H';
+  if (timeframe === 7) tfStr = '7D';
+  if (timeframe === 30) tfStr = '30D';
+  if (timeframe === 90) tfStr = '90D';
+
+  let numBuckets = 30;
+  let stepMs = 24 * 60 * 60 * 1000;
+
+  if (tfStr === '24H' || tfStr === '24') {
+    numBuckets = 24;
+    stepMs = 60 * 60 * 1000; // 1 hora
+  } else if (tfStr === '7D' || tfStr === '7') {
+    numBuckets = 14;
+    stepMs = 12 * 60 * 60 * 1000; // 12 horas
+  } else if (tfStr === '30D' || tfStr === '30') {
+    numBuckets = 30;
+    stepMs = 24 * 60 * 60 * 1000; // 24 horas
+  } else if (tfStr === '90D' || tfStr === '90') {
+    numBuckets = 30;
+    stepMs = 3 * 24 * 60 * 60 * 1000; // 3 dias (72 horas) para 90 dias em 30 resultados
+  }
+
+  const nowMs = Date.now();
+  const sortedRaw = Array.isArray(rawData)
+    ? [...rawData]
+      .map(item => {
+        const t = new Date(item.timestamp || item.day || 0).getTime();
+        const p = Number(item.floor_sfl ?? item.avg_floor_sfl ?? item.price_sfl ?? item.avg_price_sfl ?? item.price_usd ?? item.price ?? 0);
+        return { ...item, t, p };
+      })
+      .filter(item => !isNaN(item.t) && item.t > 0 && !isNaN(item.p) && item.p > 0)
+      .sort((a, b) => a.t - b.t)
+    : [];
+
+  const buckets = [];
+
+  for (let i = 0; i < numBuckets; i++) {
+    const bucketStartMs = nowMs - (numBuckets - i) * stepMs;
+    const bucketEndMs = nowMs - (numBuckets - i - 1) * stepMs;
+    const bucketMidMs = (bucketStartMs + bucketEndMs) / 2;
+    const bucketEndDate = new Date(bucketEndMs);
+
+    // Filtra pontos da série bruta dentro da janela do bucket
+    const matches = sortedRaw.filter(item => item.t >= bucketStartMs && item.t < bucketEndMs);
+
+    let avgVal = 0;
+    let isFallback = false;
+
+    if (matches.length > 0) {
+      const sum = matches.reduce((acc, curr) => acc + curr.p, 0);
+      avgVal = sum / matches.length;
+    } else if (sortedRaw.length > 0) {
+      // Interpolação entre o ponto anterior mais próximo e o ponto posterior mais próximo
+      let prec = null;
+      let succ = null;
+
+      for (const item of sortedRaw) {
+        if (item.t < bucketMidMs) {
+          prec = item;
+        } else if (item.t > bucketMidMs && !succ) {
+          succ = item;
+          break;
+        }
+      }
+
+      if (prec && succ) {
+        const ratio = (bucketMidMs - prec.t) / (succ.t - prec.t);
+        avgVal = prec.p + ratio * (succ.p - prec.p);
+      } else if (prec) {
+        avgVal = prec.p;
+      } else if (succ) {
+        avgVal = succ.p;
+      } else {
+        avgVal = Number(fallbackPrice || 0);
+      }
+      isFallback = true;
+    } else {
+      avgVal = Number(fallbackPrice || 0);
+      isFallback = true;
+    }
+
+    // Formatação do rótulo de data/hora
+    let labelDateStr = bucketEndDate.toISOString().split('T')[0];
+    if (numBuckets === 24 && stepMs === 3600000) {
+      const hours = String(bucketEndDate.getHours()).padStart(2, '0');
+      const mins = String(bucketEndDate.getMinutes()).padStart(2, '0');
+      labelDateStr = `${hours}:${mins}`;
+    } else {
+      const m = String(bucketEndDate.getMonth() + 1).padStart(2, '0');
+      const d = String(bucketEndDate.getDate()).padStart(2, '0');
+      labelDateStr = `${m}-${d}`;
+    }
+
+    buckets.push({
+      id: `b_${i}_${bucketEndMs}`,
+      timestamp: bucketEndDate.toISOString(),
+      day: labelDateStr,
+      avg_price_sfl: Number(avgVal.toFixed(6)),
+      price_sfl: Number(avgVal.toFixed(6)),
+      price_usd: Number(avgVal.toFixed(6)),
+      isInitialData: isFallback
+    });
+  }
+
+  // Calcula Médias Móveis SMA 7d e SMA 30d
+  const withSma7 = calculateMovingAverage(buckets, 7, 'price_sfl');
+  const withSma30 = calculateMovingAverage(withSma7, 30, 'price_sfl');
+
+  return withSma30.map(item => ({
+    ...item,
+    sma_7d_sfl: item.sma_7d,
+    sma_30d_sfl: item.sma_30d
+  }));
+}
+
+/**
+ * Busca histórico da cotação do token $FLOWER por amostragem exata de período (24h, 7D, 30D, 90D)
+ */
+export async function fetchTokenHistory(timeframe = '30D', currentPrice = 0.05) {
+  let days = 30;
+  const tfStr = String(timeframe).toUpperCase();
+  if (tfStr === '24H' || tfStr === '1' || tfStr === '24') days = 1;
+  else if (tfStr === '7D' || tfStr === '7') days = 7;
+  else if (tfStr === '30D' || tfStr === '30') days = 30;
+  else if (tfStr === '90D' || tfStr === '90') days = 90;
+
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
+  startDate.setDate(startDate.getDate() - days - 1);
   const isoStartDate = startDate.toISOString();
-  const dateCutoffStr = startDate.toISOString().split('T')[0];
+
+  let rawPoints = [];
 
   // 1. Tentar consulta no Supabase (Dados Globais)
   try {
@@ -250,279 +385,284 @@ export async function fetchTokenHistory(days = 90, currentPrice = 0.05) {
     );
 
     if (!error && Array.isArray(data) && data.length > 0) {
-      setLocalCache(TOKEN_CACHE_KEY, data);
-      return data;
+      rawPoints = data;
     }
   } catch (err) {
     console.warn('[HistoryService] Supabase token_price_history indisponível:', err.message);
   }
 
-  // 2. Tentar histórico acumulado local real ('sfl_hourly_history' / 'sfl_daily_history')
-  try {
-    const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
-    if (rawHourly) {
-      const historyList = JSON.parse(rawHourly);
-      if (Array.isArray(historyList) && historyList.length > 0) {
-        const filtered = historyList.filter(h => (h.day || h.hourKey) >= dateCutoffStr && h.token_price_usd > 0);
-        if (filtered.length > 0) {
-          const points = filtered.map(h => ({
-            id: h.hourKey || h.day,
-            timestamp: h.timestamp,
-            day: h.hourKey || h.day,
-            price_usd: Number(h.token_price_usd),
-            source: 'local_hourly_history',
-            isInitialData: filtered.length <= 1
-          }));
-          return points;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('[HistoryService] Erro ao ler sfl_hourly_history para token:', e);
-  }
-
-  // 3. Ponto único do preço real do dia atual
-  return createInitialTokenPoint(currentPrice);
-}
-
-/**
- * Busca histórico de preços de um recurso (até 90 dias)
- */
-export async function fetchResourceHistory(resourceId, days = 90, currentPriceSfl = 0) {
-  if (!resourceId) return [];
-
-  const cacheKey = RESOURCE_CACHE_KEY_PREFIX + resourceId.toLowerCase();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  const dateStr = startDate.toISOString().split('T')[0];
-
-  // 1. Tentar consulta na View Agregada v_resource_daily_metrics do Supabase (Globais)
-  try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from('v_resource_daily_metrics')
-        .select('*')
-        .eq('resource_id', resourceId)
-        .gte('day', dateStr)
-        .order('day', { ascending: true })
-    );
-
-    if (!error && Array.isArray(data) && data.length > 0) {
-      setLocalCache(cacheKey, data);
-      return data;
-    }
-  } catch (err) {
-    console.warn(`[HistoryService] Supabase View v_resource_daily_metrics indisponível para ${resourceId}:`, err.message);
-  }
-
-  // 2. Tentar consulta na Tabela Bruta resource_price_history (Globais)
-  try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from('resource_price_history')
-        .select('*')
-        .eq('resource_id', resourceId)
-        .gte('timestamp', startDate.toISOString())
-        .order('timestamp', { ascending: true })
-    );
-
-    if (!error && Array.isArray(data) && data.length > 0) {
-      const formatted = data.map(d => ({
-        resource_id: d.resource_id,
-        day: d.timestamp ? d.timestamp.split('T')[0] : dateStr,
-        timestamp: d.timestamp,
-        avg_price_sfl: Number(d.price_sfl),
-        price_sfl: Number(d.price_sfl),
-        avg_price_usd: Number(d.price_usd)
-      }));
-      const withSma = calculateMovingAverage(formatted, 7, 'price_sfl');
-      setLocalCache(cacheKey, withSma);
-      return withSma;
-    }
-  } catch (err) {
-    console.warn(`[HistoryService] Erro na Tabela resource_price_history para ${resourceId}:`, err.message);
-  }
-
-  // 3. Tentar histórico acumulado local real ('sfl_hourly_history' / 'sfl_daily_history')
-  try {
-    const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
-    if (rawHourly) {
-      const historyList = JSON.parse(rawHourly);
-      if (Array.isArray(historyList) && historyList.length > 0) {
-        const filtered = historyList.filter(h => (h.day || h.hourKey) >= dateStr && h.resources && h.resources[resourceId] !== undefined);
-        if (filtered.length > 0) {
-          const rawPoints = filtered.map(h => {
-            const pSfl = Number(h.resources[resourceId]);
-            const pUsd = pSfl * (h.token_price_usd || 0.05);
-            return {
-              resource_id: resourceId,
-              day: h.hourKey || h.day,
-              timestamp: h.timestamp,
-              avg_price_sfl: pSfl,
-              price_sfl: pSfl,
-              min_price_sfl: pSfl,
-              max_price_sfl: pSfl,
-              avg_price_usd: pUsd,
-              records_count: 1,
-              isInitialData: filtered.length <= 1
-            };
-          });
-
-          const withSma7 = calculateMovingAverage(rawPoints, 7, 'avg_price_sfl');
-          const withSma30 = calculateMovingAverage(withSma7, 30, 'avg_price_sfl');
-
-          return withSma30.map(item => ({
-            ...item,
-            sma_7d_sfl: item.sma_7d,
-            sma_30d_sfl: item.sma_30d
-          }));
-        }
-      }
-    }
-  } catch (e) {
-    console.warn(`[HistoryService] Erro ao ler sfl_hourly_history para recurso ${resourceId}:`, e);
-  }
-
-  // 4. Ponto único do preço real do dia atual
-  return createInitialResourcePoint(resourceId, currentPriceSfl);
-}
-
-/**
- * 5. DESTAQUES DO MERCADO: TOP 3 MAIORES ALTAS E TOP 3 MAIORES BAIXAS
- * Calcula variação percentual dos recursos em relação ao preço de referência do período (24h, 7D, 30D, 90D).
- */
-const MOVERS_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutos
-const moversCache = {};
-
-export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h') {
-  const safeTimeframe = ['24h', '7D', '30D', '90D'].includes(timeframe) ? timeframe : '24h';
-  const now = new Date();
-  
-  // Verifica cache em memória
-  const cached = moversCache[safeTimeframe];
-  if (cached && (Date.now() - cached.timestamp < MOVERS_CACHE_TTL_MS)) {
-    return cached.data;
-  }
-
-  let days = 1;
-  if (safeTimeframe === '7D') days = 7;
-  else if (safeTimeframe === '30D') days = 30;
-  else if (safeTimeframe === '90D') days = 90;
-
-  const targetDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-  const targetDateStr = targetDate.toISOString().split('T')[0];
-  const targetTimeMs = targetDate.getTime();
-
-  const baselineMap = {};
-
-  // 1. Tentar consulta no Supabase
-  try {
-    if (safeTimeframe === '24h') {
-      // Para 24h, busca pontos detalhados recentes
-      const { data: rawHistory, error: rawError } = await withTimeout(
-        supabase
-          .from('resource_price_history')
-          .select('resource_id, price_sfl, timestamp')
-          .order('timestamp', { ascending: true })
-          .limit(2000),
-        3000
-      );
-
-      if (!rawError && Array.isArray(rawHistory) && rawHistory.length > 0) {
-        const byRes = {};
-        rawHistory.forEach(r => {
-          if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
-          byRes[r.resource_id].push(r);
-        });
-
-        const cutoffTime = now.getTime() - 24 * 60 * 60 * 1000;
-        Object.entries(byRes).forEach(([resId, rows]) => {
-          const pastRows = rows.filter(r => new Date(r.timestamp).getTime() <= cutoffTime);
-          if (pastRows.length > 0) {
-            baselineMap[resId] = Number(pastRows[pastRows.length - 1].price_sfl);
-          } else if (rows.length > 1) {
-            // Se não há ponto de exatamente 24h atrás, pega o mais antigo do dia
-            baselineMap[resId] = Number(rows[0].price_sfl);
-          }
-        });
-      }
-    } else {
-      // Para 7D, 30D, 90D, busca na View agregada v_resource_daily_metrics
-      const { data: dailyMetrics, error: dailyError } = await withTimeout(
-        supabase
-          .from('v_resource_daily_metrics')
-          .select('resource_id, day, avg_price_sfl')
-          .order('day', { ascending: true }),
-        3000
-      );
-
-      if (!dailyError && Array.isArray(dailyMetrics) && dailyMetrics.length > 0) {
-        const byRes = {};
-        dailyMetrics.forEach(r => {
-          if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
-          byRes[r.resource_id].push(r);
-        });
-
-        Object.entries(byRes).forEach(([resId, rows]) => {
-          const pastRows = rows.filter(r => r.day <= targetDateStr);
-          if (pastRows.length > 0) {
-            baselineMap[resId] = Number(pastRows[pastRows.length - 1].avg_price_sfl);
-          } else if (rows.length > 1) {
-            // Se o histórico não alcança o total de dias, pega o ponto mais antigo registrado
-            baselineMap[resId] = Number(rows[0].avg_price_sfl);
-          }
-        });
-      }
-    }
-  } catch (err) {
-    console.warn(`[HistoryService] Supabase indisponível para movers (${safeTimeframe}):`, err?.message || err);
-  }
-
-  // 2. Fallback: Histórico local em localStorage ('sfl_hourly_history' / 'sfl_daily_history')
-  if (Object.keys(baselineMap).length === 0) {
+  // 2. Fallback local acumulado ('sfl_hourly_history' / 'sfl_daily_history')
+  if (rawPoints.length === 0) {
     try {
       const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
       if (rawHourly) {
         const historyList = JSON.parse(rawHourly);
         if (Array.isArray(historyList) && historyList.length > 0) {
-          // Ordena cronologicamente
-          const sorted = [...historyList].sort((a, b) => 
-            (new Date(a.timestamp || a.day).getTime()) - (new Date(b.timestamp || b.day).getTime())
-          );
-
-          // Procura snapshot mais próximo do targetTime
-          let bestSnapshot = null;
-          for (const snap of sorted) {
-            const snapTime = new Date(snap.timestamp || snap.day).getTime();
-            if (snapTime <= targetTimeMs) {
-              bestSnapshot = snap;
-            } else if (!bestSnapshot) {
-              bestSnapshot = snap;
-            }
-          }
-
-          if (bestSnapshot && bestSnapshot.resources) {
-            Object.entries(bestSnapshot.resources).forEach(([resId, price]) => {
-              if (Number(price) > 0) {
-                baselineMap[resId] = Number(price);
-              }
-            });
-          }
+          rawPoints = historyList.map(h => ({
+            timestamp: h.timestamp || h.day,
+            price_usd: Number(h.token_price_usd)
+          })).filter(h => h.price_usd > 0);
         }
       }
     } catch (e) {
-      console.warn('[HistoryService] Erro ao carregar baseline local para movers:', e);
+      console.warn('[HistoryService] Erro ao ler sfl_hourly_history para token:', e);
     }
   }
 
-  // 3. Calcula variações percentuais para cada recurso
+  return aggregateHistoryByInterval(rawPoints, timeframe, currentPrice);
+}
+
+/**
+ * Busca histórico de preços de um recurso por amostragem exata de período (24h, 7D, 30D, 90D)
+ */
+export async function fetchResourceHistory(resourceId, timeframe = '30D', currentPriceSfl = 0) {
+  if (!resourceId) return [];
+
+  let days = 30;
+  const tfStr = String(timeframe).toUpperCase();
+  if (tfStr === '24H' || tfStr === '1' || tfStr === '24') days = 1;
+  else if (tfStr === '7D' || tfStr === '7') days = 7;
+  else if (tfStr === '30D' || tfStr === '30') days = 30;
+  else if (tfStr === '90D' || tfStr === '90') days = 90;
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days - 1);
+  const dateStr = startDate.toISOString().split('T')[0];
+
+  let rawPoints = [];
+
+  // Se timeframe for 24h ou 7D, prioriza a tabela bruta resource_price_history com timestamps precisos
+  if (days <= 7) {
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from('resource_price_history')
+          .select('*')
+          .eq('resource_id', resourceId)
+          .gte('timestamp', startDate.toISOString())
+          .order('timestamp', { ascending: true })
+      );
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        rawPoints = data.map(d => ({
+          timestamp: d.timestamp,
+          price_sfl: Number(d.price_sfl),
+          price_usd: Number(d.price_usd)
+        }));
+      }
+    } catch (err) {
+      console.warn(`[HistoryService] Erro na tabela resource_price_history para ${resourceId}:`, err.message);
+    }
+  }
+
+  // Se não encontrou dados brutos ou timeframe for 30D/90D, busca na View agregada v_resource_daily_metrics
+  if (rawPoints.length === 0) {
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from('v_resource_daily_metrics')
+          .select('*')
+          .eq('resource_id', resourceId)
+          .gte('day', dateStr)
+          .order('day', { ascending: true })
+      );
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        rawPoints = data.map(d => ({
+          timestamp: d.day,
+          price_sfl: Number(d.avg_price_sfl),
+          price_usd: Number(d.avg_price_usd)
+        }));
+      }
+    } catch (err) {
+      console.warn(`[HistoryService] Supabase View v_resource_daily_metrics indisponível para ${resourceId}:`, err.message);
+    }
+  }
+
+  // Fallback local ('sfl_hourly_history' / 'sfl_daily_history')
+  if (rawPoints.length === 0) {
+    try {
+      const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
+      if (rawHourly) {
+        const historyList = JSON.parse(rawHourly);
+        if (Array.isArray(historyList) && historyList.length > 0) {
+          rawPoints = historyList
+            .filter(h => h.resources && h.resources[resourceId] !== undefined)
+            .map(h => {
+              const pSfl = Number(h.resources[resourceId]);
+              return {
+                timestamp: h.timestamp || h.day,
+                price_sfl: pSfl,
+                price_usd: pSfl * (h.token_price_usd || 0.05)
+              };
+            });
+        }
+      }
+    } catch (e) {
+      console.warn(`[HistoryService] Erro ao ler sfl_hourly_history para recurso ${resourceId}:`, e);
+    }
+  }
+
+  return aggregateHistoryByInterval(rawPoints, timeframe, currentPriceSfl);
+}
+
+/**
+ * 5. DESTAQUES DO MERCADO: TOP 3 MAIORES ALTAS E TOP 3 MAIORES BAIXAS
+ * Otimizado para usar a cotação real instantânea e comparar com a referência histórica exata do período.
+ */
+const BASELINE_CACHE_TTL_MS = 3 * 60 * 1000; // Cache de 3 min apenas para a consulta de baseline no Supabase
+const baselineCache = {};
+
+export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h') {
+  const tfStr = String(timeframe).toUpperCase();
+  let safeTimeframe = '24h';
+  let hoursBack = 24;
+  let minAgeMs = 12 * 60 * 60 * 1000; // Mínimo de 12h de idade para ser considerado baseline de 24h
+
+  if (tfStr === '7D' || tfStr === '7') {
+    safeTimeframe = '7D';
+    hoursBack = 7 * 24;
+    minAgeMs = 3.5 * 24 * 60 * 60 * 1000;
+  } else if (tfStr === '30D' || tfStr === '30') {
+    safeTimeframe = '30D';
+    hoursBack = 30 * 24;
+    minAgeMs = 15 * 24 * 60 * 60 * 1000;
+  } else if (tfStr === '90D' || tfStr === '90') {
+    safeTimeframe = '90D';
+    hoursBack = 90 * 24;
+    minAgeMs = 45 * 24 * 60 * 60 * 1000;
+  }
+
+  const nowMs = Date.now();
+  const targetTimeMs = nowMs - hoursBack * 60 * 60 * 1000;
+
+  // 1. Reutiliza ou busca mapa de baseline histórica (somente a consulta do banco é armazenada em cache)
+  let baselineMap = {};
+  const cachedBaseline = baselineCache[safeTimeframe];
+  if (cachedBaseline && (nowMs - cachedBaseline.timestamp < BASELINE_CACHE_TTL_MS)) {
+    baselineMap = cachedBaseline.map;
+  } else {
+    try {
+      if (hoursBack <= 168) {
+        // Para 24h e 7D, busca registros históricos na tabela de snapshots com limite temporal de 24h atrás
+        const { data: rawHistory, error: rawError } = await withTimeout(
+          supabase
+            .from('resource_price_history')
+            .select('resource_id, price_sfl, timestamp')
+            .gte('timestamp', new Date(targetTimeMs - 24 * 60 * 60 * 1000).toISOString())
+            .order('timestamp', { ascending: true })
+            .limit(3000),
+          3000
+        );
+
+        if (!rawError && Array.isArray(rawHistory) && rawHistory.length > 0) {
+          const byRes = {};
+          rawHistory.forEach(r => {
+            if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
+            byRes[r.resource_id].push(r);
+          });
+
+          Object.entries(byRes).forEach(([resId, rows]) => {
+            let closest = rows[0];
+            let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
+            for (const row of rows) {
+              const diff = Math.abs(new Date(row.timestamp).getTime() - targetTimeMs);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = row;
+              }
+            }
+            const closestAge = nowMs - new Date(closest.timestamp).getTime();
+            if (closest && closest.price_sfl > 0 && closestAge >= minAgeMs) {
+              baselineMap[resId] = Number(closest.price_sfl);
+            }
+          });
+        }
+      } else {
+        // Para 30D e 90D, busca na View agregada v_resource_daily_metrics
+        const targetDateStr = new Date(targetTimeMs).toISOString().split('T')[0];
+        const { data: dailyMetrics, error: dailyError } = await withTimeout(
+          supabase
+            .from('v_resource_daily_metrics')
+            .select('resource_id, day, avg_price_sfl')
+            .order('day', { ascending: true }),
+          3000
+        );
+
+        if (!dailyError && Array.isArray(dailyMetrics) && dailyMetrics.length > 0) {
+          const byRes = {};
+          dailyMetrics.forEach(r => {
+            if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
+            byRes[r.resource_id].push(r);
+          });
+
+          Object.entries(byRes).forEach(([resId, rows]) => {
+            const pastRows = rows.filter(r => r.day <= targetDateStr);
+            if (pastRows.length > 0) {
+              baselineMap[resId] = Number(pastRows[pastRows.length - 1].avg_price_sfl);
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(`[HistoryService] Supabase indisponível para movers (${safeTimeframe}):`, err?.message || err);
+    }
+
+    // Fallback local caso Supabase não tenha retornado baselines
+    if (Object.keys(baselineMap).length === 0) {
+      try {
+        const rawHourly = localStorage.getItem(HOURLY_HISTORY_KEY) || localStorage.getItem(DAILY_HISTORY_KEY);
+        if (rawHourly) {
+          const historyList = JSON.parse(rawHourly);
+          if (Array.isArray(historyList) && historyList.length > 0) {
+            const sorted = [...historyList].sort((a, b) =>
+              (new Date(a.timestamp || a.day).getTime()) - (new Date(b.timestamp || b.day).getTime())
+            );
+
+            let bestSnapshot = sorted[0];
+            let minDiff = Math.abs(new Date(bestSnapshot.timestamp || bestSnapshot.day).getTime() - targetTimeMs);
+
+            for (const snap of sorted) {
+              const snapTime = new Date(snap.timestamp || snap.day).getTime();
+              const diff = Math.abs(snapTime - targetTimeMs);
+              if (diff < minDiff) {
+                minDiff = diff;
+                bestSnapshot = snap;
+              }
+            }
+
+            const bestAge = nowMs - new Date(bestSnapshot.timestamp || bestSnapshot.day).getTime();
+            if (bestSnapshot && bestSnapshot.resources && bestAge >= minAgeMs) {
+              Object.entries(bestSnapshot.resources).forEach(([resId, price]) => {
+                if (Number(price) > 0) {
+                  baselineMap[resId] = Number(price);
+                }
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[HistoryService] Erro ao carregar baseline local para movers:', e);
+      }
+    }
+
+    baselineCache[safeTimeframe] = {
+      timestamp: nowMs,
+      map: baselineMap
+    };
+  }
+
+  // 2. Calcula as variações percentuais usando a cotação real AO VIVO enviada em currentMarketData
   const variations = [];
 
   Object.entries(currentMarketData).forEach(([resourceId, rawCurrent]) => {
     const currentPrice = Number(rawCurrent);
-    const basePrice = Number(baselineMap[resourceId]);
+    if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) return;
 
-    if (currentPrice > 0 && basePrice > 0) {
+    // Se houver baseline histórica válida de períodos anteriores, calcula a variação real
+    const basePrice = Number(baselineMap[resourceId] || currentPrice);
+
+    if (basePrice > 0) {
       const diff = currentPrice - basePrice;
       const changePct = (diff / basePrice) * 100;
 
@@ -541,25 +681,320 @@ export async function fetchMarketMovers(currentMarketData = {}, timeframe = '24h
   // Ordena por maior variação positiva
   variations.sort((a, b) => b.changePct - a.changePct);
 
-  // Top 3 que mais valorizaram
-  const topGainers = variations.slice(0, 3);
+  // Top 3 que mais valorizaram (apenas os que tiveram variação real)
+  const topGainers = variations.filter(v => v.changePct > 0).slice(0, 3);
 
-  // Top 3 que mais desvalorizaram (menor variação / maiores quedas)
-  const topLosers = [...variations].reverse().slice(0, 3);
+  // Top 3 que mais desvalorizaram (apenas os que tiveram variação negativa real)
+  const topLosers = [...variations].filter(v => v.changePct < 0).reverse().slice(0, 3);
 
-  const result = {
+  return {
     timeframe: safeTimeframe,
-    topGainers,
-    topLosers,
+    topGainers: topGainers.length > 0 ? topGainers : variations.slice(0, 3),
+    topLosers: topLosers.length > 0 ? topLosers : [...variations].reverse().slice(0, 3),
     hasData: variations.length > 0
   };
+}
 
-  // Salva no cache em memória
-  moversCache[safeTimeframe] = {
-    timestamp: Date.now(),
-    data: result
+/**
+ * ====================================================================
+ * HISTÓRICO E MOVERS DE NFTS (POWER UPS)
+ * ====================================================================
+ */
+
+/**
+ * Grava snapshots locais de NFTs e transmite para a tabela nft_price_history no Supabase
+ * com throttle de 4 horas para não sobrecarregar e preservar a quota gratuita.
+ */
+export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
+  if (!Array.isArray(nftList) || nftList.length === 0) return;
+
+  try {
+    const now = new Date();
+    const currentTokenUsd = Number(tokenPriceUsd || 0.05);
+
+    // 1. Grava no cache local (último snapshot)
+    const localSnapshot = {
+      timestamp: now.toISOString(),
+      tokenPriceUsd: currentTokenUsd,
+      items: nftList.map(n => ({
+        id: n.id,
+        name: n.name,
+        collection: n.collection || 'collectibles',
+        floor: Number(n.floor || 0),
+        lastSalePrice: Number(n.lastSalePrice || 0),
+        supply: n.supply || 0,
+        boost_text: n.boost_text || ''
+      }))
+    };
+    setLocalCache('sfl_last_nft_snapshot', localSnapshot);
+
+    // 2. Transmissão para o Supabase com throttle de 4 horas
+    const lastPush = Number(localStorage.getItem(LAST_SUPABASE_NFT_PUSH_KEY) || 0);
+    const timeSinceLastPush = Date.now() - lastPush;
+
+    if (timeSinceLastPush >= SUPABASE_NFT_PUSH_THROTTLE_MS) {
+      localStorage.setItem(LAST_SUPABASE_NFT_PUSH_KEY, String(Date.now()));
+
+      const rows = nftList.map(n => ({
+        nft_id: n.id,
+        name: n.name,
+        collection: n.collection || 'collectibles',
+        floor_sfl: Number(n.floor || 0),
+        floor_usd: Number(n.floor || 0) * currentTokenUsd,
+        last_sale_sfl: n.lastSalePrice !== undefined && n.lastSalePrice !== null ? Number(n.lastSalePrice) : null,
+        supply: n.supply || null,
+        boost_text: n.boost_text || null,
+        timestamp: now.toISOString()
+      }));
+
+      if (rows.length > 0) {
+        supabase
+          .from('nft_price_history')
+          .insert(rows)
+          .then(({ error }) => {
+            if (error) {
+              console.warn('[HistoryService] Erro ao gravar nft_price_history no Supabase:', error.message || error);
+            } else {
+              console.log(`[HistoryService] ${rows.length} snapshots de NFTs gravados com sucesso no Supabase!`);
+            }
+          })
+          .catch(err => console.warn('[HistoryService] Exceção ao gravar nft_price_history:', err?.message || err));
+      }
+    }
+  } catch (e) {
+    console.warn('[HistoryService] Falha ao registrar snapshot de NFTs:', e);
+  }
+}
+
+/**
+ * Busca histórico de Floor Price de um NFT específico no Supabase (com fallback local)
+ */
+export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl = 0) {
+  if (nftId === undefined || nftId === null) return [];
+
+  let days = 30;
+  const tfStr = String(timeframe).toUpperCase();
+  if (tfStr === '24H' || tfStr === '1' || tfStr === '24') days = 1;
+  else if (tfStr === '7D' || tfStr === '7') days = 7;
+  else if (tfStr === '30D' || tfStr === '30') days = 30;
+  else if (tfStr === '90D' || tfStr === '90') days = 90;
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days - 1);
+  const dateStr = startDate.toISOString().split('T')[0];
+
+  let rawPoints = [];
+
+  // Se timeframe for 24h ou 7D, prioriza tabela bruta nft_price_history
+  if (days <= 7) {
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from('nft_price_history')
+          .select('*')
+          .eq('nft_id', Number(nftId))
+          .gte('timestamp', startDate.toISOString())
+          .order('timestamp', { ascending: true })
+      );
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        rawPoints = data.map(d => ({
+          timestamp: d.timestamp,
+          floor_sfl: Number(d.floor_sfl),
+          price_sfl: Number(d.floor_sfl),
+          floor_usd: Number(d.floor_usd),
+          price_usd: Number(d.floor_usd),
+          last_sale_sfl: d.last_sale_sfl ? Number(d.last_sale_sfl) : null
+        }));
+      }
+    } catch (err) {
+      console.warn(`[HistoryService] Erro ao consultar nft_price_history para NFT #${nftId}:`, err?.message || err);
+    }
+  }
+
+  // Se não encontrou ou timeframe for 30D/90D, busca na View agregada v_nft_daily_metrics
+  if (rawPoints.length === 0) {
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from('v_nft_daily_metrics')
+          .select('*')
+          .eq('nft_id', Number(nftId))
+          .gte('day', dateStr)
+          .order('day', { ascending: true })
+      );
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        rawPoints = data.map(d => ({
+          timestamp: d.day,
+          floor_sfl: Number(d.avg_floor_sfl),
+          price_sfl: Number(d.avg_floor_sfl),
+          floor_usd: Number(d.avg_floor_usd),
+          price_usd: Number(d.avg_floor_usd),
+          min_price_sfl: Number(d.min_floor_sfl),
+          max_price_sfl: Number(d.max_floor_sfl),
+          sma_7d_sfl: d.sma_7d_sfl ? Number(d.sma_7d_sfl) : null,
+          sma_30d_sfl: d.sma_30d_sfl ? Number(d.sma_30d_sfl) : null
+        }));
+      }
+    } catch (err) {
+      console.warn(`[HistoryService] Erro ao consultar v_nft_daily_metrics para NFT #${nftId}:`, err?.message || err);
+    }
+  }
+
+  // Fallback caso não haja dados históricos: gera ponto inicial
+  if (rawPoints.length === 0) {
+    const now = new Date();
+    const price = Number(currentFloorSfl || 0);
+    rawPoints = [{
+      timestamp: now.toISOString(),
+      day: now.toISOString().split('T')[0],
+      floor_sfl: price,
+      price_sfl: price,
+      floor_usd: price * 0.05,
+      price_usd: price * 0.05,
+      isInitialData: true
+    }];
+  }
+
+  const aggregated = aggregateHistoryByInterval(rawPoints, timeframe, currentFloorSfl);
+  const withSma7 = calculateMovingAverage(aggregated, 7, 'price_sfl');
+  return calculateMovingAverage(withSma7, 30, 'price_sfl');
+}
+
+/**
+ * Cache em memória para os baselines de variação de NFTs por período
+ */
+const nftBaselineCache = {
+  '24h': null,
+  '7D': null,
+  '30D': null,
+  '90D': null
+};
+
+/**
+ * Calcula os Destaques de Mercado (Maiores Altas e Maiores Baixas) para NFTs baseado no Floor Price
+ */
+export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h') {
+  const safeTimeframe = ['24h', '7D', '30D', '90D'].includes(timeframe) ? timeframe : '24h';
+  const nowMs = Date.now();
+
+  const timeframeConfig = {
+    '24h': { targetDays: 1, minAgeHours: 2, cacheTtlMs: 15 * 60 * 1000 },
+    '7D':  { targetDays: 7, minAgeHours: 24, cacheTtlMs: 30 * 60 * 1000 },
+    '30D': { targetDays: 30, minAgeHours: 72, cacheTtlMs: 60 * 60 * 1000 },
+    '90D': { targetDays: 90, minAgeHours: 168, cacheTtlMs: 60 * 60 * 1000 }
   };
 
-  return result;
+  const { targetDays, minAgeHours, cacheTtlMs } = timeframeConfig[safeTimeframe];
+  const targetTimeMs = nowMs - (targetDays * 24 * 60 * 60 * 1000);
+
+  let baselineMap = {};
+  const cached = nftBaselineCache[safeTimeframe];
+
+  if (cached && (nowMs - cached.timestamp < cacheTtlMs) && cached.map && Object.keys(cached.map).length > 0) {
+    baselineMap = cached.map;
+  } else {
+    try {
+      if (safeTimeframe === '24h') {
+        const targetDate = new Date(targetTimeMs);
+        const windowStart = new Date(targetDate.getTime() - (8 * 60 * 60 * 1000)).toISOString();
+        const windowEnd = new Date(targetDate.getTime() + (8 * 60 * 60 * 1000)).toISOString();
+
+        const { data, error } = await withTimeout(
+          supabase
+            .from('nft_price_history')
+            .select('nft_id, name, floor_sfl, timestamp')
+            .gte('timestamp', windowStart)
+            .lte('timestamp', windowEnd)
+            .order('timestamp', { ascending: false })
+            .limit(1000)
+        );
+
+        if (!error && Array.isArray(data) && data.length > 0) {
+          data.forEach(item => {
+            const key = item.name || String(item.nft_id);
+            if (!baselineMap[key] && Number(item.floor_sfl) > 0) {
+              baselineMap[key] = Number(item.floor_sfl);
+            }
+          });
+        }
+      } else {
+        const windowStartStr = new Date(targetTimeMs - (3 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+        const windowEndStr = new Date(targetTimeMs + (3 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
+        const { data, error } = await withTimeout(
+          supabase
+            .from('v_nft_daily_metrics')
+            .select('nft_id, name, avg_floor_sfl, day')
+            .gte('day', windowStartStr)
+            .lte('day', windowEndStr)
+            .order('day', { ascending: false })
+            .limit(1000)
+        );
+
+        if (!error && Array.isArray(data) && data.length > 0) {
+          data.forEach(item => {
+            const key = item.name || String(item.nft_id);
+            if (!baselineMap[key] && Number(item.avg_floor_sfl) > 0) {
+              baselineMap[key] = Number(item.avg_floor_sfl);
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(`[HistoryService] Supabase indisponível para movers de NFT (${safeTimeframe}):`, err?.message || err);
+    }
+
+    nftBaselineCache[safeTimeframe] = {
+      timestamp: nowMs,
+      map: baselineMap
+    };
+  }
+
+  // Calcula variações percentuais baseadas no Floor Price
+  const variations = [];
+  const safeList = Array.isArray(nftMarketList) ? nftMarketList : [];
+
+  safeList.forEach(nft => {
+    const currentFloor = Number(nft.floor);
+    if (!currentFloor || isNaN(currentFloor) || currentFloor <= 0) return;
+
+    const key = nft.name || String(nft.id);
+    const baseFloor = Number(baselineMap[key] || currentFloor);
+
+    if (baseFloor > 0) {
+      const diff = currentFloor - baseFloor;
+      const changePct = (diff / baseFloor) * 100;
+
+      if (isFinite(changePct) && !isNaN(changePct)) {
+        variations.push({
+          resource: nft.name,
+          nft_id: nft.id,
+          name: nft.name,
+          collection: nft.collection,
+          boost_text: nft.boost_text,
+          currentPrice: currentFloor,
+          basePrice: baseFloor,
+          diff,
+          changePct: Number(changePct.toFixed(2)),
+          isNft: true
+        });
+      }
+    }
+  });
+
+  variations.sort((a, b) => b.changePct - a.changePct);
+
+  const topGainers = variations.filter(v => v.changePct > 0).slice(0, 3);
+  const topLosers = [...variations].filter(v => v.changePct < 0).reverse().slice(0, 3);
+
+  return {
+    timeframe: safeTimeframe,
+    topGainers: topGainers.length > 0 ? topGainers : variations.slice(0, 3),
+    topLosers: topLosers.length > 0 ? topLosers : [...variations].reverse().slice(0, 3),
+    hasData: variations.length > 0
+  };
 }
+
 

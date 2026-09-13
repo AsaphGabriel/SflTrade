@@ -250,4 +250,61 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
   // 5. Salvar resultado no Cache local
   setCachedData(cacheKey, result);
   return { ...result, isFromCache: false };
-}
+}
+
+/**
+ * Busca cotações de NFTs (Floor e Last Sale) filtrando apenas itens com buff (have_boost === 1)
+ */
+export async function fetchNftMarketData(forceRefresh = false) {
+  const cacheKey = 'nft_market_boosts';
+  if (!forceRefresh) {
+    const cached = getCachedData(cacheKey);
+    if (cached && !cached.isExpired) {
+      return cached.data;
+    }
+  }
+
+  try {
+    const data = await fetchWithFallback('https://sfl.world/api/v1/nfts');
+    if (!data) return null;
+
+    const collectibles = Array.isArray(data.collectibles) ? data.collectibles : [];
+    const wearables = Array.isArray(data.wearables) ? data.wearables : [];
+
+    const boostCollectibles = collectibles
+      .filter(item => item && item.have_boost === 1)
+      .map(item => ({ ...item, collection: 'collectibles' }));
+
+    const boostWearables = wearables
+      .filter(item => item && item.have_boost === 1)
+      .map(item => ({ ...item, collection: 'wearables' }));
+
+    const allBoosts = [...boostCollectibles, ...boostWearables];
+
+    const byName = {};
+    const byId = {};
+    allBoosts.forEach(nft => {
+      if (nft.name) {
+        byName[nft.name] = nft;
+      }
+      if (nft.id !== undefined) {
+        byId[nft.id] = nft;
+      }
+    });
+
+    const result = {
+      list: allBoosts,
+      byName,
+      byId,
+      updatedAt: data.updatedAt || Date.now()
+    };
+
+    setCachedData(cacheKey, result);
+    return result;
+  } catch (err) {
+    console.warn('[API] Erro ao buscar cotações de NFTs:', err);
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached.data;
+    return null;
+  }
+}

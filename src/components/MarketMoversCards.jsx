@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchMarketMovers } from '../services/historyService';
+import { fetchMarketMovers, fetchNftMarketMovers } from '../services/historyService';
 import { t } from '../i18n';
 
 const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
@@ -25,7 +25,8 @@ const TIMEFRAMES = [
   { id: '90D', label: '90D' }
 ];
 
-const MarketMoversCards = ({ marketData = {}, currentLang = 'en', onSelectResource }) => {
+const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, currentLang = 'en', onSelectResource }) => {
+  const [activeCategory, setActiveCategory] = useState('resources'); // 'resources' | 'power_ups'
   const [timeframe, setTimeframe] = useState('24h');
   const [moversData, setMoversData] = useState({ topGainers: [], topLosers: [], hasData: false });
   const [loading, setLoading] = useState(true);
@@ -36,7 +37,13 @@ const MarketMoversCards = ({ marketData = {}, currentLang = 'en', onSelectResour
 
     async function loadMovers() {
       try {
-        const data = await fetchMarketMovers(marketData, timeframe);
+        let data = null;
+        if (activeCategory === 'power_ups') {
+          data = await fetchNftMarketMovers(nftMarketData?.list || [], timeframe);
+        } else {
+          data = await fetchMarketMovers(marketData, timeframe);
+        }
+
         if (isMounted) {
           setMoversData(data || { topGainers: [], topLosers: [], hasData: false });
           setLoading(false);
@@ -52,7 +59,7 @@ const MarketMoversCards = ({ marketData = {}, currentLang = 'en', onSelectResour
     return () => {
       isMounted = false;
     };
-  }, [marketData, timeframe]);
+  }, [marketData, nftMarketData, timeframe, activeCategory]);
 
   const { topGainers = [], topLosers = [], hasData = false } = moversData;
 
@@ -71,18 +78,44 @@ const MarketMoversCards = ({ marketData = {}, currentLang = 'en', onSelectResour
 
   return (
     <section className="mb-6">
-      {/* Cabeçalho do Bloco de Destaques com Filtro de Tempo */}
+      {/* Cabeçalho com Abas [Recursos | Power Ups] e Filtro de Período */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">📈</span>
-            <h2 className="text-base md:text-lg font-bold text-slate-100">
-              {t('moversTitle', currentLang)}
-            </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📈</span>
+              <h2 className="text-base md:text-lg font-bold text-slate-100">
+                {t('moversTitle', currentLang)}
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400">
+              {t('moversSubtitle', currentLang)}
+            </p>
           </div>
-          <p className="text-xs text-slate-400">
-            {t('moversSubtitle', currentLang)}
-          </p>
+
+          {/* Seletor de Categoria: [Recursos | Power Ups] */}
+          <div className="flex items-center gap-1 bg-slate-800/90 p-1 rounded-xl border border-slate-700/60 shadow-inner self-start sm:self-center">
+            <button
+              onClick={() => setActiveCategory('resources')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                activeCategory === 'resources'
+                  ? 'bg-amber-400 text-slate-900 shadow-md scale-105'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+              }`}
+            >
+              {t('tabResources', currentLang)}
+            </button>
+            <button
+              onClick={() => setActiveCategory('power_ups')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                activeCategory === 'power_ups'
+                  ? 'bg-amber-400 text-slate-900 shadow-md scale-105'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+              }`}
+            >
+              {t('tabPowerUps', currentLang)}
+            </button>
+          </div>
         </div>
 
         {/* Seletor de Período (24h, 7D, 30D, 90D) */}
@@ -140,26 +173,33 @@ const MarketMoversCards = ({ marketData = {}, currentLang = 'en', onSelectResour
                   const isPositive = item.changePct >= 0;
                   return (
                     <div
-                      key={item.resource}
-                      onClick={() => onSelectResource && onSelectResource(item.resource)}
+                      key={item.resource || item.name}
+                      onClick={() => onSelectResource && onSelectResource(item.resource || item.name, item)}
                       className="bg-slate-900/60 hover:bg-slate-900/90 border border-slate-800/80 hover:border-emerald-500/50 rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition group shadow-sm"
                       title={t('clickToViewChart', currentLang)}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         {renderRankBadge(idx)}
                         <img
-                          src={getItemIcon(item.resource)}
-                          alt={item.resource}
+                          src={getItemIcon(item.resource || item.name)}
+                          alt={item.resource || item.name}
                           className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
                           onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
                         />
                         <div className="min-w-0">
-                          <div className="text-xs md:text-sm font-bold text-slate-100 group-hover:text-emerald-300 transition truncate">
-                            {item.resource}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs md:text-sm font-bold text-slate-100 group-hover:text-emerald-300 transition truncate">
+                              {item.resource || item.name}
+                            </span>
+                            {item.boost_text && (
+                              <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded shrink-0">
+                                {item.boost_text}
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
                             <span className="font-semibold text-slate-200">
-                              {formatarPreco(item.currentPrice)} SFL
+                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} SFL
                             </span>
                             <span className="text-slate-500 text-[10px]">
                               ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
@@ -219,26 +259,33 @@ const MarketMoversCards = ({ marketData = {}, currentLang = 'en', onSelectResour
                   const isNegative = item.changePct < 0;
                   return (
                     <div
-                      key={item.resource}
-                      onClick={() => onSelectResource && onSelectResource(item.resource)}
+                      key={item.resource || item.name}
+                      onClick={() => onSelectResource && onSelectResource(item.resource || item.name, item)}
                       className="bg-slate-900/60 hover:bg-slate-900/90 border border-slate-800/80 hover:border-rose-500/50 rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition group shadow-sm"
                       title={t('clickToViewChart', currentLang)}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         {renderRankBadge(idx)}
                         <img
-                          src={getItemIcon(item.resource)}
-                          alt={item.resource}
+                          src={getItemIcon(item.resource || item.name)}
+                          alt={item.resource || item.name}
                           className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
                           onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
                         />
                         <div className="min-w-0">
-                          <div className="text-xs md:text-sm font-bold text-slate-100 group-hover:text-rose-300 transition truncate">
-                            {item.resource}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs md:text-sm font-bold text-slate-100 group-hover:text-rose-300 transition truncate">
+                              {item.resource || item.name}
+                            </span>
+                            {item.boost_text && (
+                              <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded shrink-0">
+                                {item.boost_text}
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
                             <span className="font-semibold text-slate-200">
-                              {formatarPreco(item.currentPrice)} SFL
+                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} SFL
                             </span>
                             <span className="text-slate-500 text-[10px]">
                               ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
