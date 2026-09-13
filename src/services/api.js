@@ -163,6 +163,37 @@ export function normalizeFarmResponse(rawData, source) {
     const f = rawData.farm || rawData;
     const computedLevel = f.bumpkin?.experience ? getBumpkinLevel(f.bumpkin.experience) : (f.bumpkin?.level || f.level || 1);
 
+    // Unifica inventário: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
+    const fullInventory = { ...(f.inventory || {}) };
+
+    if (f.collectibles && typeof f.collectibles === 'object') {
+      Object.entries(f.collectibles).forEach(([collName, items]) => {
+        const count = Array.isArray(items) ? items.length : Number(items || 0);
+        if (count > 0) {
+          fullInventory[collName] = (Number(fullInventory[collName]) || 0) + count;
+        }
+      });
+    }
+
+    if (f.wardrobe && typeof f.wardrobe === 'object') {
+      Object.entries(f.wardrobe).forEach(([wName, qty]) => {
+        const count = Number(qty) || 0;
+        if (count > 0) {
+          fullInventory[wName] = (Number(fullInventory[wName]) || 0) + count;
+        }
+      });
+    }
+
+    if (f.bumpkin?.equipped && typeof f.bumpkin.equipped === 'object') {
+      Object.values(f.bumpkin.equipped).forEach(eqItem => {
+        if (eqItem && typeof eqItem === 'string') {
+          if (!fullInventory[eqItem] || Number(fullInventory[eqItem]) <= 0) {
+            fullInventory[eqItem] = 1;
+          }
+        }
+      });
+    }
+
     return {
       source: 'official',
       land: {
@@ -178,7 +209,9 @@ export function normalizeFarmResponse(rawData, source) {
         taxResource: 0.15,
         verified: true,
         vip: Boolean(f.inventory?.['Gold Pass'] || f.vip),
-        inventory: f.inventory || {}
+        inventory: fullInventory,
+        collectibles: f.collectibles || {},
+        wardrobe: f.wardrobe || {}
       },
       bumpkin: f.bumpkin ? {
         level: computedLevel,

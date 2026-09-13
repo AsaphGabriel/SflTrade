@@ -107,6 +107,7 @@ const FarmDashboard = ({
   mode = 'info', // 'info' (Painel & Inventário) ou 'perfil' (Configurações & Credenciais)
   farmData,
   marketData = {},
+  nftMarketData = { byName: {}, list: [] },
   flowerPrice = 0.087,
   selectedCurrency = 'usd',
   currentLang = 'pt',
@@ -170,21 +171,41 @@ const FarmDashboard = ({
     const items = [];
     let totalStockSfl = 0;
     let pricedItemsCount = 0;
+    const nftByName = nftMarketData?.byName || {};
 
     Object.entries(rawInventory).forEach(([itemName, rawQty]) => {
       const qty = Number(rawQty);
       if (qty <= 0) return;
 
-      // Busca preço unitário no mercado (case-insensitive)
-      let unitPriceSfl = marketData[itemName] || 0;
-      if (!unitPriceSfl) {
-        const matchedKey = Object.keys(marketData).find(k => k.toLowerCase() === itemName.toLowerCase());
-        if (matchedKey) unitPriceSfl = marketData[matchedKey];
+      // 1. Verifica se é um NFT rastreado (Floor Price)
+      const nftMeta = nftByName[itemName] || Object.values(nftByName).find(
+        nft => nft.name && nft.name.toLowerCase() === itemName.toLowerCase()
+      );
+
+      let unitPriceSfl = 0;
+      let isNft = false;
+      let boostText = '';
+      let nftImage = null;
+
+      if (nftMeta) {
+        unitPriceSfl = Number(nftMeta.floor || nftMeta.currentPrice || 0);
+        isNft = true;
+        boostText = nftMeta.boost_text || '';
+        nftImage = nftMeta.image || (nftMeta.collection === 'wearables'
+          ? `https://sunflower-land.com/play/wearables/images/${nftMeta.id}.png`
+          : `https://sunflower-land.com/play/erc1155/images/${nftMeta.id}.webp`);
+      } else {
+        // 2. Busca preço unitário no mercado de recursos P2P (case-insensitive)
+        unitPriceSfl = marketData[itemName] || 0;
+        if (!unitPriceSfl) {
+          const matchedKey = Object.keys(marketData).find(k => k.toLowerCase() === itemName.toLowerCase());
+          if (matchedKey) unitPriceSfl = marketData[matchedKey];
+        }
       }
 
       const totalValSfl = qty * unitPriceSfl;
       const totalValFiat = totalValSfl * flowerPrice;
-      const category = getItemCategory(itemName);
+      const category = isNft ? 'power_ups' : getItemCategory(itemName);
 
       if (unitPriceSfl > 0) pricedItemsCount++;
       totalStockSfl += totalValSfl;
@@ -196,6 +217,9 @@ const FarmDashboard = ({
         totalValSfl,
         totalValFiat,
         category,
+        isNft,
+        boostText,
+        nftImage,
         emoji: getItemEmoji(itemName)
       });
     });
@@ -219,7 +243,7 @@ const FarmDashboard = ({
       pricedItemsCount,
       priceCoverage
     };
-  }, [farmData, marketData, flowerPrice]);
+  }, [farmData, marketData, nftMarketData, flowerPrice]);
 
   // Filtragem e Ordenação do Inventário
   const filteredInventory = useMemo(() => {
@@ -576,6 +600,7 @@ const FarmDashboard = ({
               { id: 'resources', label: t('catResources', currentLang), icon: '⛏️' },
               { id: 'animals', label: t('catAnimals', currentLang), icon: '🐔' },
               { id: 'emblems', label: t('catEmblems', currentLang), icon: '🏺' },
+              { id: 'power_ups', label: t('cat_power_ups', currentLang) || 'Power Ups', icon: '⚡' },
               { id: 'other', label: t('catOther', currentLang), icon: '🌱' }
             ].map(cat => (
               <button
@@ -602,9 +627,22 @@ const FarmDashboard = ({
                   className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <span className="text-xl group-hover:scale-110 transition-transform">{item.emoji}</span>
-                    <span className="text-[10px] bg-slate-800 text-slate-400 font-mono px-1.5 py-0.5 rounded border border-slate-700/50">
-                      {item.category}
+                    {item.nftImage ? (
+                      <img
+                        src={item.nftImage}
+                        alt={item.name}
+                        className="w-7 h-7 object-contain drop-shadow image-rendering-pixelated group-hover:scale-110 transition-transform"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span className="text-xl group-hover:scale-110 transition-transform">{item.emoji}</span>
+                    )}
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                      item.isNft
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-bold'
+                        : 'bg-slate-800 text-slate-400 border-slate-700/50'
+                    }`}>
+                      {item.isNft ? 'NFT' : item.category}
                     </span>
                   </div>
 
@@ -619,13 +657,20 @@ const FarmDashboard = ({
 
                   <div className="mt-2 border-t border-slate-800/80 pt-1.5 text-[10px] text-slate-400 font-mono space-y-0.5">
                     <div className="flex justify-between">
-                      <span>P2P:</span>
-                      <span className="text-slate-300">{item.unitPriceSfl > 0 ? `${formatNum(item.unitPriceSfl, 4)} SFL` : 's/ cotação'}</span>
+                      <span>{item.isNft ? 'Floor:' : 'P2P:'}</span>
+                      <span className={item.isNft ? 'text-amber-300 font-bold' : 'text-slate-300'}>
+                        {item.unitPriceSfl > 0 ? `${formatNum(item.unitPriceSfl, item.isNft ? 2 : 4)} SFL` : 's/ cotação'}
+                      </span>
                     </div>
                     {item.totalValSfl > 0 && (
                       <div className="flex justify-between text-emerald-400 font-bold">
                         <span>Total:</span>
                         <span>{formatNum(item.totalValSfl, 2)} SFL</span>
+                      </div>
+                    )}
+                    {item.boostText && (
+                      <div className="text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1 py-0.5 truncate mt-1 text-center" title={item.boostText}>
+                        {item.boostText}
                       </div>
                     )}
                   </div>

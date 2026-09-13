@@ -188,6 +188,7 @@ const App = () => {
               mode="info"
               farmData={farmData}
               marketData={marketData}
+              nftMarketData={nftMarketData}
               flowerPrice={flowerPrice}
               selectedCurrency={selectedCurrency}
               currentLang={currentLang}
@@ -211,6 +212,7 @@ const App = () => {
               mode="perfil"
               farmData={farmData}
               marketData={marketData}
+              nftMarketData={nftMarketData}
               flowerPrice={flowerPrice}
               selectedCurrency={selectedCurrency}
               currentLang={currentLang}
