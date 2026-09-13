@@ -124,6 +124,13 @@ const ResourceGrid = ({
 
   const handleSearchChange = (val) => {
     setInternalSearchTerm(val);
+    // Ao iniciar uma busca, redefine a categoria para 'all' para manter consistência visual
+    if (val.trim() && currentCategoryFilter !== 'all') {
+      setInternalCategoryFilter('all');
+      if (onCategoryFilterChange) {
+        onCategoryFilterChange('all');
+      }
+    }
     if (onSearchTermChange) {
       onSearchTermChange(val);
     }

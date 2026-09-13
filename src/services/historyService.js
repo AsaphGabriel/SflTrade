@@ -946,6 +946,29 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
       console.warn(`[HistoryService] Supabase indisponível para movers de NFT (${safeTimeframe}):`, err?.message || err);
     }
 
+    // Fallback local: usa o último snapshot de NFTs gravado localmente quando Supabase não tem dados
+    if (Object.keys(baselineMap).length === 0) {
+      try {
+        const rawSnapshot = localStorage.getItem('sfl_last_nft_snapshot');
+        if (rawSnapshot) {
+          const snapshot = JSON.parse(rawSnapshot);
+          const snapshotAge = nowMs - new Date(snapshot.timestamp).getTime();
+          const minAgeMs = minAgeHours * 60 * 60 * 1000;
+          // Só usa o snapshot se ele tiver a idade mínima necessária para o timeframe
+          if (snapshotAge >= minAgeMs && Array.isArray(snapshot.items)) {
+            snapshot.items.forEach(item => {
+              const key = item.name || String(item.id);
+              if (Number(item.floor) > 0) {
+                baselineMap[key] = Number(item.floor);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[HistoryService] Erro ao carregar snapshot local de NFTs para movers:', e);
+      }
+    }
+
     nftBaselineCache[safeTimeframe] = {
       timestamp: nowMs,
       map: baselineMap
@@ -961,8 +984,9 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     if (!currentFloor || isNaN(currentFloor) || currentFloor <= 0) return;
 
     const key = nft.name || String(nft.id);
-    const baseFloor = Number(baselineMap[key] || currentFloor);
+    const baseFloor = Number(baselineMap[key]);
 
+    // Só calcula se houver baseline real — nunca usa currentFloor como baseline (mascararia variação 0%)
     if (baseFloor > 0) {
       const diff = currentFloor - baseFloor;
       const changePct = (diff / baseFloor) * 100;
@@ -972,6 +996,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
           resource: nft.name,
           nft_id: nft.id,
           name: nft.name,
+          displayName: nft.displayName || nft.name,
           collection: nft.collection,
           image: nft.image || (nft.collection === 'wearables'
             ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
@@ -987,17 +1012,18 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     }
   });
 
+  // Ordenação correta: desc por changePct
   variations.sort((a, b) => b.changePct - a.changePct);
 
   const topGainers = variations.filter(v => v.changePct > 0).slice(0, 3);
-  const topLosers = [...variations].filter(v => v.changePct < 0).reverse().slice(0, 3);
+  // topLosers: os de menor changePct (mais negativos) — já estão no fim do array ordenado desc
+  const topLosers = variations.filter(v => v.changePct < 0).slice(-3).reverse();
 
   return {
     timeframe: safeTimeframe,
-    topGainers: topGainers.length > 0 ? topGainers : variations.slice(0, 3),
-    topLosers: topLosers.length > 0 ? topLosers : [...variations].reverse().slice(0, 3),
+    // Se não houver variações reais, retorna lista vazia para indicar ausência de dados históricos
+    topGainers: topGainers.length > 0 ? topGainers : [],
+    topLosers: topLosers.length > 0 ? topLosers : [],
     hasData: variations.length > 0
   };
 }
-
-
