@@ -45,6 +45,12 @@ const CATEGORIAS_MERCADO = [
       "Sunflorian Emblem", "Ruffroot", "Heart Leaf", "Moonfur",
       "Ribbon", "Dewberry", "Frost Pebble", "Wild Grass", "Saltwort"
     ]
+  },
+  {
+    id: 'power_ups',
+    titleKey: 'cat_power_ups',
+    isNftCategory: true,
+    itens: []
   }
 ];
 
@@ -55,13 +61,14 @@ function getItemIcon(itemName) {
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function getCategoryIcon(catId) {
+function getCategoryIcon(catId, sampleNft = '') {
   const assetMap = {
     crops: 'Sunflower',
     fruits: 'Apple',
     animals: 'Egg',
     minerals: 'Wood',
-    misc: 'Sunflorian Emblem'
+    misc: 'Sunflorian Emblem',
+    power_ups: sampleNft || 'Stone Beetle'
   };
   const itemName = assetMap[catId];
   return itemName ? getItemIcon(itemName) : '';
@@ -78,14 +85,14 @@ function formatarPreco(valor) {
 
 function obterCategoriaItem(nomeItem) {
   for (const cat of CATEGORIAS_MERCADO) {
-    if (cat.itens.some(i => i.toLowerCase() === nomeItem.toLowerCase())) {
+    if (cat.itens && cat.itens.some(i => i.toLowerCase() === nomeItem.toLowerCase())) {
       return cat.id;
     }
   }
   return 'misc';
 }
 
-const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) => {
+const ResourceGrid = ({ data = {}, nftData = { list: [] }, currentLang = 'en', onOpenBuy, onOpenSell }) => {
   const [currentCategoryFilter, setCurrentCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChartResource, setSelectedChartResource] = useState(null);
@@ -100,6 +107,9 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
     grupos[catId].push(item);
   });
 
+  const nftList = Array.isArray(nftData?.list) ? nftData.list : [];
+  const firstNftName = nftList.length > 0 ? nftList[0].name : 'Stone Beetle';
+
   // Categorias que devem ser renderizadas na tela
   const categoriesToRender = currentCategoryFilter === 'all'
     ? CATEGORIAS_MERCADO
@@ -108,7 +118,7 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
   // Construção da lista de Abas
   const tabs = [
     { id: 'all', key: 'marketTabAll' },
-    ...CATEGORIAS_MERCADO.map(cat => ({ id: cat.id, key: cat.titleKey }))
+    ...CATEGORIAS_MERCADO.map(cat => ({ id: cat.id, key: cat.titleKey, isNft: cat.isNftCategory }))
   ];
 
   return (
@@ -131,11 +141,13 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
       <div id="category-tabs" className="category-tabs-bar scrollbar-hide" role="tablist">
         {tabs.map(tab => {
           const count = tab.id === 'all'
-            ? Object.keys(data).length
+            ? (Object.keys(data).length + nftList.length)
+            : tab.isNft
+            ? nftList.length
             : (CATEGORIAS_MERCADO.find(c => c.id === tab.id)?.itens.filter(i => data[i] !== undefined).length || 0);
 
           const isActive = currentCategoryFilter === tab.id;
-          const iconUrl = tab.id !== 'all' ? getCategoryIcon(tab.id) : '';
+          const iconUrl = tab.id !== 'all' ? getCategoryIcon(tab.id, firstNftName) : '';
 
           return (
             <button
@@ -163,6 +175,91 @@ const ResourceGrid = ({ data = {}, currentLang = 'en', onOpenBuy, onOpenSell }) 
       {/* Grade Principal de Categorias e Cartões */}
       <div className="market-categories-container">
         {categoriesToRender.map(cat => {
+          // Renderização especial para categoria de Power Ups (NFTs)
+          if (cat.isNftCategory) {
+            let nftsToRender = [...nftList];
+
+            if (searchTerm.trim() !== '') {
+              nftsToRender = nftsToRender.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            }
+
+            if (nftsToRender.length === 0) return null;
+
+            // Ordenação: menor Floor Price -> maior Floor Price
+            nftsToRender.sort((a, b) => (Number(a.floor) || 0) - (Number(b.floor) || 0));
+
+            return (
+              <div key={cat.id} className="category-block">
+                <h3 className="market-category-title">
+                  {getCategoryIcon(cat.id, firstNftName) && (
+                    <img
+                      src={getCategoryIcon(cat.id, firstNftName)}
+                      alt={cat.id}
+                      className="w-5 h-5 object-contain inline-block"
+                      onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                    />
+                  )}
+                  <span>{t(cat.titleKey, currentLang)}</span>
+                </h3>
+
+                <div className="category-grid">
+                  {nftsToRender.map(nft => {
+                    const iconUrl = getItemIcon(nft.name);
+
+                    return (
+                      <div 
+                        key={nft.id || nft.name} 
+                        className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between"
+                        onClick={() => setSelectedChartResource({ name: nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
+                        title={currentLang === 'pt' ? 'Clique para ver gráfico de Floor Price e médias móveis' : 'Click to view Floor Price and moving average chart'}
+                      >
+                        <div>
+                          <div className="market-card-img-wrap">
+                            <img
+                              src={iconUrl}
+                              alt={nft.name}
+                              onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                            />
+                          </div>
+                          <div className="market-card-info">
+                            <div className="market-card-name truncate" title={nft.name}>{nft.name}</div>
+                            <div className="market-card-price text-amber-300 font-bold">{formatarPreco(nft.floor)} SFL</div>
+                            {nft.boost_text && (
+                              <div className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded mt-1 truncate max-w-full text-center" title={nft.boost_text}>
+                                {nft.boost_text}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="market-card-actions mt-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onOpenBuy) onOpenBuy(nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
+                            }}
+                            className="btn-buy-card"
+                          >
+                            {t('cardBuy', currentLang)}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onOpenSell) onOpenSell(nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
+                            }}
+                            className="btn-sell-card"
+                          >
+                            {t('cardSell', currentLang)}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+
           let itens = grupos[cat.id] || [];
 
           // Filtro do campo de busca

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchResourceHistory, fetchTokenHistory } from '../services/historyService';
+import { fetchResourceHistory, fetchTokenHistory, fetchNftHistory } from '../services/historyService';
 import { t } from '../i18n';
 
 const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, currentLang = 'en', onClose }) => {
@@ -8,7 +8,13 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const [loading, setLoading] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
-  const titleName = isToken ? '$FLOWER Token' : resourceId;
+  const isNftObj = typeof resourceId === 'object' && resourceId !== null && (resourceId.isNft || resourceId.nft_id !== undefined || resourceId.floor !== undefined);
+  const targetName = isNftObj ? resourceId.name : (isToken ? '$FLOWER Token' : (typeof resourceId === 'string' ? resourceId : resourceId?.name || ''));
+  const targetNftId = isNftObj ? (resourceId.nft_id ?? resourceId.id) : null;
+  const targetBoost = isNftObj ? resourceId.boost_text : null;
+  const targetFloor = isNftObj ? Number(resourceId.floor ?? resourceId.currentPrice ?? 0) : 0;
+
+  const titleName = targetName;
   const unitSymbol = isToken ? '$' : 'SFL';
 
   useEffect(() => {
@@ -20,8 +26,10 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
         let data = [];
         if (isToken) {
           data = await fetchTokenHistory(timeframe, flowerPriceUsd);
+        } else if (isNftObj && targetNftId !== null) {
+          data = await fetchNftHistory(targetNftId, timeframe, targetFloor);
         } else if (resourceId) {
-          data = await fetchResourceHistory(resourceId, timeframe);
+          data = await fetchResourceHistory(typeof resourceId === 'string' ? resourceId : resourceId.name, timeframe);
         }
 
         if (isMounted) {
@@ -39,7 +47,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
     return () => {
       isMounted = false;
     };
-  }, [resourceId, isToken, flowerPriceUsd, timeframe]);
+  }, [resourceId, isToken, flowerPriceUsd, timeframe, isNftObj, targetNftId, targetFloor]);
 
   // Dados pre-agregados pela amostragem do período selecionado
   const displayData = Array.isArray(history) ? history : [];
@@ -101,7 +109,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
       const points = displayData
         .map((d, i) => {
           if (!d) return null;
-          const rawVal = d[valKey] ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
+          const rawVal = d[valKey] ?? d.floor_sfl ?? d.avg_floor_sfl ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
           const val = Number(rawVal);
           if (isNaN(val) || !isFinite(val)) return null;
           const x = getX(i, displayData.length);
@@ -128,9 +136,16 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
           <div className="flex items-center gap-2">
             <span className="text-xl">📊</span>
             <div>
-              <h3 className="text-base font-bold text-amber-400">
-                {titleName} - {currentLang === 'pt' ? 'Histórico de Preços' : 'Price History'}
-              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-amber-400">
+                  {titleName} - {currentLang === 'pt' ? (isNftObj ? 'Histórico de Floor Price' : 'Histórico de Preços') : (isNftObj ? 'Floor Price History' : 'Price History')}
+                </h3>
+                {targetBoost && (
+                  <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.2 rounded">
+                    {targetBoost}
+                  </span>
+                )}
+              </div>
               <p className="text-[11px] text-slate-400">
                 {currentLang === 'pt' ? 'Série temporal & Linha de Média Automática' : 'Time-series & Automatic Average Line'}
               </p>

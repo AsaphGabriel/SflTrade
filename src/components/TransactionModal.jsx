@@ -24,13 +24,14 @@ const TransactionModal = ({
   onSubmit,
   effectiveTax = 0.15,
   marketData = {},
+  nftMarketData = { list: [], byName: {} },
   portfolioData = [],
   currentLang = 'en',
   initialResource = ''
 }) => {
   const [resourceSearch, setResourceSearch] = useState(initialResource || '');
   const [selectedResource, setSelectedResource] = useState(initialResource || '');
-  const [quantity, setQuantity] = useState('');
+  const [quantity, setQuantity] = useState(type === 'buy' ? '1' : '');
   const [unitPrice, setUnitPrice] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -52,9 +53,17 @@ const TransactionModal = ({
       if (safeMarketData[nomeRecurso] !== undefined) {
         const precoApi = safeMarketData[nomeRecurso];
         setUnitPrice(precoApi);
-        const qVal = parseFloat(currentQty || quantity) || 0;
+        const qVal = parseFloat(currentQty || quantity) || (type === 'buy' ? 1 : 0);
         if (qVal > 0) {
           setTotalPrice((qVal * precoApi).toFixed(4));
+        }
+      } else if (nftMarketData?.byName && nftMarketData.byName[nomeRecurso]) {
+        const nftItem = nftMarketData.byName[nomeRecurso];
+        const precoFloor = Number(nftItem.floor || 0);
+        setUnitPrice(precoFloor);
+        const qVal = parseFloat(currentQty || quantity) || (type === 'buy' ? 1 : 0);
+        if (qVal > 0) {
+          setTotalPrice((qVal * precoFloor).toFixed(4));
         }
       }
 
@@ -63,8 +72,9 @@ const TransactionModal = ({
         if (itemEstoque && itemEstoque.qty > 0) {
           setMaxStock(itemEstoque.qty);
           setQuantity(itemEstoque.qty.toString());
-          if (safeMarketData[nomeRecurso]) {
-            setTotalPrice((itemEstoque.qty * safeMarketData[nomeRecurso]).toFixed(4));
+          const precoRef = safeMarketData[nomeRecurso] || (nftMarketData?.byName?.[nomeRecurso]?.floor) || itemEstoque.precoP2P || 0;
+          if (precoRef) {
+            setTotalPrice((itemEstoque.qty * precoRef).toFixed(4));
           }
         } else {
           setMaxStock(0);
@@ -73,7 +83,7 @@ const TransactionModal = ({
     } catch (err) {
       console.warn('[TransactionModal] Erro ao selecionar recurso:', err);
     }
-  }, [marketData, portfolioData, type]);
+  }, [marketData, nftMarketData, portfolioData, type]);
 
   useEffect(() => {
     if (initialResource && initialProcessedRef.current !== initialResource) {
@@ -144,11 +154,13 @@ const TransactionModal = ({
     if (type === 'sell') {
       listaBase = (portfolioData || []).filter(item => item && item.qty > 0.0001).map(item => item.nome);
     } else {
-      listaBase = Object.keys(marketData || {}).sort();
+      const resourceNames = Object.keys(marketData || {});
+      const nftNames = (nftMarketData?.list || []).map(n => n.name);
+      listaBase = [...new Set([...resourceNames, ...nftNames])].sort();
     }
 
     return listaBase.filter(r => r && r.toLowerCase().includes(termo));
-  }, [resourceSearch, type, portfolioData, marketData]);
+  }, [resourceSearch, type, portfolioData, marketData, nftMarketData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -159,9 +171,18 @@ const TransactionModal = ({
       return;
     }
 
+    const nftItem = nftMarketData?.byName?.[recursoFinal];
+    const itemEstoque = (portfolioData || []).find(p => p && p.nome && p.nome.toLowerCase() === recursoFinal.toLowerCase());
+    const isNft = Boolean(nftItem || itemEstoque?.isNft);
+    const nftId = nftItem?.id || itemEstoque?.nft_id || null;
+    const boostText = nftItem?.boost_text || itemEstoque?.boost_text || '';
+
     onSubmit({
       tipo: type,
       recurso: recursoFinal,
+      isNft,
+      nft_id: nftId,
+      boost_text: boostText,
       qty: parseFloat(quantity) || 0,
       unitPrice: parseFloat(unitPrice) || 0,
       totalPrice: parseFloat(totalPrice) || 0
