@@ -281,10 +281,17 @@ const FarmDashboard = ({
 
   // Filtragem e Ordenação do Inventário
   const filteredInventory = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const isSearching = Boolean(term);
+
     return inventoryAnalysis.items
       .filter(item => {
-        const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
-        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = isSearching || categoryFilter === 'all' || item.category === categoryFilter;
+        const matchesSearch = !isSearching || (
+          (item.name && item.name.toLowerCase().includes(term)) ||
+          (item.displayName && item.displayName.toLowerCase().includes(term)) ||
+          (item.boost_text && item.boost_text.toLowerCase().includes(term))
+        );
         return matchesCategory && matchesSearch;
       })
       .sort((a, b) => {

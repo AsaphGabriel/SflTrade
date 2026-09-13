@@ -131,10 +131,33 @@ const ResourceGrid = ({
   const nftList = Array.isArray(nftData?.list) ? nftData.list : [];
   const firstNftName = nftList.length > 0 ? nftList[0].name : 'Stone Beetle';
 
-  // Categorias que devem ser renderizadas na tela
-  const categoriesToRender = currentCategoryFilter === 'all'
+  const isSearching = searchTerm.trim() !== '';
+
+  // Quando há busca ativa, avalia todas as categorias para permitir filtrar recursos e NFTs juntos (elimina o bloqueio de filtro duplo).
+  // Se não houver busca ativa, respeita estritamente a aba de categoria selecionada.
+  const categoriesToRender = (isSearching || currentCategoryFilter === 'all')
     ? CATEGORIAS_MERCADO
     : CATEGORIAS_MERCADO.filter(cat => cat.id === currentCategoryFilter);
+
+  // Total de correspondências durante a busca (para empty state)
+  const totalMatches = isSearching
+    ? categoriesToRender.reduce((acc, cat) => {
+        const term = searchTerm.trim().toLowerCase();
+        if (cat.isNftCategory) {
+          const count = nftList.filter(item => {
+            const nameMatch = item.name && item.name.toLowerCase().includes(term);
+            const displayMatch = item.displayName && item.displayName.toLowerCase().includes(term);
+            const boostMatch = item.boost_text && item.boost_text.toLowerCase().includes(term);
+            const collectionMatch = item.collection && item.collection.toLowerCase().includes(term);
+            return Boolean(nameMatch || displayMatch || boostMatch || collectionMatch);
+          }).length;
+          return acc + count;
+        } else {
+          const count = (grupos[cat.id] || []).filter(item => item.toLowerCase().includes(term)).length;
+          return acc + count;
+        }
+      }, 0)
+    : 1;
 
   // Construção da lista de Abas
   const tabs = [
@@ -149,13 +172,24 @@ const ResourceGrid = ({
         <h2 className="text-lg font-bold text-slate-200">
           {t('marketTitle', currentLang)}
         </h2>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={t('searchPlaceholder', currentLang)}
-          className="bg-cardbg border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-44 md:w-56"
-        />
+        <div className="relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t('searchPlaceholder', currentLang)}
+            className="bg-cardbg border border-slate-700 text-white rounded-xl pl-3 pr-7 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-48 md:w-64"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold leading-none"
+              title={currentLang === 'pt' ? 'Limpar busca' : 'Clear search'}
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Barra de Abas Amarelas por Categoria */}
@@ -200,8 +234,15 @@ const ResourceGrid = ({
           if (cat.isNftCategory) {
             let nftsToRender = [...nftList];
 
-            if (searchTerm.trim() !== '') {
-              nftsToRender = nftsToRender.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            if (isSearching) {
+              const term = searchTerm.trim().toLowerCase();
+              nftsToRender = nftsToRender.filter(item => {
+                const nameMatch = item.name && item.name.toLowerCase().includes(term);
+                const displayMatch = item.displayName && item.displayName.toLowerCase().includes(term);
+                const boostMatch = item.boost_text && item.boost_text.toLowerCase().includes(term);
+                const collectionMatch = item.collection && item.collection.toLowerCase().includes(term);
+                return Boolean(nameMatch || displayMatch || boostMatch || collectionMatch);
+              });
             }
 
             if (nftsToRender.length === 0) return null;
@@ -359,6 +400,20 @@ const ResourceGrid = ({
             </div>
           );
         })}
+
+        {/* Mensagem amigável de nenhum resultado encontrado na busca */}
+        {isSearching && totalMatches === 0 && (
+          <div className="text-center py-10 text-slate-400 text-xs bg-cardbg rounded-xl border border-slate-700/60 p-6 my-4">
+            <p className="text-slate-300 font-semibold mb-1">
+              {t('noItemFound', currentLang)}
+            </p>
+            <p className="text-slate-500 text-[11px]">
+              {currentLang === 'pt'
+                ? `Nenhum recurso ou NFT corresponde à busca "${searchTerm}".`
+                : `No resource or NFT matches "${searchTerm}".`}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Modal de Gráficos e Séries Temporais */}
