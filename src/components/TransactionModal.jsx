@@ -40,6 +40,14 @@ const TransactionModal = ({
   const dropdownRef = useRef(null);
   const initialProcessedRef = useRef('');
 
+  // Lock scroll do body enquanto o modal está aberto (evita zoom/shift em mobile)
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+
   const handleSelectResource = useCallback((nomeRecurso, currentQty = '') => {
     try {
       if (!nomeRecurso) return;
@@ -200,8 +208,8 @@ const TransactionModal = ({
   const isBuy = type === 'buy';
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 z-50 animate-fadeIn">
-      <div className="bg-modalbg border border-slate-700 rounded-2xl p-4 md:p-5 w-full max-w-md shadow-2xl relative max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center p-3 z-50 animate-fadeIn overflow-y-auto">
+      <div className="bg-modalbg border border-slate-700 rounded-2xl p-4 md:p-5 w-full max-w-md shadow-2xl relative max-h-[90dvh] overflow-y-auto my-auto">
         <h3 className={`text-lg font-bold mb-3 ${isBuy ? 'text-emerald-400' : 'text-rose-400'}`}>
           {isBuy ? t('modalTitleBuy', currentLang) : t('modalTitleSell', currentLang)}
         </h3>

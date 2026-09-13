@@ -192,7 +192,7 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
                               {item.resource || item.name}
                             </span>
                             {item.boost_text && (
-                              <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded shrink-0">
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
                                 {item.boost_text}
                               </span>
                             )}
@@ -278,7 +278,7 @@ const MarketMoversCards = ({ marketData = {}, nftMarketData = { list: [] }, curr
                               {item.resource || item.name}
                             </span>
                             {item.boost_text && (
-                              <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded shrink-0">
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
                                 {item.boost_text}
                               </span>
                             )}
