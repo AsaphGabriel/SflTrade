@@ -157,8 +157,9 @@ const ResourceGrid = ({
     return Boolean(nameMatch || displayMatch || boostMatch || collectionMatch);
   };
 
-  // Quando ha busca ativa, avalia todas as categorias se a aba for "all"
-  const categoriesToRender = (isSearching && currentCategoryFilter === 'all')
+  // Quando há busca ativa, SEMPRE avalia todas as categorias (ignora filtro de aba ativo).
+  // O filtro de aba só restringe a visualização quando não há busca.
+  const categoriesToRender = isSearching
     ? CATEGORIAS_MERCADO
     : (currentCategoryFilter === 'all'
         ? CATEGORIAS_MERCADO

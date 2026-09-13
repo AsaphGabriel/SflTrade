@@ -30,10 +30,14 @@ const App = () => {
 
   const handleMoversCategoryChange = (cat) => {
     setActiveMoversCategory(cat);
-    if (cat === 'power_ups') {
-      setResourceCategoryFilter('power_ups');
-    } else {
-      setResourceCategoryFilter('all');
+    // Ao clicar nos cards de maiores altas/baixas, navega para a categoria correspondente
+    // na ResourceGrid, mas apenas se não houver uma busca ativa (para não interferir com o filtro de busca).
+    if (!marketSearchTerm.trim()) {
+      if (cat === 'power_ups') {
+        setResourceCategoryFilter('power_ups');
+      } else {
+        setResourceCategoryFilter('all');
+      }
     }
   };
 
@@ -167,16 +171,14 @@ const App = () => {
                 onUpdateCustomAvgPrice={updateCustomAvgPrice}
                 onOpenSell={openSell} 
               />
-              {!marketSearchTerm.trim() && (
-                <MarketMoversCards
-                  marketData={marketData}
-                  nftMarketData={nftMarketData}
-                  currentLang={currentLang}
-                  activeCategory={activeMoversCategory}
-                  onCategoryChange={handleMoversCategoryChange}
-                  onSelectResource={(res, meta) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
-                />
-              )}
+              <MarketMoversCards
+                marketData={marketData}
+                nftMarketData={nftMarketData}
+                currentLang={currentLang}
+                activeCategory={activeMoversCategory}
+                onCategoryChange={handleMoversCategoryChange}
+                onSelectResource={(res, meta) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
+              />
               <ResourceGrid 
                 data={marketData} 
                 nftData={nftMarketData}
