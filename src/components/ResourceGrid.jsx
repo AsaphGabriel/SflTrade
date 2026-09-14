@@ -303,7 +303,8 @@ const ResourceGrid = ({
 
                     return (
                       <div 
-                        key={nft.id || nft.name} 
+                        key={`${nft.collection || 'nft'}-${nft.id || nft.name}`} 
+
                         className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between"
                         onClick={() => setSelectedChartResource({ name: nft.displayName || nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
                         title={currentLang === 'pt' ? 'Clique para ver gráfico de Floor Price e médias móveis' : 'Click to view Floor Price and moving average chart'}
