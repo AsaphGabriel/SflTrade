@@ -60,7 +60,27 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   }, [resourceId, isToken, flowerPriceUsd, timeframe, isNftObj, targetNftId, targetFloor, targetName, currentPriceRef]);
 
   // Dados pre-agregados pela amostragem do período selecionado
-  const displayData = Array.isArray(history) ? history : [];
+  let displayData = Array.isArray(history) ? [...history] : [];
+
+  // Injeta o preço atual (Live) no final do array para garantir que o gráfico termine no valor exato que o usuário vê na interface
+  const livePrice = isNftObj ? targetFloor : (isToken ? flowerPriceUsd : currentPriceRef);
+  if (livePrice > 0 && displayData.length > 0 && !loading) {
+    const lastPoint = displayData[displayData.length - 1];
+    const lastPointPrice = Number(lastPoint?.price_sfl ?? lastPoint?.avg_price_sfl ?? lastPoint?.price_usd ?? lastPoint?.price ?? 0);
+    
+    // Apenas adiciona se houver diferença, para criar a conexão da linha até o "Agora"
+    if (lastPointPrice !== livePrice) {
+      displayData.push({
+        ...lastPoint,
+        price_sfl: livePrice,
+        avg_price_sfl: livePrice,
+        price_usd: livePrice,
+        price: livePrice,
+        day: currentLang === 'pt' ? 'Agora (Ao Vivo)' : 'Now (Live)',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 
   // Verifica se há apenas 1 registro inicial ou preenchido por fallback
   const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d && d.isInitialData);
