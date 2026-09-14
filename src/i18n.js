@@ -135,7 +135,20 @@ export const translations = {
     btnLogout: "Logout",
     labelEmail: "Email",
     labelPassword: "Password",
-    syncNotice: "Multi-device sync enabled with Supabase Auth."
+    syncNotice: "Multi-device sync enabled with Supabase Auth.",
+
+    // Donations
+    btnDonate: "Support",
+    donatePrompt: "Help keep SflTrade free",
+    donateTooltip: "Support the developer and keep this project 100% free",
+    donateModalTitle: "Support SflTrade",
+    donateModalSubtitle: "Help keep this project 100% free and open-source!",
+    donateModalDesc: "SflTrade is a free, open-source tool developed with dedication for the Sunflower Land community. If it helped you profit from market opportunities, track your inventory, or manage your investments, consider sending a donation to support hosting and continuous improvements!",
+    donateAddressLabel: "Public Wallet Address (EVM):",
+    donateNetworksSupported: "Accepted on Base, Polygon, Ronin, Ethereum and any EVM network ($FLOWER, ETH, POL, USDC, etc.)",
+    donateCopyBtn: "Copy Address",
+    donateCopied: "Address copied to clipboard!",
+    donateClose: "Close"
   },
 
   pt: {
@@ -274,7 +287,20 @@ export const translations = {
     btnLogout: "Sair da Conta",
     labelEmail: "E-mail",
     labelPassword: "Senha",
-    syncNotice: "Sincronização multi-dispositivo ativada via Supabase."
+    syncNotice: "Sincronização multi-dispositivo ativada via Supabase.",
+
+    // Doações
+    btnDonate: "Apoiar",
+    donatePrompt: "Ajude a manter o projeto gratuito",
+    donateTooltip: "Apoie o desenvolvedor e mantenha este projeto gratuito",
+    donateModalTitle: "Apoie o SflTrade",
+    donateModalSubtitle: "Ajude a manter o projeto 100% gratuito e open-source!",
+    donateModalDesc: "O SflTrade é uma ferramenta gratuita e de código aberto desenvolvida com dedicação para a comunidade do Sunflower Land. Se ela te ajudou a lucrar nas negociações de mercado, acompanhar seu estoque ou planejar suas metas, considere fazer uma doação para apoiar os custos de hospedagem e evolução contínua!",
+    donateAddressLabel: "Endereço da Carteira Pública (EVM):",
+    donateNetworksSupported: "Compatível com as redes Base, Polygon, Ronin, Ethereum e qualquer rede EVM ($FLOWER, ETH, POL, USDC, etc.)",
+    donateCopyBtn: "Copiar Endereço",
+    donateCopied: "Endereço copiado para a área de transferência!",
+    donateClose: "Fechar"
   }
 };
 

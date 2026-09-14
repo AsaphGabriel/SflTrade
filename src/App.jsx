@@ -9,12 +9,14 @@ import BottomNav from './components/BottomNav';
 import FarmDashboard from './components/FarmDashboard';
 import MarketMoversCards from './components/MarketMoversCards';
 import PriceChartModal from './components/PriceChartModal';
+import DonationModal from './components/DonationModal';
 import { t } from './i18n';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
   const [modalResourceMeta, setModalResourceMeta] = useState(null);
   const [selectedChartResource, setSelectedChartResource] = useState(null);
@@ -158,6 +160,7 @@ const App = () => {
           savedFarmId={farmId}
           user={user}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenDonation={() => setIsDonationModalOpen(true)}
         />
 
         <main>
@@ -294,6 +297,12 @@ const App = () => {
           onClose={() => setSelectedChartResource(null)}
         />
       )}
+
+      <DonationModal
+        isOpen={isDonationModalOpen}
+        onClose={() => setIsDonationModalOpen(false)}
+        currentLang={currentLang}
+      />
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
