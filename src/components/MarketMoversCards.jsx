@@ -221,7 +221,7 @@ const MarketMoversCards = ({
                           </div>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
                             <span className="font-semibold text-slate-200">
-                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} SFL
+                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} FLOWER
                             </span>
                             <span className="text-slate-500 text-[10px]">
                               ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
@@ -311,7 +311,7 @@ const MarketMoversCards = ({
                           </div>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
                             <span className="font-semibold text-slate-200">
-                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} SFL
+                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} FLOWER
                             </span>
                             <span className="text-slate-500 text-[10px]">
                               ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
