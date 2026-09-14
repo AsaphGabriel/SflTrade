@@ -373,7 +373,7 @@ const FarmDashboard = ({
         {/* Form de Credenciais (Farm ID e API Key) */}
         <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
           <h3 className="text-sm font-bold text-amber-400 border-b border-slate-700/60 pb-2 flex items-center justify-between">
-            <span className="flex items-center gap-2">🔑 Credenciais da API SFL</span>
+            <span className="flex items-center gap-2">🔑 Credenciais da API FLOWER</span>
             <span className="text-[10px] text-slate-400 font-normal">Armazenamento local seguro no navegador</span>
           </h3>
 
@@ -555,7 +555,7 @@ const FarmDashboard = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             <StatCard label={t('level', currentLang)} value={farmData.land.level} icon="🏝️" />
-            <StatCard label={t('balance', currentLang)} value={`${formatNum(inventoryAnalysis.sflBalance)} SFL`} subValue={`~${formatCurrency(inventoryAnalysis.sflBalanceFiat)}`} icon="💰" colorClass="text-emerald-400" />
+            <StatCard label={t('balance', currentLang)} value={`${formatNum(inventoryAnalysis.sflBalance)} FLOWER`} subValue={`~${formatCurrency(inventoryAnalysis.sflBalanceFiat)}`} icon="💰" colorClass="text-emerald-400" />
             <StatCard label={t('coins', currentLang)} value={formatNum(farmData.land.coins)} icon="🪙" />
             <StatCard label={t('gem', currentLang)} value={formatNum(farmData.land.gem)} icon="💎" colorClass="text-cyan-400" />
             <StatCard label={t('marks', currentLang)} value={formatNum(farmData.land.marks)} icon="🏷️" colorClass="text-purple-400" />
@@ -574,18 +574,18 @@ const FarmDashboard = ({
               💎 {t('inventoryValuation', currentLang)}
             </span>
             <h3 className="text-2xl font-black text-amber-300 flex items-center gap-2">
-              <span>{formatNum(inventoryAnalysis.totalNetWorthSfl)} SFL</span>
+              <span>{formatNum(inventoryAnalysis.totalNetWorthSfl)} FLOWER</span>
               <span className="text-base font-normal text-slate-400">({formatCurrency(inventoryAnalysis.totalNetWorthFiat)})</span>
             </h3>
             <span className="text-xs text-slate-400 block mt-1">
-              {t('totalEstWorth', currentLang)} (Estoque + Saldo SFL)
+              {t('totalEstWorth', currentLang)} (Estoque + Saldo FLOWER)
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
             <div className="text-center">
               <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('inventoryWorth', currentLang)}</span>
-              <span className="text-xs font-bold text-emerald-400 mt-1 block">{formatNum(inventoryAnalysis.totalStockSfl)} SFL</span>
+              <span className="text-xs font-bold text-emerald-400 mt-1 block">{formatNum(inventoryAnalysis.totalStockSfl)} FLOWER</span>
               <span className="text-[10px] text-slate-500 block">{formatCurrency(inventoryAnalysis.totalStockFiat)}</span>
             </div>
 
@@ -700,13 +700,13 @@ const FarmDashboard = ({
                     <div className="flex justify-between">
                       <span>{item.isNft ? 'Floor:' : 'P2P:'}</span>
                       <span className={item.isNft ? 'text-amber-300 font-bold' : 'text-slate-300'}>
-                        {item.unitPriceSfl > 0 ? `${formatNum(item.unitPriceSfl, item.isNft ? 2 : 4)} SFL` : 's/ cotação'}
+                        {item.unitPriceSfl > 0 ? `${formatNum(item.unitPriceSfl, item.isNft ? 2 : 4)} FLOWER` : 's/ cotação'}
                       </span>
                     </div>
                     {item.totalValSfl > 0 && (
                       <div className="flex justify-between text-emerald-400 font-bold">
                         <span>Total:</span>
-                        <span>{formatNum(item.totalValSfl, 2)} SFL</span>
+                        <span>{formatNum(item.totalValSfl, 2)} FLOWER</span>
                       </div>
                     )}
                     {item.boostText && (

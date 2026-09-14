@@ -178,7 +178,7 @@ const PositionDetailsModal = ({
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[9px] text-slate-400 mb-0.5">
-                      {currentLang === 'pt' ? 'Preço Médio SFL' : 'Avg Price SFL'}
+                      {currentLang === 'pt' ? 'Preço Médio FLOWER' : 'Avg Price FLOWER'}
                     </label>
                     <input
                       type="number"
@@ -233,8 +233,8 @@ const PositionDetailsModal = ({
                   <span className="font-mono font-bold text-slate-100 text-xs">{formatarPreco(qty)}</span>
                 </div>
                 <div className="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block">{currentLang === 'pt' ? 'Média SFL' : 'Avg SFL'}</span>
-                  <span className="font-mono font-bold text-slate-200 text-xs">{formatarPreco(precoMedio)} SFL</span>
+                  <span className="text-[9px] text-slate-400 block">{currentLang === 'pt' ? 'Média FLOWER' : 'Avg FLOWER'}</span>
+                  <span className="font-mono font-bold text-slate-200 text-xs">{formatarPreco(precoMedio)} FLOWER</span>
                 </div>
                 <div className="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                   <span className="text-[9px] text-amber-300 font-semibold block">
@@ -314,14 +314,14 @@ const PositionDetailsModal = ({
                             {isBuy ? (currentLang === 'pt' ? 'Compra' : 'Buy') : (currentLang === 'pt' ? 'Venda' : 'Sell')}
                           </span>
                           <span className="text-slate-200 font-bold">{formatarPreco(tx.qty)} un</span>
-                          <span className="text-slate-400">@ {formatarPreco(tx.unitPrice)} SFL</span>
+                          <span className="text-slate-400">@ {formatarPreco(tx.unitPrice)} FLOWER</span>
                         </div>
                         <div className="text-[9px] text-slate-500 mt-0.5">
                           {dateFormatted} • $FLOWER: ${cotacaoTx.toFixed(4)}
                         </div>
                       </div>
                       <div className="text-right font-bold">
-                        <span className="text-amber-400 block">{formatarPreco(tx.totalPrice)} SFL</span>
+                        <span className="text-amber-400 block">{formatarPreco(tx.totalPrice)} FLOWER</span>
                         <span className="text-slate-300 text-[10px] block">${totalUsd.toFixed(2)}</span>
                       </div>
                     </div>

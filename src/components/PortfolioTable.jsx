@@ -134,25 +134,25 @@ const PortfolioTable = ({
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thTotalCost', currentLang)}</span>
-                  <span className="font-mono text-slate-200">{formatarPreco(item.custoTotal)} SFL</span>
+                  <span className="font-mono text-slate-200">{formatarPreco(item.custoTotal)} FLOWER</span>
                   {item.custoTotalUsd > 0 && (
                     <span className="font-mono text-[10px] text-amber-300 block">${item.custoTotalUsd.toFixed(2)}</span>
                   )}
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thAvgPrice', currentLang)}</span>
-                  <span className="font-mono text-slate-300">{formatarPreco(item.precoMedio)} SFL</span>
+                  <span className="font-mono text-slate-300">{formatarPreco(item.precoMedio)} FLOWER</span>
                   {item.precoMedioUsd > 0 && (
                     <span className="font-mono text-[10px] text-slate-400 block">${formatarPreco(item.precoMedioUsd)}/un</span>
                   )}
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thNetValue', currentLang)}</span>
-                  <span className="font-mono text-slate-100 font-semibold">{formatarPreco(item.valorVendaLiquidoTotal)} SFL</span>
+                  <span className="font-mono text-slate-100 font-semibold">{formatarPreco(item.valorVendaLiquidoTotal)} FLOWER</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thP2pPrice', currentLang)}</span>
-                  <span className="font-mono text-amber-400 font-semibold">{item.precoP2P > 0 ? formatarPreco(item.precoP2P) + ' SFL' : 'N/A'}</span>
+                  <span className="font-mono text-amber-400 font-semibold">{item.precoP2P > 0 ? formatarPreco(item.precoP2P) + ' FLOWER' : 'N/A'}</span>
                 </div>
               </div>
 
@@ -240,7 +240,7 @@ const PortfolioTable = ({
                     )}
                   </td>
                   <td className="p-3 text-amber-400 font-semibold font-mono">
-                    {item.precoP2P > 0 ? formatarPreco(item.precoP2P) + ' SFL' : 'N/A'}
+                    {item.precoP2P > 0 ? formatarPreco(item.precoP2P) + ' FLOWER' : 'N/A'}
                   </td>
                   <td className="p-3 font-bold text-slate-100 font-mono">
                     {formatarPreco(item.valorVendaLiquidoTotal)} SFL

@@ -280,7 +280,7 @@ const TransactionModal = ({
                         {rec}
                       </span>
                       <span className="text-amber-400 font-mono text-[10px]">
-                        {marketData[rec] !== undefined ? `${formatarPreco(marketData[rec])} SFL` : ''}
+                        {marketData[rec] !== undefined ? `${formatarPreco(marketData[rec])} FLOWER` : ''}
                       </span>
                     </div>
                   ))
@@ -359,17 +359,17 @@ const TransactionModal = ({
             <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-700/80 text-[11px] space-y-1">
               <div className="flex justify-between text-slate-400">
                 <span>{t('grossTotal', currentLang)}</span>
-                <span className="font-mono text-slate-200">{formatarPreco(bruto)} SFL</span>
+                <span className="font-mono text-slate-200">{formatarPreco(bruto)} FLOWER</span>
               </div>
               <div className="flex justify-between text-rose-400">
                 <span>
                   {t('taxFee', currentLang, { tax: `${(currentTaxRate * 100).toFixed(1)}%` })}
                 </span>
-                <span className="font-mono">-{formatarPreco(valorTaxa)} SFL</span>
+                <span className="font-mono">-{formatarPreco(valorTaxa)} FLOWER</span>
               </div>
               <div className="flex justify-between font-bold text-emerald-400 pt-1 border-t border-slate-800/80 text-xs">
                 <span>{t('netAmount', currentLang)}</span>
-                <span className="font-mono">{formatarPreco(liquido)} SFL</span>
+                <span className="font-mono">{formatarPreco(liquido)} FLOWER</span>
               </div>
             </div>
           )}
