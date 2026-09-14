@@ -60,6 +60,7 @@ const App = () => {
     isSyncing,
     syncCloud,
     flowerPrice,
+    flowerPriceUsd,
     effectiveTax,
     selectedIsland,
     setSelectedIsland,
@@ -141,6 +142,7 @@ const App = () => {
       <div className="p-2 md:p-4 lg:p-6 max-w-7xl mx-auto">
         <Header
           flowerPrice={flowerPrice}
+          flowerPriceUsd={flowerPriceUsd}
           effectiveTax={effectiveTax}
           selectedIsland={selectedIsland}
           onIslandChange={setSelectedIsland}
@@ -292,7 +294,9 @@ const App = () => {
       {selectedChartResource && (
         <PriceChartModal
           resourceId={selectedChartResource}
-          flowerPriceUsd={flowerPrice}
+          flowerPriceUsd={flowerPriceUsd}
+          flowerPrice={flowerPrice}
+          selectedCurrency={selectedCurrency}
           currentLang={currentLang}
           onClose={() => setSelectedChartResource(null)}
         />

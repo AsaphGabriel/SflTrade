@@ -4,6 +4,7 @@ import PriceChartModal from './PriceChartModal';
 
 const Header = ({
   flowerPrice,
+  flowerPriceUsd,
   effectiveTax,
   selectedIsland,
   onIslandChange,
@@ -275,7 +276,9 @@ const Header = ({
       {showTokenChart && (
         <PriceChartModal
           isToken={true}
-          flowerPriceUsd={flowerPrice}
+          flowerPriceUsd={flowerPriceUsd}
+          flowerPrice={flowerPrice}
+          selectedCurrency={selectedCurrency}
           currentLang={currentLang}
           onClose={() => setShowTokenChart(false)}
         />
