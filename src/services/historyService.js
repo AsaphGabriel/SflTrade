@@ -728,6 +728,14 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
       }))
     };
     setLocalCache('sfl_last_nft_snapshot', localSnapshot);
+    
+    // 1.5 Grava um baseline local que não é sobrescrito a cada F5, para usar como fallback dos Movers
+    const existingBaseline = getLocalCache('sfl_baseline_nft_snapshot');
+    const baselineAgeMs = existingBaseline ? Date.now() - new Date(existingBaseline.timestamp).getTime() : Infinity;
+    // Só atualiza o baseline se tiver mais de 8 horas de idade
+    if (baselineAgeMs > 8 * 60 * 60 * 1000) {
+      setLocalCache('sfl_baseline_nft_snapshot', localSnapshot);
+    }
 
     // 2. Transmissão para o Supabase com throttle de 4 horas
     const lastPush = Number(localStorage.getItem(LAST_SUPABASE_NFT_PUSH_KEY) || 0);
@@ -926,8 +934,11 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     try {
       if (safeTimeframe === '24h') {
         const targetDate = new Date(targetTimeMs);
-        const windowStart = new Date(targetDate.getTime() - (8 * 60 * 60 * 1000)).toISOString();
-        const windowEnd = new Date(targetDate.getTime() + (8 * 60 * 60 * 1000)).toISOString();
+        // Ampliamos a janela para capturar qualquer histórico entre 36h atrás até 2h atrás.
+        // Isso garante que no primeiro dia de uso (antes de bater 24h completas), 
+        // ele pegue o registro mais antigo disponível (ex: de 10h atrás) para mostrar alguma variação.
+        const windowStart = new Date(nowMs - (36 * 60 * 60 * 1000)).toISOString();
+        const windowEnd = new Date(nowMs - (2 * 60 * 60 * 1000)).toISOString();
 
         const { data, error } = await withTimeout(
           supabase
@@ -936,7 +947,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
             .gte('timestamp', windowStart)
             .lte('timestamp', windowEnd)
             .order('timestamp', { ascending: false })
-            .limit(1000)
+            .limit(2000)
         );
 
         if (!error && Array.isArray(data) && data.length > 0) {
@@ -974,16 +985,19 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
       console.warn(`[HistoryService] Supabase indisponível para movers de NFT (${safeTimeframe}):`, err?.message || err);
     }
 
-    // Fallback local: usa o último snapshot de NFTs gravado localmente quando Supabase não tem dados
+    // Fallback local: usa o baseline local ou o último snapshot de NFTs
     if (Object.keys(baselineMap).length === 0) {
       try {
-        const rawSnapshot = localStorage.getItem('sfl_last_nft_snapshot');
-        if (rawSnapshot) {
-          const snapshot = JSON.parse(rawSnapshot);
-          const snapshotAge = nowMs - new Date(snapshot.timestamp).getTime();
-          const minAgeMs = minAgeHours * 60 * 60 * 1000;
-          // Só usa o snapshot se ele tiver a idade mínima necessária para o timeframe
-          if (snapshotAge >= minAgeMs && Array.isArray(snapshot.items)) {
+        const rawBaseline = localStorage.getItem('sfl_baseline_nft_snapshot') || localStorage.getItem('sfl_last_nft_snapshot');
+        if (rawBaseline) {
+          const snapshot = JSON.parse(rawBaseline);
+          const snapshotAgeMs = nowMs - new Date(snapshot.timestamp).getTime();
+          
+          // Reduzimos o critério de idade mínima no fallback local para apenas 1 hora
+          // para garantir que o usuário veja alguma variação mesmo no primeiro dia
+          const minFallbackAgeMs = 1 * 60 * 60 * 1000; 
+          
+          if (snapshotAgeMs >= minFallbackAgeMs && Array.isArray(snapshot.items)) {
             snapshot.items.forEach(item => {
               const key = item.name || String(item.id);
               if (Number(item.floor) > 0) {
