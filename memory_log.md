@@ -1,5 +1,21 @@
 # 📜 Memory Log - SflTrade
 
+## [2026-09-13] Correção: Pesquisa de NFTs e Visibilidade de MarketMoversCards
+
+### 1. Bug — MarketMoversCards ocultados durante a busca (`App.jsx`)
+- **Causa Raiz**: A condição `{!marketSearchTerm.trim() && <MarketMoversCards />}` foi adicionada erroneamente, fazendo os cards de Maiores Altas/Baixas desaparecerem ao digitar na barra de pesquisa.
+- **Correção**: `MarketMoversCards` é uma seção independente da pesquisa de mercado. A condição foi removida — o componente agora é sempre renderizado na aba `home`.
+
+### 2. Bug — Pesquisa de NFTs não filtrava resultados (`ResourceGrid.jsx` + `App.jsx`)
+- **Causa Raiz**: A lógica `categoriesToRender` em `ResourceGrid.jsx` só expandia para todas as categorias quando `isSearching && currentCategoryFilter === 'all'`. Se o usuário havia clicado em "Power Ups" no MarketMovers antes de pesquisar, `currentCategoryFilter` ficava em `'power_ups'`, restringindo a busca apenas a NFTs (e vice-versa para recursos).
+- **Correção 1** (`ResourceGrid.jsx`): `categoriesToRender` agora ignora completamente o filtro de aba quando há busca ativa — **`isSearching` já é suficiente para varrer todas as categorias**.
+- **Correção 2** (`App.jsx`): `handleMoversCategoryChange` só propaga a mudança de categoria para `resourceCategoryFilter` quando **não há busca ativa**, evitando que clicar no seletor de categoria dos Movers interfira com a pesquisa em andamento.
+
+### 3. Build
+- `npm run build` executado com sucesso (exit 0). Sem erros de compilação.
+
+---
+
 ## [2026-09-07] Reestruturação das Amostragens de Séries Temporais, Média Automática e Correção de Baseline dos Movers
 
 ### 1. 📊 Reestruturação dos Filtros e Amostragem Temporais (`historyService.js` / `PriceChartModal.jsx`)

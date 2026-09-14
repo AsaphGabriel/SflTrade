@@ -11,7 +11,7 @@ const CURRENT_CACHE_VERSION = 'v1.5.0_global_supabase';
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de TTL para cache local
 const SUPABASE_PUSH_THROTTLE_MS = 15 * 60 * 1000; // Envia no máximo a cada 15 minutos para não sobrecarregar
-const SUPABASE_NFT_PUSH_THROTTLE_MS = 4 * 60 * 60 * 1000; // 4 horas de throttle para NFTs (preserva quota gratuita)
+const SUPABASE_NFT_PUSH_THROTTLE_MS = 60 * 60 * 1000; // 1 hora de throttle para NFTs
 const NFT_HOURLY_HISTORY_KEY = 'sfl_nft_hourly_history';
 
 /**
@@ -728,6 +728,14 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
       }))
     };
     setLocalCache('sfl_last_nft_snapshot', localSnapshot);
+    
+    // 1.5 Grava um baseline local que não é sobrescrito a cada F5, para usar como fallback dos Movers
+    const existingBaseline = getLocalCache('sfl_baseline_nft_snapshot');
+    const baselineAgeMs = existingBaseline ? Date.now() - new Date(existingBaseline.timestamp).getTime() : Infinity;
+    // Só atualiza o baseline se tiver mais de 8 horas de idade
+    if (baselineAgeMs > 8 * 60 * 60 * 1000) {
+      setLocalCache('sfl_baseline_nft_snapshot', localSnapshot);
+    }
 
     // 2. Transmissão para o Supabase com throttle de 4 horas
     const lastPush = Number(localStorage.getItem(LAST_SUPABASE_NFT_PUSH_KEY) || 0);
@@ -769,7 +777,7 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
 /**
  * Busca histórico de Floor Price de um NFT específico no Supabase (com fallback local)
  */
-export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl = 0) {
+export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl = 0, nftName = '') {
   if (nftId === undefined || nftId === null) return [];
 
   let days = 30;
@@ -788,14 +796,16 @@ export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl 
   // Se timeframe for 24h ou 7D, prioriza tabela bruta nft_price_history
   if (days <= 7) {
     try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('nft_price_history')
-          .select('*')
-          .eq('nft_id', Number(nftId))
-          .gte('timestamp', startDate.toISOString())
-          .order('timestamp', { ascending: true })
-      );
+      let query = supabase
+        .from('nft_price_history')
+        .select('*')
+        .eq('nft_id', Number(nftId))
+        .gte('timestamp', startDate.toISOString())
+        .order('timestamp', { ascending: true });
+        
+      if (nftName) query = query.eq('name', nftName);
+
+      const { data, error } = await withTimeout(query);
 
       if (!error && Array.isArray(data) && data.length > 0) {
         rawPoints = data.map(d => ({
@@ -815,19 +825,22 @@ export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl 
   // Se não encontrou ou timeframe for 30D/90D, busca na View agregada v_nft_daily_metrics
   if (rawPoints.length === 0) {
     try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('v_nft_daily_metrics')
-          .select('*')
-          .eq('nft_id', Number(nftId))
-          .gte('day', dateStr)
-          .order('day', { ascending: true })
-      );
+      let query = supabase
+        .from('v_nft_daily_metrics')
+        .select('*')
+        .eq('nft_id', Number(nftId))
+        .gte('day', dateStr)
+        .order('day', { ascending: true });
+        
+      if (nftName) query = query.eq('name', nftName);
+
+      const { data, error } = await withTimeout(query);
 
       if (!error && Array.isArray(data) && data.length > 0) {
         rawPoints = data.map(d => ({
           timestamp: d.day,
           floor_sfl: Number(d.avg_floor_sfl),
+
           price_sfl: Number(d.avg_floor_sfl),
           floor_usd: Number(d.avg_floor_usd),
           price_usd: Number(d.avg_floor_usd),
@@ -855,6 +868,29 @@ export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl 
       price_usd: price * 0.05,
       isInitialData: true
     }];
+  } else if (currentFloorSfl > 0) {
+    // Filtro de sanidade: descarta pontos históricos com valores impossíveis
+    // (dados corrompidos de IDs de NFTs reciclados para itens diferentes no passado)
+    const sanityMin = currentFloorSfl / 20;
+    const sanityMax = currentFloorSfl * 20;
+    const sanityFiltered = rawPoints.filter(p => {
+      const v = Number(p.floor_sfl || p.price_sfl || p.avg_floor_sfl || p.avg_price_sfl || 0);
+      return v > 0 && v >= sanityMin && v <= sanityMax;
+    });
+    if (sanityFiltered.length > 0) {
+      rawPoints = sanityFiltered;
+    } else {
+      // Todos os dados históricos são suspeitos — usa apenas o ponto atual
+      const now = new Date();
+      const price = Number(currentFloorSfl);
+      rawPoints = [{
+        timestamp: now.toISOString(),
+        day: now.toISOString().split('T')[0],
+        floor_sfl: price,
+        price_sfl: price,
+        isInitialData: true
+      }];
+    }
   }
 
   const aggregated = aggregateHistoryByInterval(rawPoints, timeframe, currentFloorSfl);
@@ -898,8 +934,11 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     try {
       if (safeTimeframe === '24h') {
         const targetDate = new Date(targetTimeMs);
-        const windowStart = new Date(targetDate.getTime() - (8 * 60 * 60 * 1000)).toISOString();
-        const windowEnd = new Date(targetDate.getTime() + (8 * 60 * 60 * 1000)).toISOString();
+        // Ampliamos a janela para capturar qualquer histórico entre 36h atrás até 2h atrás.
+        // Isso garante que no primeiro dia de uso (antes de bater 24h completas), 
+        // ele pegue o registro mais antigo disponível (ex: de 10h atrás) para mostrar alguma variação.
+        const windowStart = new Date(nowMs - (36 * 60 * 60 * 1000)).toISOString();
+        const windowEnd = new Date(nowMs - (2 * 60 * 60 * 1000)).toISOString();
 
         const { data, error } = await withTimeout(
           supabase
@@ -908,7 +947,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
             .gte('timestamp', windowStart)
             .lte('timestamp', windowEnd)
             .order('timestamp', { ascending: false })
-            .limit(1000)
+            .limit(2000)
         );
 
         if (!error && Array.isArray(data) && data.length > 0) {
@@ -946,6 +985,32 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
       console.warn(`[HistoryService] Supabase indisponível para movers de NFT (${safeTimeframe}):`, err?.message || err);
     }
 
+    // Fallback local: usa o baseline local ou o último snapshot de NFTs
+    if (Object.keys(baselineMap).length === 0) {
+      try {
+        const rawBaseline = localStorage.getItem('sfl_baseline_nft_snapshot') || localStorage.getItem('sfl_last_nft_snapshot');
+        if (rawBaseline) {
+          const snapshot = JSON.parse(rawBaseline);
+          const snapshotAgeMs = nowMs - new Date(snapshot.timestamp).getTime();
+          
+          // Reduzimos o critério de idade mínima no fallback local para apenas 1 hora
+          // para garantir que o usuário veja alguma variação mesmo no primeiro dia
+          const minFallbackAgeMs = 1 * 60 * 60 * 1000; 
+          
+          if (snapshotAgeMs >= minFallbackAgeMs && Array.isArray(snapshot.items)) {
+            snapshot.items.forEach(item => {
+              const key = item.name || String(item.id);
+              if (Number(item.floor) > 0) {
+                baselineMap[key] = Number(item.floor);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[HistoryService] Erro ao carregar snapshot local de NFTs para movers:', e);
+      }
+    }
+
     nftBaselineCache[safeTimeframe] = {
       timestamp: nowMs,
       map: baselineMap
@@ -961,8 +1026,9 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     if (!currentFloor || isNaN(currentFloor) || currentFloor <= 0) return;
 
     const key = nft.name || String(nft.id);
-    const baseFloor = Number(baselineMap[key] || currentFloor);
+    const baseFloor = Number(baselineMap[key]);
 
+    // Só calcula se houver baseline real — nunca usa currentFloor como baseline (mascararia variação 0%)
     if (baseFloor > 0) {
       const diff = currentFloor - baseFloor;
       const changePct = (diff / baseFloor) * 100;
@@ -972,6 +1038,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
           resource: nft.name,
           nft_id: nft.id,
           name: nft.name,
+          displayName: nft.displayName || nft.name,
           collection: nft.collection,
           image: nft.image || (nft.collection === 'wearables'
             ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
@@ -987,17 +1054,18 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     }
   });
 
+  // Ordenação correta: desc por changePct
   variations.sort((a, b) => b.changePct - a.changePct);
 
   const topGainers = variations.filter(v => v.changePct > 0).slice(0, 3);
-  const topLosers = [...variations].filter(v => v.changePct < 0).reverse().slice(0, 3);
+  // topLosers: os de menor changePct (mais negativos) — já estão no fim do array ordenado desc
+  const topLosers = variations.filter(v => v.changePct < 0).slice(-3).reverse();
 
   return {
     timeframe: safeTimeframe,
-    topGainers: topGainers.length > 0 ? topGainers : variations.slice(0, 3),
-    topLosers: topLosers.length > 0 ? topLosers : [...variations].reverse().slice(0, 3),
+    // Se não houver variações reais, retorna lista vazia para indicar ausência de dados históricos
+    topGainers: topGainers.length > 0 ? topGainers : [],
+    topLosers: topLosers.length > 0 ? topLosers : [],
     hasData: variations.length > 0
   };
 }
-
-

@@ -325,13 +325,19 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
 }
 
 /**
- * Busca cotações de NFTs (Floor e Last Sale) filtrando apenas itens com buff (have_boost === 1)
+ * Busca cotações de NFTs (Floor e Last Sale) filtrando apenas itens com buff (have_boost === 1).
+ * Garante que `floor` e `lastSalePrice` são sempre números válidos.
  */
 export async function fetchNftMarketData(forceRefresh = false) {
   const cacheKey = 'nft_market_boosts';
   if (!forceRefresh) {
     const cached = getCachedData(cacheKey);
-    if (cached && !cached.isExpired) {
+    // Invalida cache se os itens não tiverem floor populado (dados de versão antiga)
+    const cacheIsValid = cached && !cached.isExpired &&
+      Array.isArray(cached.data?.list) &&
+      cached.data.list.length > 0 &&
+      Number(cached.data.list[0]?.floor) > 0;
+    if (cacheIsValid) {
       return cached.data;
     }
   }
@@ -344,22 +350,27 @@ export async function fetchNftMarketData(forceRefresh = false) {
     const wearables = Array.isArray(data.wearables) ? data.wearables : [];
 
     const boostCollectibles = collectibles
-      .filter(item => item && item.have_boost === 1)
+      .filter(item => item && item.have_boost === 1 && item.name)
       .map(item => ({
         ...item,
+        displayName: item.name, // collectibles usam o próprio nome como displayName
         collection: 'collectibles',
+        floor: Number(item.floor) || 0,
+        lastSalePrice: Number(item.lastSalePrice) || 0,
         image: `https://sunflower-land.com/play/erc1155/images/${item.id}.webp`
       }));
 
     const boostWearables = wearables
-      .filter(item => item && item.have_boost === 1)
+      .filter(item => item && item.have_boost === 1 && item.name)
       .map(item => {
-        const isParsnipWearable = item.name && item.name.toLowerCase() === 'parsnip';
+        const isParsnipWearable = item.name.toLowerCase() === 'parsnip';
         const displayName = isParsnipWearable ? 'Parsnip (Wearable)' : item.name;
         return {
           ...item,
           displayName,
           collection: 'wearables',
+          floor: Number(item.floor) || 0,
+          lastSalePrice: Number(item.lastSalePrice) || 0,
           image: `https://sunflower-land.com/play/wearables/images/${item.id}.png`
         };
       });
@@ -395,4 +406,4 @@ export async function fetchNftMarketData(forceRefresh = false) {
     if (cached) return cached.data;
     return null;
   }
-}
+}

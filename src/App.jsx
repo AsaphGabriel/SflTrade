@@ -9,12 +9,14 @@ import BottomNav from './components/BottomNav';
 import FarmDashboard from './components/FarmDashboard';
 import MarketMoversCards from './components/MarketMoversCards';
 import PriceChartModal from './components/PriceChartModal';
+import DonationModal from './components/DonationModal';
 import { t } from './i18n';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
   const [modalResourceMeta, setModalResourceMeta] = useState(null);
   const [selectedChartResource, setSelectedChartResource] = useState(null);
@@ -26,13 +28,18 @@ const App = () => {
 
   const [activeMoversCategory, setActiveMoversCategory] = useState('resources');
   const [resourceCategoryFilter, setResourceCategoryFilter] = useState('all');
+  const [marketSearchTerm, setMarketSearchTerm] = useState('');
 
   const handleMoversCategoryChange = (cat) => {
     setActiveMoversCategory(cat);
-    if (cat === 'power_ups') {
-      setResourceCategoryFilter('power_ups');
-    } else {
-      setResourceCategoryFilter('all');
+    // Ao clicar nos cards de maiores altas/baixas, navega para a categoria correspondente
+    // na ResourceGrid, mas apenas se não houver uma busca ativa (para não interferir com o filtro de busca).
+    if (!marketSearchTerm.trim()) {
+      if (cat === 'power_ups') {
+        setResourceCategoryFilter('power_ups');
+      } else {
+        setResourceCategoryFilter('all');
+      }
     }
   };
 
@@ -153,6 +160,7 @@ const App = () => {
           savedFarmId={farmId}
           user={user}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenDonation={() => setIsDonationModalOpen(true)}
         />
 
         <main>
@@ -180,6 +188,8 @@ const App = () => {
                 currentLang={currentLang} 
                 categoryFilter={resourceCategoryFilter}
                 onCategoryFilterChange={handleResourceCategoryChange}
+                searchTerm={marketSearchTerm}
+                onSearchTermChange={setMarketSearchTerm}
                 onOpenBuy={openBuy} 
                 onOpenSell={openSell} 
               />
@@ -287,6 +297,12 @@ const App = () => {
           onClose={() => setSelectedChartResource(null)}
         />
       )}
+
+      <DonationModal
+        isOpen={isDonationModalOpen}
+        onClose={() => setIsDonationModalOpen(false)}
+        currentLang={currentLang}
+      />
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>

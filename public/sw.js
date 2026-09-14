@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sfl-tracker-v1.9.1';
+const CACHE_NAME = 'sfl-tracker-v1.9.3';
 const ASSETS_TO_CACHE = [
   '/SflTrade/',
   '/SflTrade/index.html',
@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // 1. NÃO intercepta chamadas de API externas nem Supabase
+  // 1. NAO intercepta chamadas de API externas nem Supabase
   if (
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('workers.dev') ||
@@ -48,10 +48,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Se for navegação de página (SPA)
+  // 2. Se for navegacao de pagina (SPA) - Rede primeiro para index.html fresco
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/SflTrade/index.html'))
+      fetch(event.request, { cache: 'no-cache' })
+        .then((res) => {
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put('/SflTrade/index.html', clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match('/SflTrade/index.html'))
     );
     return;
   }

@@ -26,3 +26,4 @@
 - **[2026-08]** Solução definitiva da instalação PWA Standalone em WebAPK/Safari iOS (correção de escopo/start_url no manifest e remoção de botão/modal legados).
 - **[2026-08]** Padronização visual com artes PNG oficiais das categorias do jogo (`Sunflower`, `Apple`, `Egg`, `Wood`, `Sunflorian Emblem`) substituindo emojis Unicode.
 - **[2026-08]** Elaboração e publicação do `README.md` abrangente focado na comunidade de traders do Sunflower Land.
+- **[2026-09]** Documentação da transição macroeconômica do Sunflower Land: a moeda oficial é o token `$FLOWER` (Flower), com suporte nativo a saques e depósitos nas redes **Base** (Ethereum L2) e **Ronin**. O termo "SFL" permanece apenas como convenção informal da comunidade. Definição da rede Base como prioritária para a arquitetura de monetização SflTrade PRO.
