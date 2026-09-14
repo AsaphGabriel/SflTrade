@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchResourceHistory, fetchTokenHistory, fetchNftHistory } from '../services/historyService';
 import { t } from '../i18n';
 
-const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, currentLang = 'en', onClose }) => {
+const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, flowerPrice = 0.05, selectedCurrency = 'usd', currentLang = 'en', onClose }) => {
   const [timeframe, setTimeframe] = useState('30D'); // '24h', '7D', '30D', '90D'
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,9 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   const currentPriceRef = typeof resourceId === 'object' && resourceId !== null ? Number(resourceId.currentPrice || resourceId.price || 0) : 0;
 
   const titleName = targetName;
-  const unitSymbol = isToken ? '$' : 'FLOWER';
+  const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
+  const fiatSymbol = symbolMap[selectedCurrency] || '$';
+  const unitSymbol = isToken ? fiatSymbol : 'FLOWER';
 
   useEffect(() => {
     let isMounted = true;
@@ -60,10 +62,17 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
   }, [resourceId, isToken, flowerPriceUsd, timeframe, isNftObj, targetNftId, targetFloor, targetName, currentPriceRef]);
 
   // Dados pre-agregados pela amostragem do período selecionado
+  const currencyRatio = (isToken && flowerPriceUsd > 0) ? (flowerPrice / flowerPriceUsd) : 1;
   let displayData = Array.isArray(history) ? [...history] : [];
+  if (isToken && currencyRatio !== 1) {
+    displayData = displayData.map(d => {
+      if(!d) return d;
+      return { ...d, price_sfl: Number(d.price_sfl || d.price_usd || 0) * currencyRatio, avg_price_sfl: Number(d.avg_price_sfl || d.avg_price_usd || 0) * currencyRatio, price_usd: Number(d.price_usd || 0) * currencyRatio };
+    });
+  }
 
   // Injeta o preço atual (Live) no final do array para garantir que o gráfico termine no valor exato que o usuário vê na interface
-  const livePrice = isNftObj ? targetFloor : (isToken ? flowerPriceUsd : currentPriceRef);
+  const livePrice = isNftObj ? targetFloor : (isToken ? flowerPrice : currentPriceRef);
   if (livePrice > 0 && displayData.length > 0 && !loading) {
     const lastPoint = displayData[displayData.length - 1];
     const lastPointPrice = Number(lastPoint?.price_sfl ?? lastPoint?.avg_price_sfl ?? lastPoint?.price_usd ?? lastPoint?.price ?? 0);

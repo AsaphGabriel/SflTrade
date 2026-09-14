@@ -536,6 +536,7 @@ export default function useMarketData() {
   }, [currencyRates.usd, user]);
 
   const flowerPrice = currencyRates[selectedCurrency] || currencyRates.usd;
+  const flowerPriceUsd = currencyRates.usd;
 
   return {
     user,
@@ -545,6 +546,7 @@ export default function useMarketData() {
     isSyncing,
     syncCloud,
     flowerPrice,
+    flowerPriceUsd,
     effectiveTax,
     selectedIsland,
     setSelectedIsland: updateIsland,
