@@ -37,7 +37,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, c
         if (isToken) {
           data = await fetchTokenHistory(timeframe, flowerPriceUsd);
         } else if (isNftObj && targetNftId !== null) {
-          data = await fetchNftHistory(targetNftId, timeframe, targetFloor);
+          data = await fetchNftHistory(targetNftId, timeframe, targetFloor, targetName);
         } else if (targetName) {
           data = await fetchResourceHistory(targetName, timeframe, currentPriceRef);
         }

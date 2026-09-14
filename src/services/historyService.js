@@ -769,7 +769,7 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
 /**
  * Busca histórico de Floor Price de um NFT específico no Supabase (com fallback local)
  */
-export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl = 0) {
+export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl = 0, nftName = '') {
   if (nftId === undefined || nftId === null) return [];
 
   let days = 30;
@@ -788,14 +788,16 @@ export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl 
   // Se timeframe for 24h ou 7D, prioriza tabela bruta nft_price_history
   if (days <= 7) {
     try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('nft_price_history')
-          .select('*')
-          .eq('nft_id', Number(nftId))
-          .gte('timestamp', startDate.toISOString())
-          .order('timestamp', { ascending: true })
-      );
+      let query = supabase
+        .from('nft_price_history')
+        .select('*')
+        .eq('nft_id', Number(nftId))
+        .gte('timestamp', startDate.toISOString())
+        .order('timestamp', { ascending: true });
+        
+      if (nftName) query = query.eq('name', nftName);
+
+      const { data, error } = await withTimeout(query);
 
       if (!error && Array.isArray(data) && data.length > 0) {
         rawPoints = data.map(d => ({
@@ -815,19 +817,22 @@ export async function fetchNftHistory(nftId, timeframe = '30D', currentFloorSfl 
   // Se não encontrou ou timeframe for 30D/90D, busca na View agregada v_nft_daily_metrics
   if (rawPoints.length === 0) {
     try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('v_nft_daily_metrics')
-          .select('*')
-          .eq('nft_id', Number(nftId))
-          .gte('day', dateStr)
-          .order('day', { ascending: true })
-      );
+      let query = supabase
+        .from('v_nft_daily_metrics')
+        .select('*')
+        .eq('nft_id', Number(nftId))
+        .gte('day', dateStr)
+        .order('day', { ascending: true });
+        
+      if (nftName) query = query.eq('name', nftName);
+
+      const { data, error } = await withTimeout(query);
 
       if (!error && Array.isArray(data) && data.length > 0) {
         rawPoints = data.map(d => ({
           timestamp: d.day,
           floor_sfl: Number(d.avg_floor_sfl),
+
           price_sfl: Number(d.avg_floor_sfl),
           floor_usd: Number(d.avg_floor_usd),
           price_usd: Number(d.avg_floor_usd),
