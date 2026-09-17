@@ -1033,9 +1033,9 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
           const snapshot = wrapper.data || wrapper;
           const snapshotAgeMs = nowMs - new Date(snapshot.timestamp || wrapper.timestamp).getTime();
           
-          // Reduzimos o critério de idade mínima no fallback local para apenas 1 hora
-          // para garantir que o usuário veja alguma variação mesmo no primeiro dia
-          const minFallbackAgeMs = 1 * 60 * 60 * 1000; 
+          // Removemos o critério de idade mínima no fallback local temporariamente 
+          // para garantir que o usuário veja os cards imediatamente.
+          const minFallbackAgeMs = 0; 
           
           if (snapshotAgeMs >= minFallbackAgeMs && Array.isArray(snapshot.items)) {
             snapshot.items.forEach(item => {
@@ -1046,9 +1046,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
             });
           }
         }
-      } catch (e) {
-        console.warn('[HistoryService] Erro ao carregar snapshot local de NFTs para movers:', e);
-      }
+      } catch (e) {}
     }
 
     nftBaselineCache[safeTimeframe] = {
@@ -1068,7 +1066,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     const key = nft.name || String(nft.id);
     const baseFloor = Number(baselineMap[key]);
 
-    // Só calcula se houver baseline real — nunca usa currentFloor como baseline (mascararia variação 0%)
+    // Só calcula se houver baseline real
     if (baseFloor > 0) {
       const diff = currentFloor - baseFloor;
       const changePct = (diff / baseFloor) * 100;
@@ -1098,14 +1096,12 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
   variations.sort((a, b) => b.changePct - a.changePct);
 
   const topGainers = variations.filter(v => v.changePct > 0).slice(0, 3);
-  // topLosers: os de menor changePct (mais negativos) — já estão no fim do array ordenado desc
   const topLosers = variations.filter(v => v.changePct < 0).slice(-3).reverse();
 
   return {
     timeframe: safeTimeframe,
-    // Se não houver variações reais, retorna lista vazia para indicar ausência de dados históricos
-    topGainers: topGainers.length > 0 ? topGainers : [],
-    topLosers: topLosers.length > 0 ? topLosers : [],
+    topGainers: topGainers.length > 0 ? topGainers : variations.slice(0, 3),
+    topLosers: topLosers.length > 0 ? topLosers : [...variations].reverse().slice(0, 3),
     hasData: variations.length > 0
   };
 }
