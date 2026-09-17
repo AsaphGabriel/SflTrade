@@ -55,6 +55,17 @@ function setLocalCache(key, data) {
   }
 }
 
+function getLocalCache(key) {
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) return null;
+    return JSON.parse(item);
+  } catch (e) {
+    console.warn(`[HistoryService] Erro ao ler cache local '${key}':`, e);
+    return null;
+  }
+}
+
 /**
  * Utilitário linear O(N) para calcular média móvel (Simple Moving Average - SMA) sem travamentos de CPU
  */
@@ -951,10 +962,24 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
         );
 
         if (!error && Array.isArray(data) && data.length > 0) {
-          data.forEach(item => {
-            const key = item.name || String(item.nft_id);
-            if (!baselineMap[key] && Number(item.floor_sfl) > 0) {
-              baselineMap[key] = Number(item.floor_sfl);
+          const byNft = {};
+          data.forEach(r => {
+            const key = r.name || String(r.nft_id);
+            if (!byNft[key]) byNft[key] = [];
+            byNft[key].push(r);
+          });
+          Object.entries(byNft).forEach(([key, rows]) => {
+            let closest = rows[0];
+            let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
+            for (const row of rows) {
+              const diff = Math.abs(new Date(row.timestamp).getTime() - targetTimeMs);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = row;
+              }
+            }
+            if (closest && Number(closest.floor_sfl) > 0) {
+              baselineMap[key] = Number(closest.floor_sfl);
             }
           });
         }
@@ -973,10 +998,24 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
         );
 
         if (!error && Array.isArray(data) && data.length > 0) {
-          data.forEach(item => {
-            const key = item.name || String(item.nft_id);
-            if (!baselineMap[key] && Number(item.avg_floor_sfl) > 0) {
-              baselineMap[key] = Number(item.avg_floor_sfl);
+          const byNft = {};
+          data.forEach(r => {
+            const key = r.name || String(r.nft_id);
+            if (!byNft[key]) byNft[key] = [];
+            byNft[key].push(r);
+          });
+          Object.entries(byNft).forEach(([key, rows]) => {
+            let closest = rows[0];
+            let minDiff = Math.abs(new Date(closest.day).getTime() - targetTimeMs);
+            for (const row of rows) {
+              const diff = Math.abs(new Date(row.day).getTime() - targetTimeMs);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = row;
+              }
+            }
+            if (closest && Number(closest.avg_floor_sfl) > 0) {
+              baselineMap[key] = Number(closest.avg_floor_sfl);
             }
           });
         }
@@ -990,8 +1029,9 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
       try {
         const rawBaseline = localStorage.getItem('sfl_baseline_nft_snapshot') || localStorage.getItem('sfl_last_nft_snapshot');
         if (rawBaseline) {
-          const snapshot = JSON.parse(rawBaseline);
-          const snapshotAgeMs = nowMs - new Date(snapshot.timestamp).getTime();
+          const wrapper = JSON.parse(rawBaseline);
+          const snapshot = wrapper.data || wrapper;
+          const snapshotAgeMs = nowMs - new Date(snapshot.timestamp || wrapper.timestamp).getTime();
           
           // Reduzimos o critério de idade mínima no fallback local para apenas 1 hora
           // para garantir que o usuário veja alguma variação mesmo no primeiro dia
