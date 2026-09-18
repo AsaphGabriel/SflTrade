@@ -964,7 +964,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
         if (!error && Array.isArray(data) && data.length > 0) {
           const byNft = {};
           data.forEach(r => {
-            const key = r.name || String(r.nft_id);
+            const key = String(r.nft_id);
             if (!byNft[key]) byNft[key] = [];
             byNft[key].push(r);
           });
@@ -1000,7 +1000,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
         if (!error && Array.isArray(data) && data.length > 0) {
           const byNft = {};
           data.forEach(r => {
-            const key = r.name || String(r.nft_id);
+            const key = String(r.nft_id);
             if (!byNft[key]) byNft[key] = [];
             byNft[key].push(r);
           });
@@ -1039,7 +1039,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
           
           if (snapshotAgeMs >= minFallbackAgeMs && Array.isArray(snapshot.items)) {
             snapshot.items.forEach(item => {
-              const key = item.name || String(item.id);
+              const key = String(item.nft_id || item.id);
               if (Number(item.floor) > 0) {
                 baselineMap[key] = Number(item.floor);
               }
@@ -1063,7 +1063,7 @@ export async function fetchNftMarketMovers(nftMarketList = [], timeframe = '24h'
     const currentFloor = Number(nft.floor);
     if (!currentFloor || isNaN(currentFloor) || currentFloor <= 0) return;
 
-    const key = nft.name || String(nft.id);
+    const key = String(nft.id);
     const baseFloor = Number(baselineMap[key]);
 
     // Só calcula se houver baseline real
