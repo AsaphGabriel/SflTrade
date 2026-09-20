@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { t } from '../i18n';
 import { getBumpkinXPDetails } from '../utils/bumpkinLevel';
+import { handleImageError } from '../utils/imageFallback';
 
 // Categorizador de Recursos do Inventário
 export function getItemCategory(name) {
@@ -668,16 +669,12 @@ const FarmDashboard = ({
                   className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-1">
-                    {item.nftImage ? (
-                      <img
-                        src={item.nftImage}
-                        alt={item.name}
-                        className="w-7 h-7 object-contain drop-shadow image-rendering-pixelated group-hover:scale-110 transition-transform"
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <span className="text-xl group-hover:scale-110 transition-transform">{item.emoji}</span>
-                    )}
+                    <img
+                      src={item.nftImage || `https://sfl.world/img/source/${encodeURIComponent(item.name)}.png`}
+                      alt={item.name}
+                      className="w-7 h-7 object-contain drop-shadow image-rendering-pixelated group-hover:scale-110 transition-transform"
+                      onError={handleImageError}
+                    />
                     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
                       item.isNft
                         ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-bold'

@@ -12,10 +12,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // Registra o Service Worker e forca atualizacao imediata ao detectar nova versao
 if ('serviceWorker' in navigator) {
   let refreshing = false;
+  // Identifica se ja existia um SW ativo antes (se sim, e atualizacao; se nao, e primeira instalacao)
+  const hadController = Boolean(navigator.serviceWorker.controller);
+
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
+    if (!refreshing && hadController) {
       refreshing = true;
-      console.log('[PWA] Nova versao ativada. Recarregando aplicacao...');
+      console.log('[PWA] Nova versao detectada. Atualizando aplicacao...');
       window.location.reload();
     }
   });

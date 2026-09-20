@@ -149,6 +149,18 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
     }
 
     hourlyHistory.sort((a, b) => (a.hourKey || a.day).localeCompare(b.hourKey || b.day));
+
+    // Downsampling: mantém todas as horas dos últimos 7 dias; para dias anteriores (até 90 dias), mantém apenas 1 amostra diária
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const seenDays = new Set();
+    hourlyHistory = hourlyHistory.filter(h => {
+      const hDay = h.day || (h.hourKey ? h.hourKey.split(' ')[0] : null);
+      if (hDay && hDay >= sevenDaysAgo) return true; // Mantém todas as horas dos últimos 7 dias
+      if (hDay && seenDays.has(hDay)) return false; // Remove horas intermediárias de dias antigos
+      if (hDay) seenDays.add(hDay);
+      return true; // Preserva 1 amostra diária
+    });
+
     localStorage.setItem(HOURLY_HISTORY_KEY, JSON.stringify(hourlyHistory));
 
     // 2. Transmite dados globais para o Supabase (DESATIVADO - ARCH-01)

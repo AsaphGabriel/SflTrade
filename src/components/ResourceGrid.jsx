@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PriceChartModal from './PriceChartModal';
+import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
 // Definição das Categorias e Itens
 const CATEGORIAS_MERCADO = [
@@ -54,10 +55,8 @@ const CATEGORIAS_MERCADO = [
   }
 ];
 
-const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
-
 function getItemIcon(itemName) {
-  if (!itemName) return TRANSPARENT_FALLBACK;
+  if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
@@ -259,7 +258,7 @@ const ResourceGrid = ({
                   src={iconUrl}
                   alt={tab.id}
                   className="category-tab-icon"
-                  onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                  onError={handleImageError}
                 />
               )}
               <span>{t(tab.key, currentLang)}</span>
@@ -289,7 +288,7 @@ const ResourceGrid = ({
                       src={getCategoryIcon(cat.id, firstNftName)}
                       alt={cat.id}
                       className="w-5 h-5 object-contain inline-block"
-                      onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                      onError={handleImageError}
                     />
                   )}
                   <span>{t(cat.titleKey, currentLang)}</span>
@@ -314,7 +313,7 @@ const ResourceGrid = ({
                             <img
                               src={iconUrl}
                               alt={nft.displayName || nft.name}
-                              onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                              onError={handleImageError}
                             />
                           </div>
                           <div className="market-card-info">
@@ -376,7 +375,7 @@ const ResourceGrid = ({
                     src={getCategoryIcon(cat.id)}
                     alt={cat.id}
                     className="w-5 h-5 object-contain inline-block"
-                    onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                    onError={handleImageError}
                   />
                 )}
                 <span>{t(cat.titleKey, currentLang)}</span>
@@ -398,7 +397,7 @@ const ResourceGrid = ({
                         <img
                           src={iconUrl}
                           alt={item}
-                          onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                          onError={handleImageError}
                         />
                       </div>
                       <div className="market-card-info">

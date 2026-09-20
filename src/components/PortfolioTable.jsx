@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PositionDetailsModal from './PositionDetailsModal';
-
-const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
+import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
 function getItemIcon(itemName) {
-  if (!itemName) return TRANSPARENT_FALLBACK;
+  if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
@@ -101,7 +100,7 @@ const PortfolioTable = ({
                     src={iconUrl}
                     alt={item.nome}
                     className="w-6 h-6 rounded-sm object-cover align-middle inline-block"
-                    onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                    onError={handleImageError}
                   />
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -210,7 +209,7 @@ const PortfolioTable = ({
                       src={iconUrl}
                       alt={item.nome}
                       className="w-5 h-5 rounded-sm object-cover align-middle inline-block"
-                      onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                      onError={handleImageError}
                     />
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span>{item.nome}</span>

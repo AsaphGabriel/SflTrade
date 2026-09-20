@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { fetchMarketMovers, fetchNftMarketMovers } from '../services/historyService';
 import { t } from '../i18n';
-
-const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
+import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
 function getItemIcon(itemName) {
-  if (!itemName) return TRANSPARENT_FALLBACK;
+  if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
@@ -206,7 +205,7 @@ const MarketMoversCards = ({
                             : getItemIcon(item.resource || item.name))}
                           alt={item.resource || item.name}
                           className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
-                          onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                          onError={handleImageError}
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -296,7 +295,7 @@ const MarketMoversCards = ({
                             : getItemIcon(item.resource || item.name))}
                           alt={item.resource || item.name}
                           className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
-                          onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                          onError={handleImageError}
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
