@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { t } from '../i18n';
-
-const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
+import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
 function getItemIcon(itemName) {
-  if (!itemName) return TRANSPARENT_FALLBACK;
+  if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
@@ -275,7 +274,7 @@ const TransactionModal = ({
                           src={nftMarketData?.byName?.[rec]?.image || getItemIcon(rec)}
                           alt={rec}
                           className="w-4 h-4 rounded-sm object-cover"
-                          onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+                          onError={handleImageError}
                         />
                         {rec}
                       </span>

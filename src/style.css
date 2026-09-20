@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Customização de Scrollbar para o tema dark */
 ::-webkit-scrollbar {
   width: 6px;

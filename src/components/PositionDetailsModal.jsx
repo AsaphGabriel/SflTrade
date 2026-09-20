@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { t } from '../i18n';
-
-const TRANSPARENT_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E";
+import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
 function getItemIcon(itemName) {
-  if (!itemName) return TRANSPARENT_FALLBACK;
+  if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
@@ -132,7 +131,7 @@ const PositionDetailsModal = ({
               src={iconUrl}
               alt={nome}
               className="w-7 h-7 rounded-md object-contain align-middle"
-              onError={(e) => { e.target.src = TRANSPARENT_FALLBACK; }}
+              onError={handleImageError}
             />
             <div>
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-1.5 leading-tight">
