@@ -1,16 +1,12 @@
--- =========================================================================
--- SETUP DE CRON JOB NO SUPABASE PARA SINCRONIZAR PREÇOS DE MERCADO 24/7
--- =========================================================================
--- IMPORTANTE: A extensão pg_net precisa estar ativada no Supabase Dashboard
--- (Database -> Extensions -> pg_net) e a Edge Function deve estar em deploy.
-
+-- Habilita as extensões necessárias
 CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Agendamento diário/por hora usando pg_cron
 -- Remove agendamento antigo caso exista para evitar duplicatas
+-- Se der erro nessa linha na primeira vez, não tem problema!
 SELECT cron.unschedule('sync-market-prices-cron');
 
--- Cria a rotina (ex: a cada 1 hora no minuto zero)
+-- Cria a rotina (a cada 1 hora)
 SELECT cron.schedule(
     'sync-market-prices-cron',
     '0 * * * *',
@@ -19,12 +15,8 @@ SELECT cron.schedule(
         url:='https://atiumxglieipioqmnrbd.supabase.co/functions/v1/sync-market-prices',
         headers:=jsonb_build_object(
             'Content-Type', 'application/json',
-            'Authorization', 'Bearer [YOUR_ANON_KEY]'
+            'Authorization', 'Bearer SEU_TOKEN_AQUI'
         )
     );
     $$
 );
-
--- NOTA: Como a Edge Function já usa a Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
--- a chamada POST apenas precisa do token 'anon' padrão (Bearer) para 
--- invocar a função, mas a função em si operará com bypass de RLS no backend.
