@@ -151,44 +151,9 @@ export function recordDailySnapshot(tokenPriceUsd = 0.05, marketData = {}) {
     hourlyHistory.sort((a, b) => (a.hourKey || a.day).localeCompare(b.hourKey || b.day));
     localStorage.setItem(HOURLY_HISTORY_KEY, JSON.stringify(hourlyHistory));
 
-    // 2. Transmite dados globais para o Supabase (com throttle para evitar exagero de requisições)
-    const lastPush = Number(localStorage.getItem(LAST_SUPABASE_PUSH_KEY) || 0);
-    const timeSinceLastPush = Date.now() - lastPush;
-
-    if (timeSinceLastPush >= SUPABASE_PUSH_THROTTLE_MS && Object.keys(cleanResources).length > 0) {
-      localStorage.setItem(LAST_SUPABASE_PUSH_KEY, String(Date.now()));
-
-      // Envia cotação do token
-      supabase
-        .from('token_price_history')
-        .insert([{ price_usd: currentTokenUsd, source: 'sfl.world' }])
-        .then(({ error }) => {
-          if (error) console.warn('[HistoryService] Erro ao gravar token_price_history global:', error.message || error);
-        })
-        .catch(err => console.warn('[HistoryService] Exceção ao gravar token_price_history global:', err?.message || err));
-
-      // Envia cotações dos recursos
-      const resourceRows = Object.entries(cleanResources).map(([resId, priceSfl]) => ({
-        resource_id: resId,
-        price_sfl: priceSfl,
-        price_usd: priceSfl * currentTokenUsd,
-        timestamp: now.toISOString()
-      }));
-
-      if (resourceRows.length > 0) {
-        supabase
-          .from('resource_price_history')
-          .insert(resourceRows)
-          .then(({ error }) => {
-            if (error) {
-              console.warn('[HistoryService] Erro ao enviar resource_price_history global:', error.message || error);
-            } else {
-              console.log(`[HistoryService] ${resourceRows.length} cotações globais enviadas ao Supabase!`);
-            }
-          })
-          .catch(err => console.warn('[HistoryService] Exceção ao enviar resource_price_history global:', err?.message || err));
-      }
-    }
+    // 2. Transmite dados globais para o Supabase (DESATIVADO - ARCH-01)
+    // A gravação global agora é responsabilidade exclusiva de Edge Functions ou Cron Jobs (service_role)
+    // para evitar exposição de RLS e erros 42501 no console do cliente.
 
   } catch (e) {
     console.warn('[HistoryService] Erro ao gravar snapshot horário:', e);
@@ -748,38 +713,9 @@ export function recordNftSnapshot(tokenPriceUsd = 0.05, nftList = []) {
       setLocalCache('sfl_baseline_nft_snapshot', localSnapshot);
     }
 
-    // 2. Transmissão para o Supabase com throttle de 4 horas
-    const lastPush = Number(localStorage.getItem(LAST_SUPABASE_NFT_PUSH_KEY) || 0);
-    const timeSinceLastPush = Date.now() - lastPush;
-
-    if (timeSinceLastPush >= SUPABASE_NFT_PUSH_THROTTLE_MS) {
-      const rows = nftList.map(n => ({
-        nft_id: n.id,
-        name: n.name,
-        collection: n.collection || 'collectibles',
-        floor_sfl: Number(n.floor || 0),
-        floor_usd: Number(n.floor || 0) * currentTokenUsd,
-        last_sale_sfl: n.lastSalePrice !== undefined && n.lastSalePrice !== null ? Number(n.lastSalePrice) : null,
-        supply: n.supply || null,
-        have_boost: n.have_boost ?? 1,
-        timestamp: now.toISOString()
-      }));
-
-      if (rows.length > 0) {
-        supabase
-          .from('nft_price_history')
-          .insert(rows)
-          .then(({ error }) => {
-            if (error) {
-              console.warn('[HistoryService] Erro ao gravar nft_price_history no Supabase:', error.message || error);
-            } else {
-              localStorage.setItem(LAST_SUPABASE_NFT_PUSH_KEY, String(Date.now()));
-              console.log(`[HistoryService] ${rows.length} snapshots de NFTs gravados com sucesso no Supabase!`);
-            }
-          })
-          .catch(err => console.warn('[HistoryService] Exceção ao gravar nft_price_history:', err?.message || err));
-      }
-    }
+    // 2. Transmissão para o Supabase (DESATIVADO - ARCH-01)
+    // A gravação global agora é responsabilidade exclusiva de Edge Functions ou Cron Jobs (service_role)
+    // para evitar exposição de RLS e erros 42501 no console do cliente.
   } catch (e) {
     console.warn('[HistoryService] Falha ao registrar snapshot de NFTs:', e);
   }

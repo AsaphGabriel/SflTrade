@@ -77,6 +77,10 @@ export async function fetchWithFallback(url, options = {}) {
     },
     // 3. CorsProxy.io Fallback
     async () => {
+      const hasSensitiveKey = Boolean(headers['x-api-key'] || headers['Authorization']);
+      if (hasSensitiveKey) {
+        throw new Error('Proxy público bloqueado por segurança para requisições com API Key.');
+      }
       const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);

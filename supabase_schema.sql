@@ -83,24 +83,30 @@ CREATE POLICY "Allow public read access on nft_price_history"
     TO anon, authenticated
     USING (true);
 
--- Políticas de inserção global de preços coletados pelas instâncias do app
-CREATE POLICY "Allow public insert on token_price_history"
-    ON public.token_price_history FOR INSERT
-    TO anon, authenticated
-    WITH CHECK (true);
+-- 1. Revogar políticas inseguras de inserção pública
+DROP POLICY IF EXISTS "Allow public insert on token_price_history" ON public.token_price_history;
+DROP POLICY IF EXISTS "Allow public insert on resource_price_history" ON public.resource_price_history;
+DROP POLICY IF EXISTS "Allow public insert on nft_price_history" ON public.nft_price_history;
 
-CREATE POLICY "Allow public insert on resource_price_history"
-    ON public.resource_price_history FOR INSERT
-    TO anon, authenticated
-    WITH CHECK (true);
+-- 2. Revogar privilégio explícito de INSERT da role anon
+REVOKE INSERT ON public.token_price_history FROM anon;
+REVOKE INSERT ON public.resource_price_history FROM anon;
+REVOKE INSERT ON public.nft_price_history FROM anon;
 
-CREATE POLICY "Allow public insert on nft_price_history"
-    ON public.nft_price_history FOR INSERT
-    TO anon, authenticated
-    WITH CHECK (true);
+-- 3. Inserção permitida ÚNICA E EXCLUSIVAMENTE para a service_role (Scripts/Crons)
+CREATE POLICY "Allow service_role insert on token_price_history"
+    ON public.token_price_history FOR INSERT TO service_role WITH CHECK (true);
 
--- Permissões de tabela para as roles anon e authenticated
-GRANT SELECT, INSERT ON public.nft_price_history TO anon, authenticated;
+CREATE POLICY "Allow service_role insert on resource_price_history"
+    ON public.resource_price_history FOR INSERT TO service_role WITH CHECK (true);
+
+CREATE POLICY "Allow service_role insert on nft_price_history"
+    ON public.nft_price_history FOR INSERT TO service_role WITH CHECK (true);
+
+-- 4. Leitura pública (SELECT) permanece aberta para anon e authenticated
+GRANT SELECT ON public.token_price_history TO anon, authenticated;
+GRANT SELECT ON public.resource_price_history TO anon, authenticated;
+GRANT SELECT ON public.nft_price_history TO anon, authenticated;
 
 -- 6. FUNÇÃO DE LIMPEZA E EXPURGO AUTOMÁTICO (> 90 DIAS)
 CREATE OR REPLACE FUNCTION public.clean_old_price_history()
