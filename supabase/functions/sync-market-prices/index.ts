@@ -14,7 +14,6 @@ serve(async (req) => {
       throw new Error("Variáveis de ambiente do Supabase não configuradas.");
     }
 
-    // Inicializa o cliente Supabase contornando o RLS com a service_role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Fetch Dólar/SFL
@@ -41,13 +40,13 @@ serve(async (req) => {
 
     // --- B. Inserir Preços de Recursos ---
     const resourcesToInsert = [];
-    if (pricesData) {
-      for (const [key, value] of Object.entries(pricesData)) {
-        if (value && typeof value === 'object' && value.SFL) {
+    if (pricesData?.data?.p2p) {
+      for (const [key, value] of Object.entries(pricesData.data.p2p)) {
+        if (value && typeof value === 'number') {
           resourcesToInsert.push({
             resource_id: key,
-            price_sfl: Number(value.SFL),
-            price_usd: Number(value.SFL) * flowerPriceUsd
+            price_sfl: value,
+            price_usd: value * flowerPriceUsd
           });
         }
       }
