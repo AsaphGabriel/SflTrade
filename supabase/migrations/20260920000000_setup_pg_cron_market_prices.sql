@@ -16,7 +16,7 @@ SELECT cron.schedule(
     '0 * * * *',
     $$
     SELECT net.http_post(
-        url:='https://[PROJECT_REF].supabase.co/functions/v1/sync-market-prices',
+        url:='https://atiumxglieipioqmnrbd.supabase.co/functions/v1/sync-market-prices',
         headers:=jsonb_build_object(
             'Content-Type', 'application/json',
             'Authorization', 'Bearer [YOUR_ANON_KEY]'
