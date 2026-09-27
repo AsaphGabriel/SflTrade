@@ -707,7 +707,7 @@ const FarmDashboard = ({
                       </div>
                     )}
                     {item.boostText && (
-                      <div className="text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1 py-0.5 truncate mt-1 text-center" title={item.boostText}>
+                      <div className="text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1 py-0.5 w-[calc(100%-12px)] mx-auto truncate mt-1 text-center" title={item.boostText}>
                         {item.boostText}
                       </div>
                     )}

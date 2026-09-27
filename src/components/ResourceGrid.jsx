@@ -320,7 +320,7 @@ const ResourceGrid = ({
                             <div className="market-card-name truncate" title={nft.displayName || nft.name}>{nft.displayName || nft.name}</div>
                             <div className="market-card-price text-amber-300 font-bold">{formatarPreco(nft.floor)} FLOWER</div>
                             {nft.boost_text && (
-                              <div className="text-[9px] sm:text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded mt-1 max-w-full text-center leading-tight line-clamp-1" title={nft.boost_text}>
+                              <div className="text-[9px] sm:text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded mt-1 w-[calc(100%-12px)] mx-auto truncate text-center" title={nft.boost_text}>
                                 {nft.boost_text}
                               </div>
                             )}
