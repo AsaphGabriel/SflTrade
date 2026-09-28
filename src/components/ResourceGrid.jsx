@@ -304,11 +304,11 @@ const ResourceGrid = ({
                       <div 
                         key={`${nft.collection || 'nft'}-${nft.id || nft.name}`} 
 
-                        className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between"
+                        className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between w-full min-w-0"
                         onClick={() => setSelectedChartResource({ name: nft.displayName || nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
                         title={currentLang === 'pt' ? 'Clique para ver gráfico de Floor Price e médias móveis' : 'Click to view Floor Price and moving average chart'}
                       >
-                        <div>
+                        <div className="w-full min-w-0 flex flex-col items-center">
                           <div className="market-card-img-wrap">
                             <img
                               src={iconUrl}
@@ -316,12 +316,17 @@ const ResourceGrid = ({
                               onError={handleImageError}
                             />
                           </div>
-                          <div className="market-card-info">
+                          <div className="market-card-info w-full min-w-0">
                             <div className="market-card-name truncate" title={nft.displayName || nft.name}>{nft.displayName || nft.name}</div>
                             <div className="market-card-price text-amber-300 font-bold">{formatarPreco(nft.floor)} FLOWER</div>
                             {nft.boost_text && (
-                              <div className="text-[9px] sm:text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded mt-1 w-[calc(100%-12px)] mx-auto truncate text-center" title={nft.boost_text}>
-                                {nft.boost_text}
+                              <div 
+                                className="w-[calc(100%-10px)] mx-[5px] mt-1 h-[22px] px-1.5 flex items-center justify-center text-[9px] sm:text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded box-border" 
+                                title={nft.boost_text}
+                              >
+                                <span className="w-full truncate text-center block">
+                                  {nft.boost_text}
+                                </span>
                               </div>
                             )}
                           </div>

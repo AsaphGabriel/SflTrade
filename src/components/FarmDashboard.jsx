@@ -666,7 +666,7 @@ const FarmDashboard = ({
               {filteredInventory.map(item => (
                 <div
                   key={item.id || item.name}
-                  className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm"
+                  className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm min-w-0"
                 >
                   <div className="flex items-start justify-between gap-1">
                     <img
@@ -684,7 +684,7 @@ const FarmDashboard = ({
                     </span>
                   </div>
 
-                  <div className="mt-2">
+                  <div className="mt-2 min-w-0">
                     <span className="text-xs font-bold text-slate-200 block truncate" title={item.name}>
                       {item.name}
                     </span>
@@ -693,7 +693,7 @@ const FarmDashboard = ({
                     </span>
                   </div>
 
-                  <div className="mt-2 border-t border-slate-800/80 pt-1.5 text-[10px] text-slate-400 font-mono space-y-0.5">
+                  <div className="mt-2 border-t border-slate-800/80 pt-1.5 text-[10px] text-slate-400 font-mono space-y-0.5 min-w-0">
                     <div className="flex justify-between">
                       <span>{item.isNft ? 'Floor:' : 'P2P:'}</span>
                       <span className={item.isNft ? 'text-amber-300 font-bold' : 'text-slate-300'}>
@@ -707,8 +707,13 @@ const FarmDashboard = ({
                       </div>
                     )}
                     {item.boostText && (
-                      <div className="text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1 py-0.5 w-[calc(100%-12px)] mx-auto truncate mt-1 text-center" title={item.boostText}>
-                        {item.boostText}
+                      <div 
+                        className="w-[calc(100%-10px)] mx-[5px] mt-1 h-[22px] px-1.5 flex items-center justify-center text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded box-border" 
+                        title={item.boostText}
+                      >
+                        <span className="w-full truncate text-center block">
+                          {item.boostText}
+                        </span>
                       </div>
                     )}
                   </div>

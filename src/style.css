@@ -167,6 +167,8 @@
   align-items: center;
   gap: 8px;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .market-card:hover {
@@ -196,6 +198,7 @@
 .market-card-info {
   text-align: center;
   width: 100%;
+  min-width: 0;
 }
 
 .market-card-name {
