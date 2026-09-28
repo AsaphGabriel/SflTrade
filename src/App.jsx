@@ -80,6 +80,7 @@ const App = () => {
     refreshData,
     handleTransaction,
     updateCustomAvgPrice,
+    updateTransactionPrice,
     searchFarm,
     updatedTimeText,
     loading,
