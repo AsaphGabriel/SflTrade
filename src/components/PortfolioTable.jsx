@@ -47,6 +47,7 @@ const PortfolioTable = ({
   currentLang = 'en',
   selectedCurrency = 'usd',
   onUpdateCustomAvgPrice,
+  onUpdateTransactionPrice,
   onOpenSell
 }) => {
   const [selectedPosition, setSelectedPosition] = useState(null);
@@ -283,6 +284,7 @@ const PortfolioTable = ({
           currentLang={currentLang}
           selectedCurrency={selectedCurrency}
           onUpdateCustomAvgPrice={onUpdateCustomAvgPrice}
+          onUpdateTransactionPrice={onUpdateTransactionPrice}
           onClose={() => setSelectedPosition(null)}
         />
       )}

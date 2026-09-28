@@ -174,6 +174,7 @@ const App = () => {
                 currentLang={currentLang} 
                 selectedCurrency={selectedCurrency}
                 onUpdateCustomAvgPrice={updateCustomAvgPrice}
+                onUpdateTransactionPrice={updateTransactionPrice}
                 onOpenSell={openSell} 
               />
               <MarketMoversCards

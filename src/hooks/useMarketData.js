@@ -197,6 +197,42 @@ export default function useMarketData() {
     }
   }, [currencyRates.usd, user, setTransactions]);
 
+  const updateTransactionPrice = useCallback(async (txId, newCotacaoUsd) => {
+    if (!user) return false;
+    try {
+      const { updateTransactionInCloud } = await import('../services/syncService');
+      const tx = transactions.find(t => t.id === txId);
+      if (!tx) return false;
+
+      const newTotalUsd = tx.totalPrice * Number(newCotacaoUsd);
+      const success = await updateTransactionInCloud(user.id, txId, Number(newCotacaoUsd), newTotalUsd);
+      
+      if (success) {
+        setTransactions(prev => {
+          const updated = prev.map(t => {
+            if (t.id === txId) {
+              return {
+                ...t,
+                cotacao_entrada_usd: Number(newCotacaoUsd),
+                token_price_usd_at_purchase: Number(newCotacaoUsd),
+                total_price_usd: newTotalUsd,
+                total_usd: newTotalUsd
+              };
+            }
+            return t;
+          });
+          localStorage.setItem('sfl_transactions', JSON.stringify(updated));
+          return updated;
+        });
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('[MarketData] Erro em updateTransactionPrice:', err);
+      return false;
+    }
+  }, [user, transactions, setTransactions]);
+
   return {
     user,
     setUser,
@@ -225,6 +261,7 @@ export default function useMarketData() {
     refreshData,
     handleTransaction,
     updateCustomAvgPrice,
+    updateTransactionPrice,
     searchFarm,
     updatedTimeText,
     loading,

@@ -46,6 +46,7 @@ const PositionDetailsModal = ({
   currentLang = 'en',
   selectedCurrency = 'usd',
   onUpdateCustomAvgPrice,
+  onUpdateTransactionPrice,
   onClose
 }) => {
   if (!position || !position.nome) return null;
@@ -65,10 +66,33 @@ const PositionDetailsModal = ({
   const [editSfl, setEditSfl] = useState('');
   const [editFlowerUsd, setEditFlowerUsd] = useState('');
 
+  const [editingTxId, setEditingTxId] = useState(null);
+  const [editTxFlowerUsd, setEditTxFlowerUsd] = useState('');
+  const [isSavingTx, setIsSavingTx] = useState(false);
+
   useEffect(() => {
     setEditSfl(precoMedio ? precoMedio.toString() : '');
     setEditFlowerUsd(cotacaoMediaFlowerUsd ? cotacaoMediaFlowerUsd.toString() : '');
   }, [precoMedio, cotacaoMediaFlowerUsd]);
+
+  const handleEditTx = (txId, currentCotacao) => {
+    setEditingTxId(txId);
+    setEditTxFlowerUsd(currentCotacao.toString());
+  };
+
+  const handleSaveTx = async (txId) => {
+    if (!onUpdateTransactionPrice) return;
+    setIsSavingTx(true);
+    const success = await onUpdateTransactionPrice(txId, editTxFlowerUsd);
+    if (success) {
+      setEditingTxId(null);
+    }
+    setIsSavingTx(false);
+  };
+
+  const handleCancelTx = () => {
+    setEditingTxId(null);
+  };
 
   const resourceTxList = (Array.isArray(allTransactions) ? allTransactions : [])
     .filter(t => t && t.recurso && nome && String(t.recurso).toLowerCase() === String(nome).toLowerCase())
@@ -306,23 +330,70 @@ const PositionDetailsModal = ({
                   const stableKey = tx.id || `${tx.recurso || 'tx'}-${tx.timestamp || 'ts'}-${idx}`;
 
                   return (
-                    <div key={stableKey} className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/80 text-[11px] flex justify-between items-center font-mono">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
-                            {isBuy ? (currentLang === 'pt' ? 'Compra' : 'Buy') : (currentLang === 'pt' ? 'Venda' : 'Sell')}
-                          </span>
-                          <span className="text-slate-200 font-bold">{formatarPreco(tx.qty)} un</span>
-                          <span className="text-slate-400">@ {formatarPreco(tx.unitPrice)} FLOWER</span>
+                    <div key={stableKey} className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/80 text-[11px] font-mono">
+                      {editingTxId === tx.id ? (
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex justify-between items-center text-slate-300">
+                            <span>{dateFormatted} - {isBuy ? 'Buy' : 'Sell'} {formatarPreco(tx.qty)} un</span>
+                            <span className="text-amber-400">{formatarPreco(tx.totalPrice)} FLOWER</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-slate-400 text-[10px] w-20">Price (USD):</label>
+                            <input
+                              type="number"
+                              step="0.0001"
+                              value={editTxFlowerUsd}
+                              onChange={(e) => setEditTxFlowerUsd(e.target.value)}
+                              className="w-full bg-slate-950 text-white rounded p-1 border border-slate-700 text-xs text-center"
+                              disabled={isSavingTx}
+                            />
+                          </div>
+                          <div className="flex gap-2 mt-1">
+                            <button
+                              onClick={() => handleSaveTx(tx.id)}
+                              disabled={isSavingTx}
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-1 rounded text-xs font-bold transition disabled:opacity-50"
+                            >
+                              {isSavingTx ? '...' : (currentLang === 'pt' ? 'Salvar' : 'Save')}
+                            </button>
+                            <button
+                              onClick={handleCancelTx}
+                              disabled={isSavingTx}
+                              className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-1 rounded text-xs transition"
+                            >
+                              {currentLang === 'pt' ? 'Cancelar' : 'Cancel'}
+                            </button>
+                          </div>
                         </div>
-                        <div className="text-[9px] text-slate-500 mt-0.5">
-                          {dateFormatted} • $FLOWER: ${cotacaoTx.toFixed(4)}
+                      ) : (
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
+                                {isBuy ? (currentLang === 'pt' ? 'Compra' : 'Buy') : (currentLang === 'pt' ? 'Venda' : 'Sell')}
+                              </span>
+                              <span className="text-slate-200 font-bold">{formatarPreco(tx.qty)} un</span>
+                              <span className="text-slate-400">@ {formatarPreco(tx.unitPrice)} FLOWER</span>
+                            </div>
+                            <div className="text-[9px] text-slate-500 mt-0.5 flex items-center gap-1">
+                              <span>{dateFormatted} • $FLOWER: ${cotacaoTx.toFixed(4)}</span>
+                              {onUpdateTransactionPrice && tx.id && (
+                                <button 
+                                  onClick={() => handleEditTx(tx.id, cotacaoTx)}
+                                  className="text-amber-500 hover:text-amber-400 underline decoration-dotted opacity-80 hover:opacity-100 transition px-1"
+                                  title={currentLang === 'pt' ? 'Editar preço de compra' : 'Edit purchase price'}
+                                >
+                                  ✏️
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right font-bold">
+                            <span className="text-amber-400 block">{formatarPreco(tx.totalPrice)} FLOWER</span>
+                            <span className="text-slate-300 text-[10px] block">${totalUsd.toFixed(2)}</span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right font-bold">
-                        <span className="text-amber-400 block">{formatarPreco(tx.totalPrice)} FLOWER</span>
-                        <span className="text-slate-300 text-[10px] block">${totalUsd.toFixed(2)}</span>
-                      </div>
+                      )}
                     </div>
                   );
                 })}

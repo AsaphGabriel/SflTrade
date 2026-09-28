@@ -301,3 +301,26 @@ export async function saveSettingsRemote(userId, settings) {
     console.warn('[SyncService] Exceção ao salvar configurações no Supabase:', err?.message || err);
   }
 }
+
+/**
+ * Atualiza o preço da transação no Supabase
+ */
+export async function updateTransactionInCloud(userId, txId, newCotacaoUsd, newTotalUsd) {
+  if (!userId || !txId) return false;
+  try {
+    const { error } = await supabase
+      .from('user_transactions')
+      .update({
+        token_price_usd_at_purchase: newCotacaoUsd,
+        total_usd: newTotalUsd
+      })
+      .eq('user_id', userId)
+      .eq('id', txId);
+
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('[SyncService] Erro ao atualizar transação:', err);
+    return false;
+  }
+}

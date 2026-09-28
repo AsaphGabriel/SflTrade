@@ -87,7 +87,25 @@ export default function useAuthSync(onSettingsSynced) {
   }, [syncCloud]);
 
   useEffect(() => {
-    const subscription = onAuthStateChange(async (event, session) => {
+    let subscription = null;
+
+    const initAuth = async () => {
+      try {
+        const { getSession } = await import('../services/authService');
+        const session = await getSession();
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        if (currentUser && !initialSyncDone.current) {
+          initialSyncDone.current = true;
+          if (syncCloudRef.current) await syncCloudRef.current(currentUser, false);
+        }
+      } catch (err) {
+        console.warn('[MarketData] Erro ao recuperar sessão inicial:', err);
+      }
+    };
+    initAuth();
+
+    subscription = onAuthStateChange(async (event, session) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
 
@@ -101,8 +119,16 @@ export default function useAuthSync(onSettingsSynced) {
       }
     });
 
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        initAuth();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       if (subscription && subscription.unsubscribe) subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
