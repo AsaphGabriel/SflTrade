@@ -30,7 +30,7 @@ const App = () => {
   const [resourceCategoryFilter, setResourceCategoryFilter] = useState('all');
   const [marketSearchTerm, setMarketSearchTerm] = useState('');
 
-  const handleMoversCategoryChange = (cat) => {
+  const handleMoversCategoryChange = (cat: any) => {
     setActiveMoversCategory(cat);
     // Ao clicar nos cards de maiores altas/baixas, navega para a categoria correspondente
     // na ResourceGrid, mas apenas se não houver uma busca ativa (para não interferir com o filtro de busca).
@@ -43,7 +43,7 @@ const App = () => {
     }
   };
 
-  const handleResourceCategoryChange = (catId) => {
+  const handleResourceCategoryChange = (catId: any) => {
     setResourceCategoryFilter(catId);
     if (catId === 'power_ups') {
       setActiveMoversCategory('power_ups');
@@ -111,13 +111,13 @@ const App = () => {
     if (farmId) searchFarm(farmId, keyStr, true);
   };
 
-  const openBuy = (recurso = '', meta = null) => {
+  const openBuy = (recurso: any = '', meta: any = null) => {
     setModalResource(recurso);
     setModalResourceMeta(meta);
     setIsBuyModalOpen(true);
   };
 
-  const openSell = (recurso = '', meta = null) => {
+  const openSell = (recurso: any = '', meta: any = null) => {
     setModalResource(recurso);
     setModalResourceMeta(meta);
     setIsSellModalOpen(true);
@@ -184,7 +184,7 @@ const App = () => {
                 currentLang={currentLang}
                 activeCategory={activeMoversCategory}
                 onCategoryChange={handleMoversCategoryChange}
-                onSelectResource={(res, meta) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
+                onSelectResource={(res: any, meta: any) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
               />
               <ResourceGrid 
                 data={marketData} 
@@ -287,7 +287,7 @@ const App = () => {
           onClose={() => setIsAuthModalOpen(false)}
           user={user}
           currentLang={currentLang}
-          onAuthChange={(updatedUser) => setUser(updatedUser)}
+          onAuthChange={(updatedUser: any) => setUser(updatedUser)}
           onSyncCloud={syncCloud}
           isSyncing={isSyncing}
         />

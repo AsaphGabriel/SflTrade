@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 /**
  * Utilitário para verificar se o erro é de permissão/RLS (ex: 42501 Forbidden)
  */
-function isPermissionOrForbiddenError(error) {
+function isPermissionOrForbiddenError(error: any) {
   if (!error) return false;
   const code = String(error.code || '');
   const msg = String(error.message || '');
@@ -19,7 +19,7 @@ function isPermissionOrForbiddenError(error) {
 /**
  * Busca todas as informações do usuário no Supabase (settings, portfolios, transactions)
  */
-export async function fetchRemoteUserData(userId) {
+export async function fetchRemoteUserData(userId: any) {
   if (!userId) return null;
 
   try {
@@ -74,7 +74,7 @@ export async function fetchRemoteUserData(userId) {
       portfolios: portfoliosData || [],
       transactions: transactionsData || []
     };
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[SyncService] Exceção em fetchRemoteUserData:', err?.message || err);
     return null;
   }
@@ -83,7 +83,7 @@ export async function fetchRemoteUserData(userId) {
 /**
  * Sincroniza dados locais (LocalStorage) para o Supabase (Push local -> remote)
  */
-export async function syncLocalToSupabase(userId, { localTransactions = [], localSettings = {}, localPortfolios = [] }) {
+export async function syncLocalToSupabase(userId: any, { localTransactions = [], localSettings = {}, localPortfolios = [] }: any) {
   if (!userId) return;
 
   try {
@@ -126,20 +126,20 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
       }
 
       // Chave robusta de identificação de transação
-      const makeKey = (res, type, qty, price) => {
+      const makeKey = (res: any, type: any, qty: any, price: any) => {
         return `${String(res).toLowerCase()}_${String(type).toUpperCase()}_${Number(qty).toFixed(4)}_${Number(price).toFixed(6)}`;
       };
 
       const existingSet = new Set(
-        (existingTx || []).map(t => makeKey(t.resource_id, t.type, t.quantity, t.price_sfl))
+        (existingTx || []).map((t: any) => makeKey(t.resource_id, t.type, t.quantity, t.price_sfl))
       );
 
       const newTxsToInsert = localTransactions
-        .filter(t => {
+        .filter((t: any) => {
           const key = makeKey(t.recurso || t.resource_id, t.tipo || t.type, t.qty || t.quantity, t.unitPrice || t.price_sfl);
           return !existingSet.has(key);
         })
-        .map(t => ({
+        .map((t: any) => ({
           user_id: userId,
           resource_id: t.recurso || t.resource_id,
           type: (t.tipo || t.type || 'BUY').toUpperCase(),
@@ -170,7 +170,7 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
 
     // 3. Sincronizar Portfólios / Posições
     if (localPortfolios && localPortfolios.length > 0) {
-      const portfolioRows = localPortfolios.map(p => ({
+      const portfolioRows = localPortfolios.map((p: any) => ({
         user_id: userId,
         resource_id: p.nome || p.resource_id,
         quantity: Number(p.qty || p.quantity || 0),
@@ -193,7 +193,7 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
     }
 
     console.log('[SyncService] Sincronização Local -> Supabase finalizada!');
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[SyncService] Erro na sincronização Local -> Supabase:', err?.message || err);
   }
 }
@@ -201,7 +201,7 @@ export async function syncLocalToSupabase(userId, { localTransactions = [], loca
 /**
  * Persiste uma nova transação individual diretamente no Supabase quando logado
  */
-export async function saveTransactionRemote(userId, transaction) {
+export async function saveTransactionRemote(userId: any, transaction: any) {
   if (!userId || !transaction) return;
 
   try {
@@ -228,7 +228,7 @@ export async function saveTransactionRemote(userId, transaction) {
       }
       console.warn('[SyncService] Erro ao salvar transação no Supabase:', error.message || error);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[SyncService] Exceção ao salvar transação no Supabase:', err?.message || err);
   }
 }
@@ -236,11 +236,11 @@ export async function saveTransactionRemote(userId, transaction) {
 /**
  * Persiste portfólios atualizados diretamente no Supabase
  */
-export async function savePortfoliosRemote(userId, portfolioList) {
+export async function savePortfoliosRemote(userId: any, portfolioList: any) {
   if (!userId || !portfolioList || portfolioList.length === 0) return;
 
   try {
-    const rows = portfolioList.map(p => ({
+    const rows = portfolioList.map((p: any) => ({
       user_id: userId,
       resource_id: p.nome || p.resource_id,
       quantity: Number(p.qty || p.quantity || 0),
@@ -262,7 +262,7 @@ export async function savePortfoliosRemote(userId, portfolioList) {
         console.warn('[SyncService] Erro ao salvar portfólio no Supabase:', error.message || error);
       }
     }
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[SyncService] Exceção ao salvar portfólio no Supabase:', err?.message || err);
   }
 }
@@ -270,7 +270,7 @@ export async function savePortfoliosRemote(userId, portfolioList) {
 /**
  * Persiste configurações alteradas no Supabase
  */
-export async function saveSettingsRemote(userId, settings) {
+export async function saveSettingsRemote(userId: any, settings: any) {
   if (!userId || !settings) return;
 
   try {
@@ -297,7 +297,7 @@ export async function saveSettingsRemote(userId, settings) {
       }
       console.warn('[SyncService] Erro ao salvar configurações no Supabase:', error.message || error);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[SyncService] Exceção ao salvar configurações no Supabase:', err?.message || err);
   }
 }
@@ -305,7 +305,7 @@ export async function saveSettingsRemote(userId, settings) {
 /**
  * Atualiza o preço da transação no Supabase
  */
-export async function updateTransactionInCloud(userId, txId, newCotacaoUsd, newTotalUsd) {
+export async function updateTransactionInCloud(userId: any, txId: any, newCotacaoUsd: any, newTotalUsd: any) {
   if (!userId || !txId) return false;
   try {
     const { error } = await supabase
@@ -319,7 +319,7 @@ export async function updateTransactionInCloud(userId, txId, newCotacaoUsd, newT
 
     if (error) throw error;
     return true;
-  } catch (err) {
+  } catch (err: any) {
     console.error('[SyncService] Erro ao atualizar transação:', err);
     return false;
   }

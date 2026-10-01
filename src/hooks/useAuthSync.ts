@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChange } from '../services/authService';
 import { fetchRemoteUserData, syncLocalToSupabase } from '../services/syncService';
 
-export default function useAuthSync(onSettingsSynced) {
+export default function useAuthSync(onSettingsSynced: any) {
   const [user, setUser] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [transactions, setTransactions] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('sfl_transactions')) || [];
-    } catch (e) {
+    } catch (e: any) {
       return [];
     }
   });
@@ -18,7 +18,7 @@ export default function useAuthSync(onSettingsSynced) {
   const isSyncingRef = useRef(false);
   const lastBackgroundSyncRef = useRef(0);
 
-  const syncCloud = useCallback(async (targetUser = user, isManual = false) => {
+  const syncCloud = useCallback(async (targetUser: any = user, isManual: any = false) => {
     if (!targetUser) return;
     if (isSyncingRef.current) {
       console.log('[MarketData] Sincronização já em andamento, ignorando nova chamada.');
@@ -50,7 +50,7 @@ export default function useAuthSync(onSettingsSynced) {
       const remote = await fetchRemoteUserData(targetUser.id);
 
       if (remote && remote.transactions && remote.transactions.length > 0) {
-        const formattedRemoteTxs = remote.transactions.map(rt => ({
+        const formattedRemoteTxs = remote.transactions.map((rt: any) => ({
           id: rt.id,
           recurso: rt.resource_id,
           tipo: rt.type ? rt.type.toLowerCase() : 'buy',
@@ -73,7 +73,7 @@ export default function useAuthSync(onSettingsSynced) {
         onSettingsSynced(remote.settings);
       }
       console.log('[MarketData] Sincronização cloud concluída com sucesso!');
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[MarketData] Erro ao realizar syncCloud:', err?.message || err);
     } finally {
       isSyncingRef.current = false;
@@ -99,13 +99,13 @@ export default function useAuthSync(onSettingsSynced) {
           initialSyncDone.current = true;
           if (syncCloudRef.current) await syncCloudRef.current(currentUser, false);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[MarketData] Erro ao recuperar sessão inicial:', err);
       }
     };
     initAuth();
 
-    subscription = onAuthStateChange(async (event, session) => {
+    subscription = onAuthStateChange(async (event: any, session: any) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
 

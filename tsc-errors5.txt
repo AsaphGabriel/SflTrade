@@ -1,0 +1,2 @@
+src/services/historyService.ts(243,1): error TS1128: Declaration or statement expected.
+src/services/historyService.ts(261,1): error TS1128: Declaration or statement expected.

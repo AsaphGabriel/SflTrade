@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-function getItemIcon(itemName) {
+function getItemIcon(itemName: any) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function formatarPreco(valor) {
+function formatarPreco(valor: any) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
@@ -16,7 +16,7 @@ function formatarPreco(valor) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-function formatarMoeda(valor, currency = 'usd') {
+function formatarMoeda(valor: any, currency: any = 'usd') {
   if (valor === undefined || valor === null || isNaN(valor)) return '$0.00 USD';
   const num = Number(valor);
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
@@ -48,7 +48,7 @@ const PositionDetailsModal = ({
   onUpdateCustomAvgPrice,
   onUpdateTransactionPrice,
   onClose
-}) => {
+}: any) => {
   if (!position || !position.nome) return null;
 
   const {
@@ -75,12 +75,12 @@ const PositionDetailsModal = ({
     setEditFlowerUsd(cotacaoMediaFlowerUsd ? cotacaoMediaFlowerUsd.toString() : '');
   }, [precoMedio, cotacaoMediaFlowerUsd]);
 
-  const handleEditTx = (txId, currentCotacao) => {
+  const handleEditTx = (txId: any, currentCotacao: any) => {
     setEditingTxId(txId);
     setEditTxFlowerUsd(currentCotacao.toString());
   };
 
-  const handleSaveTx = async (txId) => {
+  const handleSaveTx = async (txId: any) => {
     if (!onUpdateTransactionPrice) return;
     setIsSavingTx(true);
     const success = await onUpdateTransactionPrice(txId, editTxFlowerUsd);
@@ -95,8 +95,8 @@ const PositionDetailsModal = ({
   };
 
   const resourceTxList = (Array.isArray(allTransactions) ? allTransactions : [])
-    .filter(t => t && t.recurso && nome && String(t.recurso).toLowerCase() === String(nome).toLowerCase())
-    .sort((a, b) => {
+    .filter((t: any) => t && t.recurso && nome && String(t.recurso).toLowerCase() === String(nome).toLowerCase())
+    .sort((a: any, b: any) => {
       const timeA = new Date(a.timestamp || a.created_at || a.id || 0).getTime() || 0;
       const timeB = new Date(b.timestamp || b.created_at || b.id || 0).getTime() || 0;
       return timeB - timeA;
@@ -109,7 +109,7 @@ const PositionDetailsModal = ({
         : `https://sunflower-land.com/play/erc1155/images/${position.nft_id}.webp`)
     : getItemIcon(nome));
 
-  const handleSaveCustomAvg = (e) => {
+  const handleSaveCustomAvg = (e: any) => {
     e.preventDefault();
     try {
       const valSfl = editSfl !== '' ? parseFloat(editSfl) : null;
@@ -117,7 +117,7 @@ const PositionDetailsModal = ({
       if (onUpdateCustomAvgPrice) {
         onUpdateCustomAvgPrice(nome, valSfl, valFlowerUsd);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[PositionDetailsModal] Erro ao salvar preço médio customizado:', err);
     } finally {
       setIsEditing(false);
@@ -129,7 +129,7 @@ const PositionDetailsModal = ({
       if (onUpdateCustomAvgPrice) {
         onUpdateCustomAvgPrice(nome, null, null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[PositionDetailsModal] Erro ao restaurar preço médio:', err);
     } finally {
       setIsEditing(false);
@@ -145,7 +145,7 @@ const PositionDetailsModal = ({
     >
       <div 
         className="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-lg w-full shadow-2xl space-y-3 max-h-[85vh] flex flex-col relative"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: any) => e.stopPropagation()}
       >
         
         {/* Cabeçalho Compacto do Modal */}
@@ -207,7 +207,7 @@ const PositionDetailsModal = ({
                       type="number"
                       step="any"
                       value={editSfl}
-                      onChange={(e) => setEditSfl(e.target.value)}
+                      onChange={(e: any) => setEditSfl(e.target.value)}
                       placeholder="0.0239"
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                     />
@@ -221,7 +221,7 @@ const PositionDetailsModal = ({
                       type="number"
                       step="any"
                       value={editFlowerUsd}
-                      onChange={(e) => setEditFlowerUsd(e.target.value)}
+                      onChange={(e: any) => setEditFlowerUsd(e.target.value)}
                       placeholder="0.0670"
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-mono font-bold"
                     />
@@ -317,7 +317,7 @@ const PositionDetailsModal = ({
               </div>
             ) : (
               <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-                {resourceTxList.map((tx, idx) => {
+                {resourceTxList.map((tx: any, idx: any) => {
                   const isBuy = tx.tipo === 'buy';
                   const dateFormatted = new Date(tx.timestamp || tx.created_at || tx.id).toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
                     day: '2-digit',
@@ -343,7 +343,7 @@ const PositionDetailsModal = ({
                               type="number"
                               step="0.0001"
                               value={editTxFlowerUsd}
-                              onChange={(e) => setEditTxFlowerUsd(e.target.value)}
+                              onChange={(e: any) => setEditTxFlowerUsd(e.target.value)}
                               className="w-full bg-slate-950 text-white rounded p-1 border border-slate-700 text-xs text-center"
                               disabled={isSavingTx}
                             />

@@ -1,11 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { resolveFarmIdFromUsername, fetchFarmDataSmart } from '../services/api';
 
-export default function useFarmProfile(onFarmLoaded) {
+export default function useFarmProfile(onFarmLoaded: any) {
   const [farmData, setFarmData] = useState(null);
   const farmInitializedRef = useRef(false);
 
-  const searchFarm = useCallback(async (query, apiKeyOverride = null, forceRefresh = false) => {
+  const searchFarm = useCallback(async (query: any, apiKeyOverride: any = null, forceRefresh: any = false) => {
     if (!query) return;
     let landId = query;
     const apiKeyToUse = apiKeyOverride ?? localStorage.getItem('sfl_api_key') ?? '';
@@ -36,7 +36,7 @@ export default function useFarmProfile(onFarmLoaded) {
       } else {
         setFarmData(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[FarmSearch] Erro ao carregar dados da fazenda:', err);
       setFarmData(null);
     }

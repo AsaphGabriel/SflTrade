@@ -24,7 +24,7 @@ const DADOS_PRECOS_INICIAIS = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-export default function useMarketPrices(user) {
+export default function useMarketPrices(user: any) {
   const [selectedIsland, setSelectedIsland] = useState(localStorage.getItem('sfl_island') || 'volcano');
   const [isVip, setIsVip] = useState(localStorage.getItem('sfl_vip') === 'true');
   const [isShrine, setIsShrine] = useState(localStorage.getItem('sfl_shrine') === 'true');
@@ -42,12 +42,12 @@ export default function useMarketPrices(user) {
     try {
       const raw = localStorage.getItem('sfl_custom_avg_prices');
       return raw ? JSON.parse(raw) : {};
-    } catch (e) {
+    } catch (e: any) {
       return {};
     }
   });
 
-  const updateIsland = useCallback((val) => {
+  const updateIsland = useCallback((val: any) => {
     setSelectedIsland(val);
     localStorage.setItem('sfl_island', val);
     if (user) {
@@ -57,7 +57,7 @@ export default function useMarketPrices(user) {
     }
   }, [user, isVip, isShrine, selectedCurrency]);
 
-  const updateVip = useCallback((val) => {
+  const updateVip = useCallback((val: any) => {
     setIsVip(val);
     localStorage.setItem('sfl_vip', String(val));
     if (user) {
@@ -67,7 +67,7 @@ export default function useMarketPrices(user) {
     }
   }, [user, selectedIsland, isShrine, selectedCurrency]);
 
-  const updateShrine = useCallback((val) => {
+  const updateShrine = useCallback((val: any) => {
     setIsShrine(val);
     localStorage.setItem('sfl_shrine', String(val));
     if (user) {
@@ -77,7 +77,7 @@ export default function useMarketPrices(user) {
     }
   }, [user, selectedIsland, isVip, selectedCurrency]);
 
-  const updateCurrency = useCallback((val) => {
+  const updateCurrency = useCallback((val: any) => {
     setSelectedCurrency(val);
     localStorage.setItem('sfl_currency', val);
     if (user) {
@@ -87,8 +87,8 @@ export default function useMarketPrices(user) {
     }
   }, [user, selectedIsland, isVip, isShrine]);
 
-  const updateCustomAvgPrice = useCallback((resourceName, avgSfl, flowerUsdRate) => {
-    setCustomAvgPrices(prev => {
+  const updateCustomAvgPrice = useCallback((resourceName: any, avgSfl: any, flowerUsdRate: any) => {
+    setCustomAvgPrices((prev: any) => {
       const updated = { ...prev };
       if (!resourceName) return updated;
       const key = resourceName.toLowerCase();
@@ -140,7 +140,7 @@ export default function useMarketPrices(user) {
           pol: sfl.pol || 1.194
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[MarketData] Erro ao buscar cotações do exchange:', err);
     }
 
@@ -149,7 +149,7 @@ export default function useMarketPrices(user) {
       if (dataPrices) {
         const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
         if (p2pData) {
-          setMarketData(prev => ({ ...prev, ...p2pData }));
+          setMarketData((prev: any) => ({ ...prev, ...p2pData }));
           setTimeout(() => {
             recordDailySnapshot(fetchedUsd, p2pData);
           }, 50);
@@ -164,7 +164,7 @@ export default function useMarketPrices(user) {
       } else {
         setError(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[MarketData] Erro ao buscar preços P2P:', err);
       setError(true);
     }
@@ -177,7 +177,7 @@ export default function useMarketPrices(user) {
           recordNftSnapshot(fetchedUsd, nftRes.list);
         }, 100);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[MarketData] Erro ao buscar NFTs com boost:', err);
     } finally {
       setLoading(false);

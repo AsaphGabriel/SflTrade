@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { signUp, signInWithPassword, signInWithOtp, signOut } from '../services/authService';
 import { t } from '../i18n';
 
-const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, onSyncCloud, isSyncing = false }) => {
+const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, onSyncCloud, isSyncing = false }: any) => {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup' | 'magiclink'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,12 +11,12 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
 
   if (!isOpen) return null;
 
-  const showMessage = (text, type = 'error', duration = 4000) => {
+  const showMessage = (text: any, type: any = 'error', duration: any = 4000) => {
     setMsg({ text, type });
     setTimeout(() => setMsg({ text: '', type: '' }), duration);
   };
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: any) => {
     e.preventDefault();
     if (!email || !password) {
       showMessage(currentLang === 'pt' ? 'Preencha e-mail e senha.' : 'Fill in email and password.');
@@ -31,14 +31,14 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
       setTimeout(() => {
         onClose();
       }, 1000);
-    } catch (err) {
+    } catch (err: any) {
       showMessage(err.message || 'Erro ao realizar login.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignUp = async (e) => {
+  const handleSignUp = async (e: any) => {
     e.preventDefault();
     if (!email || !password) {
       showMessage(currentLang === 'pt' ? 'Preencha e-mail e senha.' : 'Fill in email and password.');
@@ -53,14 +53,14 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
       const data = await signUp({ email, password });
       showMessage(currentLang === 'pt' ? '✅ Conta criada! Verifique seu e-mail para confirmar.' : '✅ Account created! Check your email to confirm.', 'success', 6000);
       if (data.user && onAuthChange) onAuthChange(data.user);
-    } catch (err) {
+    } catch (err: any) {
       showMessage(err.message || 'Erro ao criar conta.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMagicLink = async (e) => {
+  const handleMagicLink = async (e: any) => {
     e.preventDefault();
     if (!email) {
       showMessage(currentLang === 'pt' ? 'Informe o e-mail.' : 'Please enter your email.');
@@ -70,7 +70,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
     try {
       await signInWithOtp({ email });
       showMessage(currentLang === 'pt' ? '📩 Link Mágico enviado! Confira sua caixa de entrada.' : '📩 Magic link sent! Check your inbox.', 'success', 6000);
-    } catch (err) {
+    } catch (err: any) {
       showMessage(err.message || 'Erro ao enviar Link Mágico.');
     } finally {
       setLoading(false);
@@ -84,7 +84,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
       showMessage(currentLang === 'pt' ? 'Desconectado com sucesso.' : 'Logged out successfully.', 'info');
       if (onAuthChange) onAuthChange(null);
       setTimeout(() => onClose(), 800);
-    } catch (err) {
+    } catch (err: any) {
       showMessage(err.message || 'Erro ao sair.');
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
     try {
       await onSyncCloud(user, true);
       showMessage(currentLang === 'pt' ? '✅ Sincronização concluída com sucesso!' : '✅ Sync completed successfully!', 'success');
-    } catch (e) {
+    } catch (e: any) {
       showMessage(currentLang === 'pt' ? 'Erro ao sincronizar.' : 'Sync failed.', 'error');
     }
   };
@@ -219,7 +219,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e: any) => setEmail(e.target.value)}
                     placeholder="seuemail@exemplo.com"
                     className="w-full bg-slate-950 text-slate-100 px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs"
                   />
@@ -234,7 +234,7 @@ const AuthModal = ({ isOpen, onClose, user, currentLang = 'pt', onAuthChange, on
                       type="password"
                       required
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e: any) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       className="w-full bg-slate-950 text-slate-100 px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs"
                     />

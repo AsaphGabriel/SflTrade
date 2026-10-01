@@ -55,12 +55,12 @@ const CATEGORIAS_MERCADO = [
   }
 ];
 
-function getItemIcon(itemName) {
+function getItemIcon(itemName: any) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function getCategoryIcon(catId, sampleNft = '') {
+function getCategoryIcon(catId: any, sampleNft: any = '') {
   if (catId === 'power_ups') {
     return 'https://sunflower-land.com/play/erc1155/images/2129.webp';
   }
@@ -75,7 +75,7 @@ function getCategoryIcon(catId, sampleNft = '') {
   return itemName ? getItemIcon(itemName) : '';
 }
 
-function formatarPreco(valor) {
+function formatarPreco(valor: any) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
@@ -84,9 +84,9 @@ function formatarPreco(valor) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-function obterCategoriaItem(nomeItem) {
+function obterCategoriaItem(nomeItem: any) {
   for (const cat of CATEGORIAS_MERCADO) {
-    if (cat.itens && cat.itens.some(i => i.toLowerCase() === nomeItem.toLowerCase())) {
+    if (cat.itens && cat.itens.some((i: any) => i.toLowerCase() === nomeItem.toLowerCase())) {
       return cat.id;
     }
   }
@@ -103,14 +103,14 @@ const ResourceGrid = ({
   onCategoryFilterChange = null,
   searchTerm: externalSearchTerm = null,
   onSearchTermChange = null
-}) => {
+}: any) => {
   // ── Categoria ───────────────────────────────────────────────────────────────
   const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
   const currentCategoryFilter = (categoryFilter !== null && categoryFilter !== undefined)
     ? categoryFilter
     : internalCategoryFilter;
 
-  const handleSelectCategory = (catId) => {
+  const handleSelectCategory = (catId: any) => {
     setInternalCategoryFilter(catId);
     if (onCategoryFilterChange) onCategoryFilterChange(catId);
   };
@@ -125,7 +125,7 @@ const ResourceGrid = ({
     ? (externalSearchTerm ?? '')   // controlado: sempre usa o valor do parent
     : internalSearchTerm;          // autônomo: usa estado interno
 
-  const handleSearchChange = (val) => {
+  const handleSearchChange = (val: any) => {
     if (isControlled) {
       // Modo controlado: reseta aba se necessário, propaga pro parent
       if (val.trim() && currentCategoryFilter !== 'all') {
@@ -146,9 +146,9 @@ const ResourceGrid = ({
 
   // Agrupamento de itens por categoria
   const grupos = {};
-  CATEGORIAS_MERCADO.forEach(cat => { grupos[cat.id] = []; });
+  CATEGORIAS_MERCADO.forEach((cat: any) => { grupos[cat.id] = []; });
 
-  Object.keys(data).forEach(item => {
+  Object.keys(data).forEach((item: any) => {
     const catId = obterCategoriaItem(item);
     if (!grupos[catId]) grupos[catId] = [];
     grupos[catId].push(item);
@@ -161,7 +161,7 @@ const ResourceGrid = ({
   const isSearching = Boolean(term);
 
   // Helper para verificar correspondencia de NFT
-  const matchesNft = (item) => {
+  const matchesNft = (item: any) => {
     if (!isSearching) return true;
     const nameMatch = item.name && item.name.toLowerCase().includes(term);
     const displayMatch = item.displayName && item.displayName.toLowerCase().includes(term);
@@ -176,15 +176,15 @@ const ResourceGrid = ({
     ? CATEGORIAS_MERCADO
     : (currentCategoryFilter === 'all'
         ? CATEGORIAS_MERCADO
-        : CATEGORIAS_MERCADO.filter(cat => cat.id === currentCategoryFilter));
+        : CATEGORIAS_MERCADO.filter((cat: any) => cat.id === currentCategoryFilter));
 
   // Total de correspondencias durante a busca
   const totalMatches = isSearching
-    ? CATEGORIAS_MERCADO.reduce((acc, cat) => {
+    ? CATEGORIAS_MERCADO.reduce((acc: any, cat: any) => {
         if (cat.isNftCategory) {
           return acc + nftList.filter(matchesNft).length;
         } else {
-          return acc + (grupos[cat.id] || []).filter(item => item.toLowerCase().includes(term)).length;
+          return acc + (grupos[cat.id] || []).filter((item: any) => item.toLowerCase().includes(term)).length;
         }
       }, 0)
     : 1;
@@ -192,7 +192,7 @@ const ResourceGrid = ({
   // Construcao da lista de Abas
   const tabs = [
     { id: 'all', key: 'marketTabAll' },
-    ...CATEGORIAS_MERCADO.map(cat => ({ id: cat.id, key: cat.titleKey, isNft: cat.isNftCategory }))
+    ...CATEGORIAS_MERCADO.map((cat: any) => ({ id: cat.id, key: cat.titleKey, isNft: cat.isNftCategory }))
   ];
 
   return (
@@ -206,7 +206,7 @@ const ResourceGrid = ({
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(e: any) => handleSearchChange(e.target.value)}
             placeholder={t('searchPlaceholder', currentLang)}
             className="bg-cardbg border border-slate-700 text-white rounded-xl pl-3 pr-7 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-48 md:w-64"
           />
@@ -224,7 +224,7 @@ const ResourceGrid = ({
 
       {/* Barra de Abas Amarelas por Categoria com Contagens Dinamicas */}
       <div id="category-tabs" className="category-tabs-bar scrollbar-hide" role="tablist">
-        {tabs.map(tab => {
+        {tabs.map((tab: any) => {
           let count = 0;
           if (isSearching) {
             if (tab.id === 'all') {
@@ -232,14 +232,14 @@ const ResourceGrid = ({
             } else if (tab.isNft) {
               count = nftList.filter(matchesNft).length;
             } else {
-              count = (grupos[tab.id] || []).filter(item => item.toLowerCase().includes(term)).length;
+              count = (grupos[tab.id] || []).filter((item: any) => item.toLowerCase().includes(term)).length;
             }
           } else {
             count = tab.id === 'all'
               ? (Object.keys(data).length + nftList.length)
               : tab.isNft
               ? nftList.length
-              : (CATEGORIAS_MERCADO.find(c => c.id === tab.id)?.itens.filter(i => data[i] !== undefined).length || 0);
+              : (CATEGORIAS_MERCADO.find((c: any) => c.id === tab.id)?.itens.filter((i: any) => data[i] !== undefined).length || 0);
           }
 
           const isActive = currentCategoryFilter === tab.id;
@@ -270,7 +270,7 @@ const ResourceGrid = ({
 
       {/* Grade Principal de Categorias e Cartões */}
       <div className="market-categories-container">
-        {categoriesToRender.map(cat => {
+        {categoriesToRender.map((cat: any) => {
           // Renderizacao especial para categoria de Power Ups (NFTs)
           if (cat.isNftCategory) {
             let nftsToRender = isSearching ? nftList.filter(matchesNft) : [...nftList];
@@ -278,7 +278,7 @@ const ResourceGrid = ({
             if (nftsToRender.length === 0) return null;
 
             // Ordenação: menor Floor Price -> maior Floor Price
-            nftsToRender.sort((a, b) => (Number(a.floor) || 0) - (Number(b.floor) || 0));
+            nftsToRender.sort((a: any, b: any) => (Number(a.floor) || 0) - (Number(b.floor) || 0));
 
             return (
               <div key={cat.id} className="category-block">
@@ -295,7 +295,7 @@ const ResourceGrid = ({
                 </h3>
 
                 <div className="category-grid">
-                  {nftsToRender.map(nft => {
+                  {nftsToRender.map((nft: any) => {
                     const iconUrl = nft.image || (nft.collection === 'wearables'
                       ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
                       : `https://sunflower-land.com/play/erc1155/images/${nft.id}.webp`);
@@ -334,7 +334,7 @@ const ResourceGrid = ({
 
                         <div className="market-card-actions mt-2">
                           <button
-                            onClick={(e) => {
+                            onClick={(e: any) => {
                               e.stopPropagation();
                               if (onOpenBuy) onOpenBuy(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
@@ -343,7 +343,7 @@ const ResourceGrid = ({
                             {t('cardBuy', currentLang)}
                           </button>
                           <button
-                            onClick={(e) => {
+                            onClick={(e: any) => {
                               e.stopPropagation();
                               if (onOpenSell) onOpenSell(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
@@ -364,13 +364,13 @@ const ResourceGrid = ({
 
           // Filtro do campo de busca
           if (searchTerm.trim() !== '') {
-            itens = itens.filter(item => item.toLowerCase().includes(searchTerm.toLowerCase()));
+            itens = itens.filter((item: any) => item.toLowerCase().includes(searchTerm.toLowerCase()));
           }
 
           if (itens.length === 0) return null;
 
           // Ordenação: menor preço P2P -> maior preço P2P
-          itens.sort((a, b) => (data[a] || 0) - (data[b] || 0));
+          itens.sort((a: any, b: any) => (data[a] || 0) - (data[b] || 0));
 
           return (
             <div key={cat.id} className="category-block">
@@ -387,7 +387,7 @@ const ResourceGrid = ({
               </h3>
 
               <div className="category-grid">
-                {itens.map(item => {
+                {itens.map((item: any) => {
                   const precoAtual = data[item];
                   const iconUrl = getItemIcon(item);
 
@@ -411,7 +411,7 @@ const ResourceGrid = ({
                       </div>
                       <div className="market-card-actions">
                         <button
-                          onClick={(e) => {
+                          onClick={(e: any) => {
                             e.stopPropagation();
                             if (onOpenBuy) onOpenBuy(item);
                           }}
@@ -420,7 +420,7 @@ const ResourceGrid = ({
                           {t('cardBuy', currentLang)}
                         </button>
                         <button
-                          onClick={(e) => {
+                          onClick={(e: any) => {
                             e.stopPropagation();
                             if (onOpenSell) onOpenSell(item);
                           }}

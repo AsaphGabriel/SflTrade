@@ -3,12 +3,12 @@ import { fetchMarketMovers, fetchNftMarketMovers } from '../services/historyServ
 import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-function getItemIcon(itemName) {
+function getItemIcon(itemName: any) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function formatarPreco(valor) {
+function formatarPreco(valor: any) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
@@ -31,13 +31,13 @@ const MarketMoversCards = ({
   onSelectResource,
   activeCategory: externalActiveCategory = null,
   onCategoryChange = null
-}) => {
+}: any) => {
   const [internalCategory, setInternalCategory] = useState('resources');
   const activeCategory = externalActiveCategory !== null && externalActiveCategory !== undefined
     ? externalActiveCategory
     : internalCategory;
 
-  const handleCategorySwitch = (cat) => {
+  const handleCategorySwitch = (cat: any) => {
     setInternalCategory(cat);
     if (onCategoryChange) {
       onCategoryChange(cat);
@@ -65,7 +65,7 @@ const MarketMoversCards = ({
           setMoversData(data || { topGainers: [], topLosers: [], hasData: false });
           setLoading(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[MarketMoversCards] Erro ao carregar destaques:', err);
         if (isMounted) setLoading(false);
       }
@@ -80,7 +80,7 @@ const MarketMoversCards = ({
 
   const { topGainers = [], topLosers = [], hasData = false } = moversData;
 
-  const renderRankBadge = (index) => {
+  const renderRankBadge = (index: any) => {
     const colors = [
       'bg-amber-400 text-slate-900 font-extrabold', // #1 Ouro
       'bg-slate-300 text-slate-900 font-bold',     // #2 Prata
@@ -140,7 +140,7 @@ const MarketMoversCards = ({
           <span className="text-[11px] font-semibold text-slate-400 pl-2 pr-1 hidden xs:inline">
             {t('timeframeLabel', currentLang)}
           </span>
-          {TIMEFRAMES.map(tf => {
+          {TIMEFRAMES.map((tf: any) => {
             const isActive = timeframe === tf.id;
             return (
               <button
@@ -180,13 +180,13 @@ const MarketMoversCards = ({
 
             {loading ? (
               <div className="space-y-2 py-1">
-                {[1, 2, 3].map(i => (
+                {[1, 2, 3].map((i: any) => (
                   <div key={i} className="h-14 bg-slate-700/30 rounded-xl animate-pulse border border-slate-700/20" />
                 ))}
               </div>
             ) : topGainers.length > 0 ? (
               <div className="space-y-2">
-                {topGainers.map((item, idx) => {
+                {topGainers.map((item: any, idx: any) => {
                   const isPositive = item.changePct >= 0;
                   return (
                     <div
@@ -270,13 +270,13 @@ const MarketMoversCards = ({
 
             {loading ? (
               <div className="space-y-2 py-1">
-                {[1, 2, 3].map(i => (
+                {[1, 2, 3].map((i: any) => (
                   <div key={i} className="h-14 bg-slate-700/30 rounded-xl animate-pulse border border-slate-700/20" />
                 ))}
               </div>
             ) : topLosers.length > 0 ? (
               <div className="space-y-2">
-                {topLosers.map((item, idx) => {
+                {topLosers.map((item: any, idx: any) => {
                   const isNegative = item.changePct < 0;
                   return (
                     <div

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const BottomNav = ({ activeTab, onTabChange }) => {
+const BottomNav = ({ activeTab, onTabChange }: any) => {
   return (
     <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-xs z-50 bg-slate-800/90 backdrop-blur-md border border-slate-700/60 rounded-full py-2 px-4 shadow-2xl flex justify-around items-center">
       <button 

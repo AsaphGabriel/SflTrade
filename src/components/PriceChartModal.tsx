@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchResourceHistory, fetchTokenHistory, fetchNftHistory } from '../services/historyService';
 import { t } from '../i18n';
 
-const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, flowerPrice = 0.05, selectedCurrency = 'usd', currentLang = 'en', onClose }) => {
+const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, flowerPrice = 0.05, selectedCurrency = 'usd', currentLang = 'en', onClose }: any) => {
   const [timeframe, setTimeframe] = useState('30D'); // '24h', '7D', '30D', '90D'
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
 
     async function loadData() {
       try {
-        let data = [];
+        let data: any[] = [];
         if (isToken) {
           data = await fetchTokenHistory(timeframe, flowerPriceUsd);
         } else if (isNftObj && targetNftId !== null) {
@@ -48,7 +48,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
           setHistory(data || []);
           setLoading(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[PriceChartModal] Erro ao carregar histórico:', err);
         if (isMounted) setLoading(false);
       }
@@ -65,7 +65,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
   const currencyRatio = (isToken && flowerPriceUsd > 0) ? (flowerPrice / flowerPriceUsd) : 1;
   let displayData = Array.isArray(history) ? [...history] : [];
   if (isToken && currencyRatio !== 1) {
-    displayData = displayData.map(d => {
+    displayData = displayData.map((d: any) => {
       if(!d) return d;
       return { ...d, price_sfl: Number(d.price_sfl || d.price_usd || 0) * currencyRatio, avg_price_sfl: Number(d.avg_price_sfl || d.avg_price_usd || 0) * currencyRatio, price_usd: Number(d.price_usd || 0) * currencyRatio };
     });
@@ -92,12 +92,12 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
   }
 
   // Verifica se há apenas 1 registro inicial ou preenchido por fallback
-  const isAccumulatingHistory = displayData.length <= 1 || displayData.every(d => d && d.isInitialData);
+  const isAccumulatingHistory = displayData.length <= 1 || displayData.every((d: any) => d && d.isInitialData);
 
   // Métricas calculadas da janela selecionada com sanitização estrita de números
   const prices = displayData
-    .map(d => Number(d?.price_sfl ?? d?.avg_price_sfl ?? d?.price_usd ?? d?.price ?? 0))
-    .filter(p => !isNaN(p) && isFinite(p) && p > 0);
+    .map((d: any) => Number(d?.price_sfl ?? d?.avg_price_sfl ?? d?.price_usd ?? d?.price ?? 0))
+    .filter((p: any) => !isNaN(p) && isFinite(p) && p > 0);
 
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
@@ -105,7 +105,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
 
   // Cálculo da Média Automática do Período Exibido
   const avgPeriodPrice = prices.length > 0
-    ? prices.reduce((acc, curr) => acc + curr, 0) / prices.length
+    ? prices.reduce((acc: any, curr: any) => acc + curr, 0) / prices.length
     : 0;
 
   // Cálculo da Variação Percentual do Período (Primeiro Ponto -> Último Ponto)
@@ -126,13 +126,13 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
   const yMax = maxPrice > 0 ? maxPrice * 1.05 : 1;
   const yRange = (isFinite(yMax - yMin) && (yMax - yMin) !== 0) ? (yMax - yMin) : 1;
 
-  const getX = (index, total) => {
+  const getX = (index: any, total: any) => {
     if (!isFinite(index) || !isFinite(total) || total <= 1) return padding + chartWidth / 2;
     const x = padding + (index / (total - 1)) * chartWidth;
     return (isNaN(x) || !isFinite(x)) ? padding + chartWidth / 2 : x;
   };
 
-  const getY = (val) => {
+  const getY = (val: any) => {
     const num = Number(val);
     if (isNaN(num) || !isFinite(num) || !isFinite(yRange) || yRange === 0) return padding + chartHeight / 2;
     const computed = svgHeight - padding - ((num - yMin) / yRange) * chartHeight;
@@ -142,11 +142,11 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
   const yAvg = (avgPeriodPrice > 0) ? getY(avgPeriodPrice) : null;
 
   // Gerar Path para a linha de preço
-  const generatePath = (valKey) => {
+  const generatePath = (valKey: any) => {
     if (!displayData || !Array.isArray(displayData) || displayData.length <= 1) return '';
     try {
       const points = displayData
-        .map((d, i) => {
+        .map((d: any, i: any) => {
           if (!d) return null;
           const rawVal = d[valKey] ?? d.floor_sfl ?? d.avg_floor_sfl ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
           const val = Number(rawVal);
@@ -158,7 +158,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
         })
         .filter(Boolean);
       return points.join(' ');
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[PriceChartModal] Erro ao gerar path SVG:', err);
       return '';
     }
@@ -209,12 +209,12 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
               { id: '7D', label: '7D' },
               { id: '30D', label: '30D' },
               { id: '90D', label: '90D' }
-            ].map(opt => (
+            ].map((opt: any) => (
               <button
                 key={opt.id}
                 onClick={() => setTimeframe(opt.id)}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
-                  String(timeframe).toUpperCase() === opt.id.toUpperCase() 
+                  String(timeframe as any).toUpperCase() === opt.id.toUpperCase() 
                     ? 'bg-amber-400 text-slate-900 shadow-md scale-105' 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
                 }`}
@@ -319,7 +319,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
                 )}
 
                 {/* Pontos de Interação do Gráfico */}
-                {displayData.map((d, i) => {
+                {displayData.map((d: any, i: any) => {
                   if (!d) return null;
                   const val = Number(d.avg_price_sfl || d.price_sfl || d.price_usd || 0);
                   const cx = getX(i, displayData.length);

@@ -4,7 +4,7 @@ import { t } from '../i18n';
 const WALLET_ADDRESS = '0xC0A82b833562D72C51aC2b66BF4C4AEF5B955222';
 const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${WALLET_ADDRESS}`;
 
-export default function DonationModal({ isOpen, onClose, currentLang = 'en' }) {
+export default function DonationModal({ isOpen, onClose, currentLang = 'en' }: any) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -12,7 +12,7 @@ export default function DonationModal({ isOpen, onClose, currentLang = 'en' }) {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: any) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -41,7 +41,7 @@ export default function DonationModal({ isOpen, onClose, currentLang = 'en' }) {
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[DonationModal] Falha ao copiar:', err);
     }
   };
@@ -53,7 +53,7 @@ export default function DonationModal({ isOpen, onClose, currentLang = 'en' }) {
     >
       <div 
         className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4 my-auto relative max-h-[92vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: any) => e.stopPropagation()}
       >
         {/* Cabecalho */}
         <div className="flex justify-between items-start border-b border-slate-800 pb-3">

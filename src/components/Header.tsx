@@ -25,13 +25,13 @@ const Header = ({
   user,
   onOpenAuthModal,
   onOpenDonation
-}) => {
+}: any) => {
   const [farmSearch, setFarmSearch] = useState('');
   const [convQty, setConvQty] = useState('');
   const [showTokenChart, setShowTokenChart] = useState(false);
 
   // Dispara a busca quando o usuário aperta Enter ou clica na lupa
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = (e: any) => {
     e.preventDefault();
     if (onSearchFarm && farmSearch.trim() !== '') {
       onSearchFarm(farmSearch.trim());
@@ -64,7 +64,7 @@ const Header = ({
               <input 
                 type="text" 
                 value={farmSearch}
-                onChange={(e) => setFarmSearch(e.target.value)}
+                onChange={(e: any) => setFarmSearch(e.target.value)}
                 placeholder={savedFarmId || "Farm ID / Nick"}
                 className="w-24 bg-transparent text-xs text-white focus:outline-none placeholder-slate-500"
               />
@@ -122,7 +122,7 @@ const Header = ({
             <span className="text-xs">🌐</span>
             <select 
               value={currentLang} 
-              onChange={(e) => onLangChange(e.target.value)} 
+              onChange={(e: any) => onLangChange(e.target.value)} 
               className="bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer"
             >
               <option value="en" className="bg-slate-900 text-white">EN</option>
@@ -135,7 +135,7 @@ const Header = ({
             <span className="text-xs">🏝️</span>
             <select 
               value={selectedIsland} 
-              onChange={(e) => onIslandChange(e.target.value)} 
+              onChange={(e: any) => onIslandChange(e.target.value)} 
               className="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer"
             >
               <option value="basic" className="bg-slate-900 text-slate-400">{t('islandBasic', currentLang)}</option>
@@ -151,7 +151,7 @@ const Header = ({
             <input 
               type="checkbox" 
               checked={isVip} 
-              onChange={(e) => onVipToggle(e.target.checked)} 
+              onChange={(e: any) => onVipToggle(e.target.checked)} 
               className="accent-amber-400 rounded cursor-pointer"
             />
             <span className="text-xs font-bold text-amber-300 flex items-center gap-1">👑 <span>{t('labelVip', currentLang)}</span></span>
@@ -161,7 +161,7 @@ const Header = ({
             <input 
               type="checkbox" 
               checked={isShrine} 
-              onChange={(e) => onShrineToggle(e.target.checked)} 
+              onChange={(e: any) => onShrineToggle(e.target.checked)} 
               className="accent-emerald-400 rounded cursor-pointer"
             />
             <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">⛩️ <span>{t('labelShrine', currentLang)}</span></span>
@@ -217,7 +217,7 @@ const Header = ({
             {/* O SELETOR DE MOEDA VOLTOU! */}
             <select 
               value={selectedCurrency} 
-              onChange={(e) => onCurrencyChange(e.target.value)} 
+              onChange={(e: any) => onCurrencyChange(e.target.value)} 
               className="bg-slate-900 border border-slate-700 text-white rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-amber-400 cursor-pointer"
             >
               <option value="usd">USD ($)</option>
@@ -242,7 +242,7 @@ const Header = ({
           <input 
             type="number" 
             value={convQty}
-            onChange={(e) => setConvQty(e.target.value)}
+            onChange={(e: any) => setConvQty(e.target.value)}
             placeholder="0" 
             className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400"
           />

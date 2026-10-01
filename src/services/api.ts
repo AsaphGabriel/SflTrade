@@ -7,7 +7,7 @@ const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 minutos de TTL para cache de contin
 /**
  * Utilitários de Cache no localStorage com expiração (TTL)
  */
-export function getCachedData(key) {
+export function getCachedData(key: any) {
   try {
     const raw = localStorage.getItem(CACHE_PREFIX + key);
     if (!raw) return null;
@@ -19,19 +19,19 @@ export function getCachedData(key) {
       isExpired: age > DEFAULT_TTL_MS,
       age
     };
-  } catch (e) {
+  } catch (e: any) {
     console.warn(`[Cache] Falha ao ler cache para ${key}:`, e);
     return null;
   }
 }
 
-export function setCachedData(key, data) {
+export function setCachedData(key: any, data: any) {
   try {
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
       timestamp: Date.now(),
       data
     }));
-  } catch (e) {
+  } catch (e: any) {
     console.warn(`[Cache] Falha ao salvar cache no localStorage:`, e);
   }
 }
@@ -39,7 +39,7 @@ export function setCachedData(key, data) {
 /**
  * Estratégia de requisição resiliente com fallback de proxies (Direto -> Worker -> CorsProxy)
  */
-export async function fetchWithFallback(url, options = {}) {
+export async function fetchWithFallback(url: any, options: any = {}) {
   const { headers = {}, timeout = 4500 } = options;
 
   const strategies = [
@@ -56,7 +56,7 @@ export async function fetchWithFallback(url, options = {}) {
         const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
         if (match) return JSON.parse(match[1]);
         return JSON.parse(text);
-      } catch (err) {
+      } catch (err: any) {
         clearTimeout(id);
         throw err;
       }
@@ -70,7 +70,7 @@ export async function fetchWithFallback(url, options = {}) {
         clearTimeout(id);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
-      } catch (err) {
+      } catch (err: any) {
         clearTimeout(id);
         throw err;
       }
@@ -89,7 +89,7 @@ export async function fetchWithFallback(url, options = {}) {
         clearTimeout(id);
         if (!response.ok) throw new Error(`CorsProxy HTTP ${response.status}`);
         return await response.json();
-      } catch (err) {
+      } catch (err: any) {
         clearTimeout(id);
         throw err;
       }
@@ -101,7 +101,7 @@ export async function fetchWithFallback(url, options = {}) {
     try {
       const data = await strategy();
       if (data) return data;
-    } catch (err) {
+    } catch (err: any) {
       lastError = err;
     }
   }
@@ -112,7 +112,7 @@ export async function fetchWithFallback(url, options = {}) {
 /**
  * Resolve nome de usuário para Farm ID (usando sfl.world)
  */
-export async function resolveFarmIdFromUsername(username) {
+export async function resolveFarmIdFromUsername(username: any) {
   try {
     const url = `https://sfl.world/api/v1/land/info/username/${encodeURIComponent(username)}`;
     const cacheKey = `user_${username.toLowerCase()}`;
@@ -121,7 +121,7 @@ export async function resolveFarmIdFromUsername(username) {
       setCachedData(cacheKey, data.farm_id);
       return data.farm_id;
     }
-  } catch (err) {
+  } catch (err: any) {
     console.warn(`[API] Erro ao converter username '${username}':`, err);
     const cached = getCachedData(`user_${username.toLowerCase()}`);
     if (cached) return cached.data;
@@ -132,7 +132,7 @@ export async function resolveFarmIdFromUsername(username) {
 /**
  * Requisição 1: Endpoint Público / Agregador (sfl.world)
  */
-export async function fetchPublicLandData(farmId) {
+export async function fetchPublicLandData(farmId: any) {
   const url = `https://sfl.world/api/v1.1/land/${farmId}`;
   return await fetchWithFallback(url);
 }
@@ -141,7 +141,7 @@ export async function fetchPublicLandData(farmId) {
  * Requisição 2: Endpoint Oficial Autenticado (sunflower-land.com)
  * Requer x-api-key no cabeçalho HTTP
  */
-export async function fetchOfficialFarmData(farmId, apiKey) {
+export async function fetchOfficialFarmData(farmId: any, apiKey: any) {
   if (!apiKey || !apiKey.startsWith('sfl.')) {
     throw new Error('API Key inválida ou ausente para requisição oficial.');
   }
@@ -159,7 +159,7 @@ export async function fetchOfficialFarmData(farmId, apiKey) {
 /**
  * Normaliza os dados retornados de ambas as APIs para manter compatibilidade no UI
  */
-export function normalizeFarmResponse(rawData, source) {
+export function normalizeFarmResponse(rawData: any, source: any) {
   if (!rawData) return null;
 
   // Se vier da API Oficial (sunflower-land.com)
@@ -170,13 +170,13 @@ export function normalizeFarmResponse(rawData, source) {
     // Unifica inventário sem duplicar: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
     const fullInventory = {};
 
-    const findExistingKey = (target, name) => {
+    const findExistingKey = (target: any, name: any) => {
       if (!name) return null;
       const targetLower = name.trim().toLowerCase();
-      return Object.keys(target).find(k => k.trim().toLowerCase() === targetLower);
+      return Object.keys(target).find((k: any) => k.trim().toLowerCase() === targetLower);
     };
 
-    const setOrMax = (target, name, count) => {
+    const setOrMax = (target: any, name: any, count: any) => {
       if (!name || count <= 0) return;
       const cleanName = name.trim();
       const existingKey = findExistingKey(target, cleanName);
@@ -189,7 +189,7 @@ export function normalizeFarmResponse(rawData, source) {
 
     // 1. Inventário base (baú / itens totais)
     if (f.inventory && typeof f.inventory === 'object') {
-      Object.entries(f.inventory).forEach(([itemName, rawQty]) => {
+      Object.entries(f.inventory).forEach(([itemName, rawQty]: any) => {
         const count = Number(rawQty) || 0;
         if (count > 0 && itemName) {
           setOrMax(fullInventory, itemName, count);
@@ -201,7 +201,7 @@ export function normalizeFarmResponse(rawData, source) {
     // No Sunflower Land, f.inventory já contém a contagem total de itens/collectibles.
     // Usamos Math.max para preencher caso falte no inventário base, sem nunca somar/dobrar.
     if (f.collectibles && typeof f.collectibles === 'object') {
-      Object.entries(f.collectibles).forEach(([collName, items]) => {
+      Object.entries(f.collectibles).forEach(([collName, items]: any) => {
         const count = Array.isArray(items) ? items.length : Number(items || 0);
         if (count > 0 && collName) {
           setOrMax(fullInventory, collName, count);
@@ -211,7 +211,7 @@ export function normalizeFarmResponse(rawData, source) {
 
     // 3. Wardrobe (wearables do Bumpkin)
     if (f.wardrobe && typeof f.wardrobe === 'object') {
-      Object.entries(f.wardrobe).forEach(([wName, qty]) => {
+      Object.entries(f.wardrobe).forEach(([wName, qty]: any) => {
         const count = Number(qty) || 0;
         if (count > 0 && wName) {
           const cleanName = wName.trim();
@@ -224,7 +224,7 @@ export function normalizeFarmResponse(rawData, source) {
 
     // 4. Bumpkin equipped (wearables atualmente vestidos)
     if (f.bumpkin?.equipped && typeof f.bumpkin.equipped === 'object') {
-      Object.values(f.bumpkin.equipped).forEach(eqItem => {
+      Object.values(f.bumpkin.equipped).forEach((eqItem: any) => {
         if (eqItem && typeof eqItem === 'string') {
           const cleanName = eqItem.trim();
           const isParsnip = cleanName.toLowerCase() === 'parsnip';
@@ -275,7 +275,7 @@ export function normalizeFarmResponse(rawData, source) {
 /**
  * Orquestrador Dual com Fallback e Cache por TTL
  */
-export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = false }) {
+export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = false }: any) {
   if (!farmId) return null;
   const cacheKey = `farm_${farmId}`;
 
@@ -296,7 +296,7 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
       const rawOfficial = await fetchOfficialFarmData(farmId, apiKey);
       result = normalizeFarmResponse(rawOfficial, 'official');
       source = 'official';
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[DualAPI] Erro no endpoint Oficial Autenticado, aplicando fallback público:', err.message);
     }
   }
@@ -309,7 +309,7 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
         result = normalizeFarmResponse(rawPublic, 'public');
         source = 'public';
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[DualAPI] Erro no endpoint Público:', err.message);
     }
   }
@@ -332,7 +332,7 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
  * Busca cotações de NFTs (Floor e Last Sale) filtrando apenas itens com buff (have_boost === 1).
  * Garante que `floor` e `lastSalePrice` são sempre números válidos.
  */
-export async function fetchNftMarketData(forceRefresh = false) {
+export async function fetchNftMarketData(forceRefresh: any = false) {
   const cacheKey = 'nft_market_boosts';
   if (!forceRefresh) {
     const cached = getCachedData(cacheKey);
@@ -354,8 +354,8 @@ export async function fetchNftMarketData(forceRefresh = false) {
     const wearables = Array.isArray(data.wearables) ? data.wearables : [];
 
     const boostCollectibles = collectibles
-      .filter(item => item && item.have_boost === 1 && item.name)
-      .map(item => ({
+      .filter((item: any) => item && item.have_boost === 1 && item.name)
+      .map((item: any) => ({
         ...item,
         displayName: item.name, // collectibles usam o próprio nome como displayName
         collection: 'collectibles',
@@ -365,8 +365,8 @@ export async function fetchNftMarketData(forceRefresh = false) {
       }));
 
     const boostWearables = wearables
-      .filter(item => item && item.have_boost === 1 && item.name)
-      .map(item => {
+      .filter((item: any) => item && item.have_boost === 1 && item.name)
+      .map((item: any) => {
         const isParsnipWearable = item.name.toLowerCase() === 'parsnip';
         const displayName = isParsnipWearable ? 'Parsnip (Wearable)' : item.name;
         return {
@@ -383,7 +383,7 @@ export async function fetchNftMarketData(forceRefresh = false) {
 
     const byName = {};
     const byId = {};
-    allBoosts.forEach(nft => {
+    allBoosts.forEach((nft: any) => {
       if (nft.name) {
         byName[nft.name] = nft;
         if (nft.displayName && nft.displayName !== nft.name) {
@@ -404,10 +404,10 @@ export async function fetchNftMarketData(forceRefresh = false) {
 
     setCachedData(cacheKey, result);
     return result;
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[API] Erro ao buscar cotações de NFTs:', err);
     const cached = getCachedData(cacheKey);
     if (cached) return cached.data;
     return null;
   }
-}
+}

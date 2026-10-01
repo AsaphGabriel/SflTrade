@@ -4,7 +4,7 @@ import { getBumpkinXPDetails } from '../utils/bumpkinLevel';
 import { handleImageError } from '../utils/imageFallback';
 
 // Categorizador de Recursos do Inventário
-export function getItemCategory(name) {
+export function getItemCategory(name: any) {
   if (!name) return 'other';
   const n = name.toLowerCase();
   
@@ -49,7 +49,7 @@ export function getItemCategory(name) {
 }
 
 // Ícones / Emojis por Item
-export function getItemEmoji(name) {
+export function getItemEmoji(name: any) {
   if (!name) return '📦';
   const n = name.toLowerCase();
   if (n.includes('sunflower')) return '🌻';
@@ -91,7 +91,7 @@ export function getItemEmoji(name) {
   return '📦';
 }
 
-const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" }) => (
+const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" }: any) => (
   <div className="bg-slate-900/90 rounded-xl p-3.5 border border-slate-700/60 shadow-md flex flex-col justify-between hover:border-slate-600 transition">
     <div className="flex items-center justify-between gap-1">
       <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">{label}</span>
@@ -124,7 +124,7 @@ const FarmDashboard = ({
   isSyncing = false,
   onOpenAuthModal = () => {},
   onNavigateTab = () => {}
-}) => {
+}: any) => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -141,14 +141,14 @@ const FarmDashboard = ({
     }
   }, [selectedCurrency]);
 
-  const formatNum = (num, decimals = 2) => {
+  const formatNum = (num: any, decimals: any = 2) => {
     if (num === null || num === undefined || isNaN(num)) return '-';
     return Number(num).toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
       maximumFractionDigits: decimals
     });
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: any) => {
     if (amount === null || amount === undefined || isNaN(amount)) return `${currencySymbol}0.00`;
     return `${currencySymbol}${Number(amount).toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
       minimumFractionDigits: 2,
@@ -172,7 +172,7 @@ const FarmDashboard = ({
     const aggregated = new Map();
     const nftByName = nftMarketData?.byName || {};
 
-    Object.entries(rawInventory).forEach(([itemName, rawQty]) => {
+    Object.entries(rawInventory).forEach(([itemName, rawQty]: any) => {
       const qty = Number(rawQty);
       if (qty <= 0 || !itemName) return;
 
@@ -185,7 +185,7 @@ const FarmDashboard = ({
       // 1. Verifica se é um NFT rastreado (Floor Price)
       const nftMeta = !isCropParsnip
         ? (nftByName[trimmedName] || Object.values(nftByName).find(
-            nft => (nft.displayName && nft.displayName.toLowerCase() === lowerName) ||
+            (nft: any) => (nft.displayName && nft.displayName.toLowerCase() === lowerName) ||
                    (nft.name && nft.name.toLowerCase() === lowerName && nft.name.toLowerCase() !== 'parsnip')
           ))
         : null;
@@ -211,7 +211,7 @@ const FarmDashboard = ({
       } else {
         // 2. Busca preço unitário no mercado de recursos P2P (case-insensitive)
         canonicalKey = `res_${lowerName}`;
-        const matchedKey = Object.keys(marketData).find(k => k.toLowerCase() === lowerName);
+        const matchedKey = Object.keys(marketData).find((k: any) => k.toLowerCase() === lowerName);
         if (matchedKey) {
           canonicalName = matchedKey;
           unitPriceSfl = marketData[matchedKey] || 0;
@@ -254,7 +254,7 @@ const FarmDashboard = ({
     let totalStockSfl = 0;
     let pricedItemsCount = 0;
 
-    items.forEach(item => {
+    items.forEach((item: any) => {
       if (item.unitPriceSfl > 0) pricedItemsCount++;
       totalStockSfl += item.totalValSfl;
     });
@@ -286,7 +286,7 @@ const FarmDashboard = ({
     const isSearching = Boolean(term);
 
     return inventoryAnalysis.items
-      .filter(item => {
+      .filter((item: any) => {
         const matchesCategory = isSearching || categoryFilter === 'all' || item.category === categoryFilter;
         const matchesSearch = !isSearching || (
           (item.name && item.name.toLowerCase().includes(term)) ||
@@ -295,7 +295,7 @@ const FarmDashboard = ({
         );
         return matchesCategory && matchesSearch;
       })
-      .sort((a, b) => {
+      .sort((a: any, b: any) => {
         if (sortBy === 'value') return b.totalValSfl - a.totalValSfl;
         if (sortBy === 'qty') return b.qty - a.qty;
         return a.name.localeCompare(b.name);
@@ -386,7 +386,7 @@ const FarmDashboard = ({
               <input
                 type="text"
                 value={farmId}
-                onChange={(e) => setFarmId(e.target.value)}
+                onChange={(e: any) => setFarmId(e.target.value)}
                 placeholder="Ex: 123456"
                 className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
               />
@@ -408,7 +408,7 @@ const FarmDashboard = ({
               <input
                 type={showApiKey ? "text" : "password"}
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e: any) => setApiKey(e.target.value)}
                 placeholder={t('apiKeyPlaceholder', currentLang)}
                 className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
               />
@@ -616,7 +616,7 @@ const FarmDashboard = ({
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e: any) => setSearchTerm(e.target.value)}
                 placeholder={t('searchInventory', currentLang)}
                 className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400 w-full sm:w-48"
               />
@@ -624,7 +624,7 @@ const FarmDashboard = ({
               {/* Ordenação */}
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e: any) => setSortBy(e.target.value)}
                 className="bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400"
               >
                 <option value="value">{t('sortByVal', currentLang)}</option>
@@ -644,7 +644,7 @@ const FarmDashboard = ({
               { id: 'emblems', label: t('catEmblems', currentLang), icon: '🏺' },
               { id: 'power_ups', label: t('cat_power_ups', currentLang) || 'Power Ups', icon: '⚡' },
               { id: 'other', label: t('catOther', currentLang), icon: '🌱' }
-            ].map(cat => (
+            ].map((cat: any) => (
               <button
                 key={cat.id}
                 onClick={() => setCategoryFilter(cat.id)}
@@ -663,7 +663,7 @@ const FarmDashboard = ({
           {/* Grid de Itens */}
           {filteredInventory.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-96 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
-              {filteredInventory.map(item => (
+              {filteredInventory.map((item: any) => (
                 <div
                   key={item.id || item.name}
                   className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm min-w-0"
@@ -767,7 +767,7 @@ const FarmDashboard = ({
                 ⭐ {t('activeSkills', currentLang)} ({Object.keys(farmData.bumpkin.skills).length})
               </span>
               <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-                {Object.keys(farmData.bumpkin.skills).map((skill, index) => (
+                {Object.keys(farmData.bumpkin.skills).map((skill: any, index: any) => (
                   <span
                     key={index}
                     className="bg-slate-900 text-amber-300 text-xs px-3 py-1.5 rounded-xl border border-slate-700 font-semibold flex items-center gap-1.5 shadow-sm"

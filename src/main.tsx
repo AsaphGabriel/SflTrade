@@ -25,12 +25,12 @@ if ('serviceWorker' in navigator) {
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/SflTrade/sw.js', { scope: '/SflTrade/' })
-      .then((registration) => {
+      .then((registration: any) => {
         console.log('[PWA] Service Worker registrado com sucesso no escopo:', registration.scope);
         registration.update();
       })
-      .catch((error) => {
+      .catch((error: any) => {
         console.error('[PWA] Falha ao registrar Service Worker:', error);
       });
   });
-}
+}

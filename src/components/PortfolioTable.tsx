@@ -3,12 +3,12 @@ import { t } from '../i18n';
 import PositionDetailsModal from './PositionDetailsModal';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-function getItemIcon(itemName) {
+function getItemIcon(itemName: any) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function formatarPreco(valor) {
+function formatarPreco(valor: any) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
@@ -17,7 +17,7 @@ function formatarPreco(valor) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-function formatarMoeda(valor, currency = 'usd') {
+function formatarMoeda(valor: any, currency: any = 'usd') {
   if (valor === undefined || valor === null || isNaN(valor)) return '$0.00 USD';
   const num = Number(valor);
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
@@ -49,12 +49,12 @@ const PortfolioTable = ({
   onUpdateCustomAvgPrice,
   onUpdateTransactionPrice,
   onOpenSell
-}) => {
+}: any) => {
   const [selectedPosition, setSelectedPosition] = useState(null);
 
   // Busca item atualizado dos dados
   const activePositionItem = selectedPosition 
-    ? (data.find(p => p.nome.toLowerCase() === selectedPosition.nome.toLowerCase()) || selectedPosition)
+    ? (data.find((p: any) => p.nome.toLowerCase() === selectedPosition.nome.toLowerCase()) || selectedPosition)
     : null;
 
   // Estado quando não há recursos em estoque
@@ -79,7 +79,7 @@ const PortfolioTable = ({
 
       {/* Visão Mobile (< md): Cards Individuais */}
       <div className="grid grid-cols-1 gap-3 md:hidden">
-        {data.map(item => {
+        {data.map((item: any) => {
           const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
           const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
           const iconUrl = item.image || (item.isNft
@@ -121,7 +121,7 @@ const PortfolioTable = ({
                   </div>
                 </div>
                 <button
-                  onClick={(e) => {
+                  onClick={(e: any) => {
                     e.stopPropagation();
                     if (onOpenSell) onOpenSell(item.nome, item);
                   }}
@@ -189,7 +189,7 @@ const PortfolioTable = ({
             </tr>
           </thead>
           <tbody>
-            {data.map(item => {
+            {data.map((item: any) => {
               const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
               const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
               const iconUrl = item.image || (item.isNft
@@ -260,7 +260,7 @@ const PortfolioTable = ({
                   </td>
                   <td className="p-3 text-center">
                     <button
-                      onClick={(e) => {
+                      onClick={(e: any) => {
                         e.stopPropagation();
                         if (onOpenSell) onOpenSell(item.nome, item);
                       }}
