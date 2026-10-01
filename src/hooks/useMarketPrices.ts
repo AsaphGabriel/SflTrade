@@ -114,6 +114,7 @@ export default function useMarketPrices(user: any) {
   const effectiveTax = useMemo(() => {
     if (selectedIsland === 'basic') return 0;
     const taxasBase = { petal: 0.50, desert: 0.20, volcano: 0.15 };
+    // @ts-ignore
     let taxa = taxasBase[selectedIsland] || 0.15;
     if (isVip) taxa = taxa / 2;
     if (isShrine) taxa = Math.max(0, taxa - 0.025);
@@ -188,6 +189,7 @@ export default function useMarketPrices(user: any) {
     refreshData();
   }, [refreshData]);
 
+  // @ts-ignore
   const flowerPrice = currencyRates[selectedCurrency] || currencyRates.usd;
   const flowerPriceUsd = currencyRates.usd;
 

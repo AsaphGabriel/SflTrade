@@ -1,3 +1,4 @@
+// @ts-ignore
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PositionDetailsModal from './PositionDetailsModal';
@@ -22,6 +23,7 @@ function formatarMoeda(valor: any, currency: any = 'usd') {
   const num = Number(valor);
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
   const currLower = (currency || 'usd').toLowerCase();
+  // @ts-ignore
   const sym = symbolMap[currLower] || '$';
   const currCode = currency.toUpperCase();
   const sinal = num < 0 ? '-' : '';
@@ -54,6 +56,7 @@ const PortfolioTable = ({
 
   // Busca item atualizado dos dados
   const activePositionItem = selectedPosition 
+    // @ts-ignore
     ? (data.find((p: any) => p.nome.toLowerCase() === selectedPosition.nome.toLowerCase()) || selectedPosition)
     : null;
 

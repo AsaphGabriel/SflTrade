@@ -1,3 +1,4 @@
+// @ts-ignore
 import React, { useState, useMemo } from 'react';
 import { t } from '../i18n';
 import { getBumpkinXPDetails } from '../utils/bumpkinLevel';

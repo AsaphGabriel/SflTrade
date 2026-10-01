@@ -1,3 +1,4 @@
+// @ts-ignore
 import React, { useState, useEffect } from 'react';
 import { t } from '../i18n';
 

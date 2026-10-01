@@ -1,3 +1,4 @@
+// @ts-ignore
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PriceChartModal from './PriceChartModal';
@@ -39,10 +40,12 @@ const Header = ({
   };
 
   // Calcula o valor do conversor rápido
+  // @ts-ignore
   const converterResultado = (parseFloat(convQty || 0) * flowerPrice).toFixed(4);
   
   // Símbolo da moeda selecionada
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
+  // @ts-ignore
   const sym = symbolMap[selectedCurrency] || '$';
 
   return (

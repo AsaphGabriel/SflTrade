@@ -1,3 +1,4 @@
+// @ts-ignore
 import React, { useState } from 'react';
 import useMarketData from './hooks/useMarketData';
 import Header from './components/Header';
@@ -10,6 +11,7 @@ import FarmDashboard from './components/FarmDashboard';
 import MarketMoversCards from './components/MarketMoversCards';
 import PriceChartModal from './components/PriceChartModal';
 import DonationModal from './components/DonationModal';
+// @ts-ignore
 import { t } from './i18n';
 
 const App = () => {

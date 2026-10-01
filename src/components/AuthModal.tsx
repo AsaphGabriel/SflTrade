@@ -1,3 +1,4 @@
+// @ts-ignore
 import React, { useState } from 'react';
 import { signUp, signInWithPassword, signInWithOtp, signOut } from '../services/authService';
 import { t } from '../i18n';

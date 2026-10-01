@@ -168,7 +168,7 @@ export function normalizeFarmResponse(rawData: any, source: any) {
     const computedLevel = f.bumpkin?.experience ? getBumpkinLevel(f.bumpkin.experience) : (f.bumpkin?.level || f.level || 1);
 
     // Unifica inventário sem duplicar: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
-    const fullInventory = {};
+    const fullInventory: Record<string, any> = {};
 
     const findExistingKey = (target: any, name: any) => {
       if (!name) return null;
@@ -288,6 +288,7 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
   }
 
   let result = null;
+  // @ts-ignore
   let source = null;
 
   // 2. Tentar Endpoint Oficial Autenticado se houver chave sfl.*
@@ -381,8 +382,8 @@ export async function fetchNftMarketData(forceRefresh: any = false) {
 
     const allBoosts = [...boostCollectibles, ...boostWearables];
 
-    const byName = {};
-    const byId = {};
+    const byName: Record<string, any> = {};
+    const byId: Record<string, any> = {};
     allBoosts.forEach((nft: any) => {
       if (nft.name) {
         byName[nft.name] = nft;

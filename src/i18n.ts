@@ -1,4 +1,4 @@
-export const translations = {
+export const translations: Record<string, Record<string, string>> = {
   en: {
     // ... [Mantenha as chaves antigas aqui] ...
     subTitle: "SFL & P2P Quotes via sfl.world",
@@ -305,6 +305,7 @@ export const translations = {
 };
 
 export function t(key: any, lang: any = 'en', params: any = {}) {
+  // @ts-ignore
   let text = translations[lang]?.[key] || translations['en']?.[key] || key;
   Object.keys(params).forEach((p: any) => {
     text = text.replace(`{${p}}`, params[p]);

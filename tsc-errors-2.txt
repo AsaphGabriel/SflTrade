@@ -75,8 +75,6 @@ src/hooks/useMarketPrices.ts(191,23): error TS7053: Element implicitly has an 'a
   No index signature with a parameter of type 'string' was found on type '{ usd: number; brl: number; eur: number; sgd: number; pol: number; }'.
 src/i18n.ts(308,14): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ en: { subTitle: string; btnBuy: string; btnSell: string; btnRefresh: string; updatedNow: string; updatedMinAgo: string; updatedAt: string; islandLabel: string; islandPetal: string; islandDesert: string; ... 127 more ...; donateClose: string; }; pt: { ...; }; }'.
 src/i18n.ts(308,43): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ subTitle: string; btnBuy: string; btnSell: string; btnRefresh: string; updatedNow: string; updatedMinAgo: string; updatedAt: string; islandLabel: string; islandPetal: string; islandDesert: string; ... 127 more ...; donateClose: string; }'.
-src/main.tsx(6,21): error TS2345: Argument of type 'HTMLElement | null' is not assignable to parameter of type 'Container'.
-  Type 'null' is not assignable to type 'Container'.
 src/services/api.ts(291,7): error TS6133: 'source' is declared but its value is never read.
 src/services/historyService.ts(819,45): error TS2345: Argument of type 'string | number' is not assignable to parameter of type 'string'.
   Type 'number' is not assignable to type 'string'.
@@ -90,11 +88,3 @@ src/services/historyService.ts(938,51): error TS7053: Element implicitly has an 
 src/services/historyService.ts(949,15): error TS6133: 'targetDate' is declared but its value is never read.
 src/services/syncService.ts(93,25): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ basic: number; desert: number; volcano: number; petal: number; }'.
 src/services/syncService.ts(278,23): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ basic: number; desert: number; volcano: number; petal: number; }'.
-supabase/functions/sync-market-prices/index.ts(1,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
-supabase/functions/sync-market-prices/index.ts(2,30): error TS2307: Cannot find module 'https://esm.sh/@supabase/supabase-js@2.39.0' or its corresponding type declarations.
-supabase/functions/sync-market-prices/index.ts(4,22): error TS2304: Cannot find name 'Deno'.
-supabase/functions/sync-market-prices/index.ts(5,22): error TS2304: Cannot find name 'Deno'.
-supabase/functions/sync-market-prices/index.ts(5,59): error TS2304: Cannot find name 'Deno'.
-supabase/functions/sync-market-prices/index.ts(7,14): error TS7006: Parameter 'req' implicitly has an 'any' type.
-supabase/functions/sync-market-prices/index.ts(68,11): error TS7034: Variable 'nftsToInsert' implicitly has type 'any[]' in some locations where its type cannot be determined.
-supabase/functions/sync-market-prices/index.ts(90,73): error TS7005: Variable 'nftsToInsert' implicitly has an 'any[]' type.
