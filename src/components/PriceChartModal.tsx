@@ -1,15 +1,31 @@
-// @ts-ignore
 import React, { useState, useEffect } from 'react';
 import { fetchResourceHistory, fetchTokenHistory, fetchNftHistory } from '../services/historyService';
 import { t } from '../i18n';
+import { PriceChartSVG, ChartPoint } from './charts/PriceChartSVG';
 
-const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, flowerPrice = 0.05, selectedCurrency = 'usd', currentLang = 'en', onClose }: any) => {
-  const [timeframe, setTimeframe] = useState('30D'); // '24h', '7D', '30D', '90D'
-  const [history, setHistory] = useState([]);
+export interface PriceChartModalProps {
+  resourceId?: any;
+  isToken?: boolean;
+  flowerPriceUsd?: number;
+  flowerPrice?: number;
+  selectedCurrency?: string;
+  currentLang?: string;
+  onClose: () => void;
+}
+
+const PriceChartModal: React.FC<PriceChartModalProps> = ({ 
+  resourceId, 
+  isToken = false, 
+  flowerPriceUsd = 0.05, 
+   
+  selectedCurrency = 'usd', 
+  currentLang = 'en', 
+  onClose 
+}) => {
+  const [timeframe, setTimeframe] = useState('30D');
+  const [history, setHistory] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hoveredPoint, setHoveredPoint] = useState(null);
 
-  // Lock scroll do body enquanto o modal está aberto (evita zoom/shift em mobile)
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -26,8 +42,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
   const currentPriceRef = typeof resourceId === 'object' && resourceId !== null ? Number(resourceId.currentPrice || resourceId.price || 0) : 0;
 
   const titleName = targetName;
-  const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
-  // @ts-ignore
+  const symbolMap: Record<string, string> = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
   const fiatSymbol = symbolMap[selectedCurrency] || '$';
   const unitSymbol = isToken ? fiatSymbol : 'FLOWER';
 
@@ -37,7 +52,7 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
 
     async function loadData() {
       try {
-        let data: any[] = [];
+        let data: ChartPoint[] = [];
         if (isToken) {
           data = await fetchTokenHistory(timeframe, flowerPriceUsd);
         } else if (isNftObj && targetNftId !== null) {
@@ -47,137 +62,69 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
         }
 
         if (isMounted) {
-          // @ts-ignore
-          setHistory(data || []);
+          setHistory(data);
           setLoading(false);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.warn('[PriceChartModal] Erro ao carregar histórico:', err);
         if (isMounted) setLoading(false);
       }
     }
-
     loadData();
+    return () => { isMounted = false; };
+  }, [timeframe, isToken, targetName, targetNftId, targetFloor, flowerPriceUsd, currentPriceRef, isNftObj]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [resourceId, isToken, flowerPriceUsd, timeframe, isNftObj, targetNftId, targetFloor, targetName, currentPriceRef]);
-
-  // Dados pre-agregados pela amostragem do período selecionado
-  const currencyRatio = (isToken && flowerPriceUsd > 0) ? (flowerPrice / flowerPriceUsd) : 1;
-  let displayData = Array.isArray(history) ? [...history] : [];
-  if (isToken && currencyRatio !== 1) {
-    // @ts-ignore
-    displayData = displayData.map((d: any) => {
-      if(!d) return d;
-      return { ...d, price_sfl: Number(d.price_sfl || d.price_usd || 0) * currencyRatio, avg_price_sfl: Number(d.avg_price_sfl || d.avg_price_usd || 0) * currencyRatio, price_usd: Number(d.price_usd || 0) * currencyRatio };
+  let displayData = history;
+  if (!isToken && !isNftObj) {
+    const usdRate = flowerPriceUsd || 0.05;
+    displayData = displayData.map((d: ChartPoint) => {
+      if (!d) return d;
+      const originalPriceSfl = Number(d.price_sfl ?? d.avg_price_sfl ?? 0);
+      let calculatedPrice = originalPriceSfl;
+      if (selectedCurrency !== 'usd' && d.price_usd && usdRate > 0) {
+         calculatedPrice = (d.price_usd / usdRate);
+      }
+      return { ...d, avg_price_sfl: calculatedPrice, price_sfl: calculatedPrice };
     });
   }
 
-  // Injeta o preço atual (Live) no final do array para garantir que o gráfico termine no valor exato que o usuário vê na interface
-  const livePrice = isNftObj ? targetFloor : (isToken ? flowerPrice : currentPriceRef);
-  if (livePrice > 0 && displayData.length > 0 && !loading) {
-    const lastPoint = displayData[displayData.length - 1];
-    // @ts-ignore
-    const lastPointPrice = Number(lastPoint?.price_sfl ?? lastPoint?.avg_price_sfl ?? lastPoint?.price_usd ?? lastPoint?.price ?? 0);
-    
-    // Apenas adiciona se houver diferença, para criar a conexão da linha até o "Agora"
-    if (lastPointPrice !== livePrice) {
-      // @ts-ignore
-      displayData.push({
-        // @ts-ignore
-        ...lastPoint,
-        price_sfl: livePrice,
-        avg_price_sfl: livePrice,
-        price_usd: livePrice,
-        price: livePrice,
-        day: currentLang === 'pt' ? 'Agora (Ao Vivo)' : 'Now (Live)',
-        timestamp: new Date().toISOString()
-      });
-    }
+  const isAccumulatingHistory = displayData.length <= 1 || displayData.every((d) => d && d.isInitialData);
+
+  const prices = displayData
+    .map((d) => Number(d?.price_sfl ?? d?.avg_price_sfl ?? d?.price_usd ?? d?.price ?? 0))
+    .filter((p) => !isNaN(p) && isFinite(p) && p > 0);
+
+  const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
+  const firstPrice = prices.length > 0 ? prices[0] : 0;
+  const avgPeriodPrice = prices.length > 0
+    ? prices.reduce((acc, curr) => acc + curr, 0) / prices.length
+    : 0;
+
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 0;
+
+  let periodChangePct = 0;
+  if (firstPrice > 0 && latestPrice > 0) {
+    periodChangePct = ((latestPrice - firstPrice) / firstPrice) * 100;
   }
 
-  // Verifica se há apenas 1 registro inicial ou preenchido por fallback
-  const isAccumulatingHistory = displayData.length <= 1 || displayData.every((d: any) => d && d.isInitialData);
+  const svgWidth = 800;
+  const svgHeight = 300;
+  const padding = 20;
 
-  // Métricas calculadas da janela selecionada com sanitização estrita de números
-  const prices = displayData
-    .map((d: any) => Number(d?.price_sfl ?? d?.avg_price_sfl ?? d?.price_usd ?? d?.price ?? 0))
-    .filter((p: any) => !isNaN(p) && isFinite(p) && p > 0);
-
-  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-  const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
-
-  // Cálculo da Média Automática do Período Exibido
-  const avgPeriodPrice = prices.length > 0
-    ? prices.reduce((acc: any, curr: any) => acc + curr, 0) / prices.length
-    : 0;
-
-  // Cálculo da Variação Percentual do Período (Primeiro Ponto -> Último Ponto)
-  const firstPrice = prices.length > 0 ? prices[0] : 0;
-  const periodChangePct = (firstPrice > 0 && latestPrice > 0)
-    ? ((latestPrice - firstPrice) / firstPrice) * 100
-    : 0;
-
-  // Cálculo de Coordenadas para Gráfico SVG Responsivo
-  const svgWidth = 500;
-  const svgHeight = 220;
-  const padding = 25;
-
-  const chartWidth = svgWidth - padding * 2;
-  const chartHeight = svgHeight - padding * 2;
-
-  const yMin = minPrice > 0 ? minPrice * 0.95 : 0;
-  const yMax = maxPrice > 0 ? maxPrice * 1.05 : 1;
-  const yRange = (isFinite(yMax - yMin) && (yMax - yMin) !== 0) ? (yMax - yMin) : 1;
-
-  const getX = (index: any, total: any) => {
-    if (!isFinite(index) || !isFinite(total) || total <= 1) return padding + chartWidth / 2;
-    const x = padding + (index / (total - 1)) * chartWidth;
-    return (isNaN(x) || !isFinite(x)) ? padding + chartWidth / 2 : x;
-  };
-
-  const getY = (val: any) => {
-    const num = Number(val);
-    if (isNaN(num) || !isFinite(num) || !isFinite(yRange) || yRange === 0) return padding + chartHeight / 2;
-    const computed = svgHeight - padding - ((num - yMin) / yRange) * chartHeight;
-    return (isNaN(computed) || !isFinite(computed)) ? padding + chartHeight / 2 : computed;
-  };
-
-  const yAvg = (avgPeriodPrice > 0) ? getY(avgPeriodPrice) : null;
-
-  // Gerar Path para a linha de preço
-  const generatePath = (valKey: any) => {
-    if (!displayData || !Array.isArray(displayData) || displayData.length <= 1) return '';
-    try {
-      const points = displayData
-        .map((d: any, i: any) => {
-          if (!d) return null;
-          const rawVal = d[valKey] ?? d.floor_sfl ?? d.avg_floor_sfl ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
-          const val = Number(rawVal);
-          if (isNaN(val) || !isFinite(val)) return null;
-          const x = getX(i, displayData.length);
-          const y = getY(val);
-          if (isNaN(x) || !isFinite(x) || isNaN(y) || !isFinite(y)) return null;
-          return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-        })
-        .filter(Boolean);
-      return points.join(' ');
-    } catch (err: any) {
-      console.warn('[PriceChartModal] Erro ao gerar path SVG:', err);
-      return '';
+  let yAvg: number | null = null;
+  if (avgPeriodPrice > 0) {
+    const minVal = minPrice * 0.95;
+    const maxVal = maxPrice * 1.05;
+    if (maxVal > minVal) {
+      yAvg = svgHeight - padding - ((avgPeriodPrice - minVal) / (maxVal - minVal)) * (svgHeight - padding * 2);
     }
-  };
-
-  const pricePath = generatePath('avg_price_sfl');
+  }
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center p-4 z-50 animate-fadeIn overflow-y-auto">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4 my-auto max-h-[90dvh] overflow-y-auto">
         
-        {/* Cabeçalho do Modal */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <span className="text-xl">📊</span>
@@ -197,31 +144,21 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
               </p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition text-lg"
-          >
-            ✕
-          </button>
         </div>
 
-        {/* Seleção de Janela Temporal (24h, 7D, 30D, 90D) */}
-        <div className="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-xl border border-slate-700/50">
-          <span className="text-xs text-slate-400 pl-2 font-semibold">
-            {currentLang === 'pt' ? 'Período:' : 'Period:'}
-          </span>
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex bg-slate-800 p-1 rounded-xl w-full sm:w-auto">
             {[
               { id: '24h', label: '24h' },
-              { id: '7D', label: '7D' },
-              { id: '30D', label: '30D' },
-              { id: '90D', label: '90D' }
-            ].map((opt: any) => (
+              { id: '7D', label: '7 Dias' },
+              { id: '30D', label: '30 Dias' },
+              { id: '90D', label: '90 Dias' }
+            ].map(opt => (
               <button
                 key={opt.id}
                 onClick={() => setTimeframe(opt.id)}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
-                  String(timeframe as any).toUpperCase() === opt.id.toUpperCase() 
+                  timeframe.toUpperCase() === opt.id.toUpperCase() 
                     ? 'bg-amber-400 text-slate-900 shadow-md scale-105' 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
                 }`}
@@ -232,7 +169,6 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
           </div>
         </div>
 
-        {/* Mensagem Limpa quando estiver acumulando histórico inicial */}
         {isAccumulatingHistory && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 text-center text-xs text-amber-300 flex items-center justify-center gap-1.5 font-medium">
             <span>ℹ️</span>
@@ -244,35 +180,21 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
           </div>
         )}
 
-        {/* Cards de Métricas (Preço Atual, Média do Período, Variação %, Min/Max) */}
         <div className="grid grid-cols-4 gap-2 text-center text-xs">
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
-            <span className="text-[10px] text-slate-400 block font-semibold">
-              {currentLang === 'pt' ? 'Atual' : 'Latest'}
-            </span>
-            <span className="font-mono font-bold text-emerald-400">
-              {latestPrice ? `${latestPrice.toFixed(3)} ${unitSymbol}` : '-'}
-            </span>
+            <span className="text-[10px] text-slate-400 block font-semibold">{currentLang === 'pt' ? 'Atual' : 'Latest'}</span>
+            <span className="font-mono font-bold text-emerald-400">{latestPrice ? `${latestPrice.toFixed(3)} ${unitSymbol}` : '-'}</span>
           </div>
-
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
-            <span className="text-[10px] text-amber-400 block font-semibold">
-              {currentLang === 'pt' ? 'Média Período' : 'Period Avg'}
-            </span>
-            <span className="font-mono font-bold text-amber-400">
-              {avgPeriodPrice ? `${avgPeriodPrice.toFixed(3)} ${unitSymbol}` : '-'}
-            </span>
+            <span className="text-[10px] text-amber-400 block font-semibold">{currentLang === 'pt' ? 'Média Período' : 'Period Avg'}</span>
+            <span className="font-mono font-bold text-amber-400">{avgPeriodPrice ? `${avgPeriodPrice.toFixed(3)} ${unitSymbol}` : '-'}</span>
           </div>
-
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
-            <span className="text-[10px] text-slate-400 block font-semibold">
-              {currentLang === 'pt' ? 'Variação' : 'Change'}
-            </span>
+            <span className="text-[10px] text-slate-400 block font-semibold">{currentLang === 'pt' ? 'Variação' : 'Change'}</span>
             <span className={`font-mono font-bold ${periodChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               {periodChangePct !== 0 ? `${periodChangePct >= 0 ? '+' : ''}${periodChangePct.toFixed(2)}%` : '0.00%'}
             </span>
           </div>
-
           <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-slate-400 block font-semibold">Mín / Máx</span>
             <span className="font-mono font-semibold text-slate-200 text-[11px] block">
@@ -281,106 +203,31 @@ const PriceChartModal = ({ resourceId, isToken = false, flowerPriceUsd = 0.05, f
           </div>
         </div>
 
-        {/* Gráfico SVG Responsivo com Tooltip ao passar o mouse */}
         <div className="relative bg-slate-950/70 rounded-2xl p-2 border border-slate-800 flex flex-col items-center">
           {loading ? (
             <div className="h-52 flex items-center justify-center text-xs text-amber-400 animate-pulse">
               ⚡ {currentLang === 'pt' ? 'Carregando histórico...' : 'Loading history...'}
             </div>
           ) : (
-            <>
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-52 overflow-visible">
-                {/* Linhas de Grade de Fundo */}
-                <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
-                <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
-                <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
-
-                {/* LINHA DE MÉDIA AUTOMÁTICA (Amarelo Dourado Tracejado) */}
-                {yAvg !== null && isFinite(yAvg) && (
-                  <g>
-                    <line
-                      x1={padding}
-                      y1={yAvg}
-                      x2={svgWidth - padding}
-                      y2={yAvg}
-                      stroke="#f59e0b"
-                      strokeWidth="1.8"
-                      strokeDasharray="6 3"
-                    />
-                    <text
-                      x={svgWidth - padding - 4}
-                      y={yAvg - 5}
-                      fill="#f59e0b"
-                      fontSize="10"
-                      fontWeight="bold"
-                      textAnchor="end"
-                    >
-                      {currentLang === 'pt' ? 'Média' : 'Avg'}: {avgPeriodPrice.toFixed(3)} {unitSymbol}
-                    </text>
-                  </g>
-                )}
-
-                {/* Curva de Preço (Verde Esmeralda) */}
-                {pricePath && (
-                  <path d={pricePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
-                )}
-
-                {/* Pontos de Interação do Gráfico */}
-                {displayData.map((d: any, i: any) => {
-                  if (!d) return null;
-                  const val = Number(d.avg_price_sfl || d.price_sfl || d.price_usd || 0);
-                  const cx = getX(i, displayData.length);
-                  const cy = getY(val);
-                  if (isNaN(cx) || !isFinite(cx) || isNaN(cy) || !isFinite(cy)) return null;
-
-                  return (
-                    <circle
-                      key={i}
-                      cx={cx}
-                      cy={cy}
-                      r="4.5"
-                      className="fill-emerald-400 hover:r-6.5 hover:fill-amber-400 transition-all cursor-pointer"
-                      onMouseEnter={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
-                      onMouseLeave={() => setHoveredPoint(null)}
-                      onTouchStart={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
-                    />
-                  );
-                })}
-              </svg>
-
-              {/* Tooltip Dinâmico ao passar o cursor */}
-              {hoveredPoint && (
-                <div className="absolute top-4 left-4 bg-slate-800/95 border border-slate-700 text-slate-100 text-xs px-3 py-1.5 rounded-xl shadow-xl backdrop-blur-md pointer-events-none z-10">
-                  {/* @ts-ignore */}
-                  <div className="font-semibold text-amber-400">{hoveredPoint.day || hoveredPoint.timestamp?.split('T')[0]}</div>
-                  {/* @ts-ignore */}
-                  <div className="font-mono">Preço: {Number(hoveredPoint.val).toFixed(4)} {unitSymbol}</div>
-                </div>
-              )}
-            </>
+            <PriceChartSVG 
+              data={displayData} 
+              width={svgWidth} 
+              height={svgHeight} 
+              padding={padding} 
+              unitSymbol={unitSymbol} 
+              currentLang={currentLang} 
+              yAvg={yAvg} 
+              avgPeriodPrice={avgPeriodPrice} 
+            />
           )}
-
-          {/* Legenda do Gráfico */}
-          <div className="flex justify-center items-center gap-6 mt-2 text-[10px] flex-wrap">
-            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
-              {currentLang === 'pt' ? 'Preço' : 'Price'}
-            </span>
-            <span className="flex items-center gap-1.5 text-amber-500 font-bold">
-              <span className="w-3 h-0.5 bg-amber-500 inline-block"></span>
-              {currentLang === 'pt' ? 'Média Automática' : 'Auto Average'}
-            </span>
-          </div>
         </div>
 
-        {/* Botão de Fechar */}
         <button
           onClick={onClose}
           className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition border border-slate-700"
         >
           {t('btnCancel', currentLang)}
         </button>
-
       </div>
     </div>
   );
