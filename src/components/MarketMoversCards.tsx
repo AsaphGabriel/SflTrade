@@ -1,22 +1,169 @@
-// @ts-ignore
 import React, { useState, useEffect } from 'react';
 import { fetchMarketMovers, fetchNftMarketMovers } from '../services/historyService';
 import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-function getItemIcon(itemName: any) {
+export interface MarketMoverItem {
+  resource?: string;
+  name?: string;
+  changePct: number;
+  image?: string;
+  isNft?: boolean;
+  collection?: string;
+  nft_id?: string | number;
+  id?: string | number;
+  boost_text?: string;
+  currentPrice?: number;
+  basePrice?: number;
+}
+
+export interface MarketMoversData {
+  topGainers: MarketMoverItem[];
+  topLosers: MarketMoverItem[];
+  hasData: boolean;
+}
+
+export interface MarketMoversCardsProps {
+  marketData?: Record<string, any>;
+  nftMarketData?: { list: any[] } & Record<string, any>;
+  currentLang?: string;
+  onSelectResource?: (resourceName: string, meta: MarketMoverItem) => void;
+  activeCategory?: 'resources' | 'power_ups' | null;
+  onCategoryChange?: ((cat: 'resources' | 'power_ups') => void) | null;
+}
+
+function getItemIcon(itemName: string) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function formatarPreco(valor: any) {
-  if (valor === undefined || valor === null || isNaN(valor)) return '0';
+function formatarPreco(valor?: number | string | null) {
+  if (valor === undefined || valor === null || isNaN(Number(valor))) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
   if (num >= 10) return num.toFixed(2);
   if (num >= 1) return num.toFixed(3);
   return parseFloat(num.toPrecision(3)).toString();
 }
+
+
+interface MoverListCardProps {
+  title: string;
+  emoji: string;
+  timeframe: string;
+  items: MarketMoverItem[];
+  loading: boolean;
+  type: 'gainers' | 'losers';
+  currentLang: string;
+  onSelectResource?: (resourceName: string, meta: any) => void;
+  renderRankBadge: (index: number) => React.ReactNode;
+}
+
+const MoverListCard: React.FC<MoverListCardProps> = ({
+  title,
+  emoji,
+  timeframe,
+  items,
+  loading,
+  type,
+  currentLang,
+  onSelectResource,
+  renderRankBadge
+}) => {
+  const isGainers = type === 'gainers';
+  const colorClass = isGainers ? 'emerald' : 'rose';
+  
+  return (
+    <div className={`bg-slate-800/60 border border-${colorClass}-500/25 hover:border-${colorClass}-500/40 rounded-2xl p-3.5 md:p-4 shadow-xl flex flex-col justify-between transition`}>
+      <div>
+        <div className="flex items-center justify-between border-b border-slate-700/50 pb-2.5 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{emoji}</span>
+            <h3 className={`text-sm font-bold text-${colorClass}-400 tracking-wide`}>
+              {title}
+            </h3>
+          </div>
+          <span className={`text-[10px] font-bold text-${colorClass}-300 bg-${colorClass}-500/15 border border-${colorClass}-500/30 px-2 py-0.5 rounded-full uppercase`}>
+            {timeframe}
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="space-y-2 py-1">
+            {[1, 2, 3].map((i: number) => (
+              <div key={i} className="h-14 bg-slate-700/30 rounded-xl animate-pulse border border-slate-700/20" />
+            ))}
+          </div>
+        ) : items.length > 0 ? (
+          <div className="space-y-2">
+            {items.map((item: MarketMoverItem, idx: number) => {
+              const isHighlight = isGainers ? item.changePct >= 0 : item.changePct < 0;
+              return (
+                <div
+                  key={(item.resource || item.name || "")}
+                  onClick={() => onSelectResource && onSelectResource((item.resource || item.name || ""), item)}
+                  className={`bg-slate-900/60 hover:bg-slate-900/90 border border-slate-800/80 hover:border-${colorClass}-500/50 rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition group shadow-sm`}
+                  title={t('clickToViewChart', currentLang)}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {renderRankBadge(idx)}
+                    <img
+                      src={item.image || (item.isNft
+                        ? (item.collection === 'wearables'
+                            ? `https://sunflower-land.com/play/wearables/images/${item.nft_id || item.id}.png`
+                            : `https://sunflower-land.com/play/erc1155/images/${item.nft_id || item.id}.webp`)
+                        : getItemIcon((item.resource || item.name || "")))}
+                      alt={(item.resource || item.name || "")}
+                      className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
+                      onError={handleImageError}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-xs md:text-sm font-bold text-slate-100 group-hover:text-${colorClass}-300 transition truncate`}>
+                          {(item.resource || item.name || "")}
+                        </span>
+                        {item.boost_text && (
+                          <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
+                            {item.boost_text}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-slate-200">
+                          {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} FLOWER
+                        </span>
+                        <span className="text-slate-500 text-[10px]">
+                          ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <span className={`text-xs md:text-sm font-black px-2.5 py-1 rounded-lg border flex items-center gap-0.5 shadow-sm ${
+                      isHighlight
+                        ? `text-${colorClass}-400 bg-${colorClass}-500/15 border-${colorClass}-500/30`
+                        : 'text-slate-300 bg-slate-800 border-slate-700'
+                    }`}>
+                      {item.changePct > 0 ? '▲ +' : (item.changePct < 0 ? '▼ ' : '')}{item.changePct}%
+                    </span>
+                    <span className="text-xs text-slate-500 group-hover:text-amber-400 transition hidden sm:inline">
+                      📊
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-6 px-3 text-xs text-slate-400 italic">
+            {t('noMoversData', currentLang)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const TIMEFRAMES = [
   { id: '24h', label: '24h' },
@@ -25,20 +172,20 @@ const TIMEFRAMES = [
   { id: '90D', label: '90D' }
 ];
 
-const MarketMoversCards = ({
+const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
   marketData = {},
   nftMarketData = { list: [] },
   currentLang = 'en',
   onSelectResource,
   activeCategory: externalActiveCategory = null,
   onCategoryChange = null
-}: any) => {
-  const [internalCategory, setInternalCategory] = useState('resources');
+}) => {
+  const [internalCategory, setInternalCategory] = useState<'resources' | 'power_ups'>('resources');
   const activeCategory = externalActiveCategory !== null && externalActiveCategory !== undefined
     ? externalActiveCategory
     : internalCategory;
 
-  const handleCategorySwitch = (cat: any) => {
+  const handleCategorySwitch = (cat: 'resources' | 'power_ups') => {
     setInternalCategory(cat);
     if (onCategoryChange) {
       onCategoryChange(cat);
@@ -46,7 +193,7 @@ const MarketMoversCards = ({
   };
 
   const [timeframe, setTimeframe] = useState('24h');
-  const [moversData, setMoversData] = useState({ topGainers: [], topLosers: [], hasData: false });
+  const [moversData, setMoversData] = useState<MarketMoversData>({ topGainers: [], topLosers: [], hasData: false });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,11 +210,11 @@ const MarketMoversCards = ({
         }
 
         if (isMounted) {
-          // @ts-ignore
+          
           setMoversData(data || { topGainers: [], topLosers: [], hasData: false });
           setLoading(false);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.warn('[MarketMoversCards] Erro ao carregar destaques:', err);
         if (isMounted) setLoading(false);
       }
@@ -80,10 +227,10 @@ const MarketMoversCards = ({
     };
   }, [marketData, nftMarketData, timeframe, activeCategory]);
 
-  // @ts-ignore
-  const { topGainers = [], topLosers = [], hasData = false } = moversData;
+  
+  const { topGainers = [], topLosers = [] } = moversData;
 
-  const renderRankBadge = (index: any) => {
+  const renderRankBadge = (index: number) => {
     const colors = [
       'bg-amber-400 text-slate-900 font-extrabold', // #1 Ouro
       'bg-slate-300 text-slate-900 font-bold',     // #2 Prata
@@ -143,7 +290,7 @@ const MarketMoversCards = ({
           <span className="text-[11px] font-semibold text-slate-400 pl-2 pr-1 hidden xs:inline">
             {t('timeframeLabel', currentLang)}
           </span>
-          {TIMEFRAMES.map((tf: any) => {
+          {TIMEFRAMES.map((tf: { id: string, label: string }) => {
             const isActive = timeframe === tf.id;
             return (
               <button
@@ -166,186 +313,31 @@ const MarketMoversCards = ({
       {/* Grade de 2 Cards: Maiores Altas e Maiores Baixas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         
-        {/* CARD 1: 3 RECURSOS QUE MAIS VALORIZARAM */}
-        <div className="bg-slate-800/60 border border-emerald-500/25 hover:border-emerald-500/40 rounded-2xl p-3.5 md:p-4 shadow-xl flex flex-col justify-between transition">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-700/50 pb-2.5 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🚀</span>
-                <h3 className="text-sm font-bold text-emerald-400 tracking-wide">
-                  {t('topGainersTitle', currentLang)}
-                </h3>
-              </div>
-              <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full uppercase">
-                {timeframe}
-              </span>
-            </div>
+                {/* CARD 1: 3 RECURSOS QUE MAIS VALORIZARAM */}
+        <MoverListCard
+          title={t('topGainersTitle', currentLang)}
+          emoji="🚀"
+          timeframe={timeframe}
+          items={topGainers}
+          loading={loading}
+          type="gainers"
+          currentLang={currentLang}
+          onSelectResource={onSelectResource}
+          renderRankBadge={renderRankBadge}
+        />
 
-            {loading ? (
-              <div className="space-y-2 py-1">
-                {[1, 2, 3].map((i: any) => (
-                  <div key={i} className="h-14 bg-slate-700/30 rounded-xl animate-pulse border border-slate-700/20" />
-                ))}
-              </div>
-            ) : topGainers.length > 0 ? (
-              <div className="space-y-2">
-                {topGainers.map((item: any, idx: any) => {
-                  const isPositive = item.changePct >= 0;
-                  return (
-                    <div
-                      key={item.resource || item.name}
-                      onClick={() => onSelectResource && onSelectResource(item.resource || item.name, item)}
-                      className="bg-slate-900/60 hover:bg-slate-900/90 border border-slate-800/80 hover:border-emerald-500/50 rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition group shadow-sm"
-                      title={t('clickToViewChart', currentLang)}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {renderRankBadge(idx)}
-                        <img
-                          src={item.image || (item.isNft
-                            ? (item.collection === 'wearables'
-                                ? `https://sunflower-land.com/play/wearables/images/${item.nft_id || item.id}.png`
-                                : `https://sunflower-land.com/play/erc1155/images/${item.nft_id || item.id}.webp`)
-                            : getItemIcon(item.resource || item.name))}
-                          alt={item.resource || item.name}
-                          className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
-                          onError={handleImageError}
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs md:text-sm font-bold text-slate-100 group-hover:text-emerald-300 transition truncate">
-                              {item.resource || item.name}
-                            </span>
-                            {item.boost_text && (
-                              <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
-                                {item.boost_text}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
-                            <span className="font-semibold text-slate-200">
-                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} FLOWER
-                            </span>
-                            <span className="text-slate-500 text-[10px]">
-                              ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        <span className={`text-xs md:text-sm font-black px-2.5 py-1 rounded-lg border flex items-center gap-0.5 shadow-sm ${
-                          isPositive
-                            ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'
-                            : 'text-slate-300 bg-slate-800 border-slate-700'
-                        }`}>
-                          {isPositive ? '▲ +' : '▼ '}{item.changePct}%
-                        </span>
-                        <span className="text-xs text-slate-500 group-hover:text-amber-400 transition hidden sm:inline">
-                          📊
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-6 px-3 text-xs text-slate-400 italic">
-                {t('noMoversData', currentLang)}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* CARD 2: 3 RECURSOS QUE MAIS DESVALORIZARAM */}
-        <div className="bg-slate-800/60 border border-rose-500/25 hover:border-rose-500/40 rounded-2xl p-3.5 md:p-4 shadow-xl flex flex-col justify-between transition">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-700/50 pb-2.5 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🔻</span>
-                <h3 className="text-sm font-bold text-rose-400 tracking-wide">
-                  {t('topLosersTitle', currentLang)}
-                </h3>
-              </div>
-              <span className="text-[10px] font-bold text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase">
-                {timeframe}
-              </span>
-            </div>
-
-            {loading ? (
-              <div className="space-y-2 py-1">
-                {[1, 2, 3].map((i: any) => (
-                  <div key={i} className="h-14 bg-slate-700/30 rounded-xl animate-pulse border border-slate-700/20" />
-                ))}
-              </div>
-            ) : topLosers.length > 0 ? (
-              <div className="space-y-2">
-                {topLosers.map((item: any, idx: any) => {
-                  const isNegative = item.changePct < 0;
-                  return (
-                    <div
-                      key={item.resource || item.name}
-                      onClick={() => onSelectResource && onSelectResource(item.resource || item.name, item)}
-                      className="bg-slate-900/60 hover:bg-slate-900/90 border border-slate-800/80 hover:border-rose-500/50 rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition group shadow-sm"
-                      title={t('clickToViewChart', currentLang)}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {renderRankBadge(idx)}
-                        <img
-                          src={item.image || (item.isNft
-                            ? (item.collection === 'wearables'
-                                ? `https://sunflower-land.com/play/wearables/images/${item.nft_id || item.id}.png`
-                                : `https://sunflower-land.com/play/erc1155/images/${item.nft_id || item.id}.webp`)
-                            : getItemIcon(item.resource || item.name))}
-                          alt={item.resource || item.name}
-                          className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
-                          onError={handleImageError}
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs md:text-sm font-bold text-slate-100 group-hover:text-rose-300 transition truncate">
-                              {item.resource || item.name}
-                            </span>
-                            {item.boost_text && (
-                              <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
-                                {item.boost_text}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
-                            <span className="font-semibold text-slate-200">
-                              {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} FLOWER
-                            </span>
-                            <span className="text-slate-500 text-[10px]">
-                              ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        <span className={`text-xs md:text-sm font-black px-2.5 py-1 rounded-lg border flex items-center gap-0.5 shadow-sm ${
-                          isNegative
-                            ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
-                            : 'text-slate-300 bg-slate-800 border-slate-700'
-                        }`}>
-                          {item.changePct > 0 ? '▲ +' : '▼ '}{item.changePct}%
-                        </span>
-                        <span className="text-xs text-slate-500 group-hover:text-amber-400 transition hidden sm:inline">
-                          📊
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-6 px-3 text-xs text-slate-400 italic">
-                {t('noMoversData', currentLang)}
-              </div>
-            )}
-          </div>
-        </div>
-
+        
+        <MoverListCard
+          title={t('topLosersTitle', currentLang)}
+          emoji="📉"
+          timeframe={timeframe}
+          items={topLosers}
+          loading={loading}
+          type="losers"
+          currentLang={currentLang}
+          onSelectResource={onSelectResource}
+          renderRankBadge={renderRankBadge}
+        />
       </div>
     </section>
   );
