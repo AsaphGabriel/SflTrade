@@ -79,14 +79,14 @@ export function purgeLegacyMockCache() {
 
       localStorage.removeItem(TOKEN_CACHE_KEY);
 
-      let keysToRemove: any[] = [];
+      let keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith(RESOURCE_CACHE_KEY_PREFIX)) {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach((k: any) => localStorage.removeItem(k));
+      keysToRemove.forEach((k: string) => localStorage.removeItem(k));
 
       localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
     }
@@ -98,7 +98,7 @@ export function purgeLegacyMockCache() {
 // Executa limpeza de cache legado imediatamente ao importar
 purgeLegacyMockCache();
 
-function setLocalCache(key: string, data: any) {
+function setLocalCache(key: string, data: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify({
       timestamp: Date.now(),
@@ -150,7 +150,7 @@ export function calculateMovingAverage(data: any = [], windowSize: number = 7, v
  * 2. PERSISTÊNCIA REAL LOCAL E GLOBAL NO SUPABASE ('token_price_history' / 'resource_price_history')
  * Grava snapshot localmente e envia pontos globais para o Supabase.
  */
-export function recordDailySnapshot(tokenPriceUsd: number = 0.05, marketData: Record<string, any> = {}) {
+export function recordDailySnapshot(tokenPriceUsd: number = 0.05, marketData: Record<string, number> = {}) {
   try {
     const now = new Date();
     const year = now.getFullYear();
@@ -162,9 +162,9 @@ export function recordDailySnapshot(tokenPriceUsd: number = 0.05, marketData: Re
     const todayStr = `${year}-${month}-${date}`;
     const currentTokenUsd = Number(tokenPriceUsd || 0.05);
 
-    const cleanResources: Record<string, any> = {};
+    const cleanResources: Record<string, number> = {};
     if (marketData && typeof marketData === 'object') {
-      Object.entries(marketData).forEach(([key, val]: any) => {
+      Object.entries(marketData).forEach(([key, val]) => {
         if (val !== undefined && val !== null && !isNaN(val)) {
           cleanResources[key] = Number(val);
         }
@@ -748,7 +748,7 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
  * Grava snapshots locais de NFTs e transmite para a tabela nft_price_history no Supabase
  * com throttle de 4 horas para não sobrecarregar e preservar a quota gratuita.
  */
-export function recordNftSnapshot(tokenPriceUsd: number = 0.05, nftList: any[] = []) {
+export function recordNftSnapshot(tokenPriceUsd: number = 0.05, nftList: NftItem[] = []) {
   if (!Array.isArray(nftList) || nftList.length === 0) return;
 
   try {
@@ -926,7 +926,7 @@ const nftBaselineCache: Record<string, any> = {
 /**
  * Calcula os Destaques de Mercado (Maiores Altas e Maiores Baixas) para NFTs baseado no Floor Price
  */
-export async function fetchNftMarketMovers(nftMarketList: any[] = [], timeframe: string | number = '24h') {
+export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timeframe: string | number = '24h') {
   // @ts-ignore
   const safeTimeframe = ['24h', '7D', '30D', '90D'].includes(timeframe) ? timeframe : '24h';
   const nowMs = Date.now();

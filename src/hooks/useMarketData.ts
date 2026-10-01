@@ -1,3 +1,4 @@
+import { Transaction, PortfolioItem } from "../types/models";
 import { useCallback, useMemo } from 'react';
 import useAuthSync from './useAuthSync';
 import useMarketPrices from './useMarketPrices';
@@ -10,7 +11,7 @@ export default function useMarketData() {
     isAuthModalOpen, setIsAuthModalOpen,
     isSyncing, transactions, setTransactions,
     syncCloud
-  } = useAuthSync((settings: any) => {
+  } = useAuthSync((settings: Record<string, unknown>) => {
     if (settings.preferred_currency) updateCurrency(String(settings.preferred_currency).toLowerCase());
     if (settings.vip_active !== undefined) updateVip(Boolean(settings.vip_active));
     if (settings.shrine_active !== undefined) updateShrine(Boolean(settings.shrine_active));
@@ -30,17 +31,17 @@ export default function useMarketData() {
   } = useMarketPrices(user);
 
   // @ts-ignore
-  const { farmData, setFarmData, searchFarm } = useFarmProfile((land: any) => {
+  const { farmData, setFarmData, searchFarm } = useFarmProfile((land: Record<string, any>) => {
     if (land.type) updateIsland(String(land.type).toLowerCase());
     if (land.vip !== undefined) updateVip(Boolean(land.vip));
     if (land.shrine !== undefined) updateShrine(Boolean(land.shrine));
   });
 
   const portfolioData = useMemo(() => {
-    const estoque: Record<string, any> = {};
+    const estoque: Record<string, PortfolioItem> = {};
     const defaultUsdRate = currencyRates.usd || 0.087;
 
-    transactions.forEach((t: any) => {
+    transactions.forEach((t: Transaction) => {
       const item = t.recurso;
       if (!item) return;
       const key = t.isNft ? `${item.toLowerCase()}_nft` : item.toLowerCase();
@@ -81,8 +82,8 @@ export default function useMarketData() {
     const currencyRatio = usdRate > 0 ? (selectedRate / usdRate) : 1;
 
     return Object.keys(estoque)
-      .filter((key: any) => estoque[key].qty > 0.0001)
-      .map((key: any) => {
+      .filter((key: string) => estoque[key].qty > 0.0001)
+      .map((key: string) => {
         const item = estoque[key];
         let precoMedio = item.qty > 0 ? (item.custoTotal / item.qty) : 0;
         let cotacaoMediaFlowerUsd = item.custoTotal > 0 ? (item.custoTotalUsd / item.custoTotal) : usdRate;
@@ -113,7 +114,7 @@ export default function useMarketData() {
           precoP2P = Number(nftEntry?.floor || 0);
         } else {
           // @ts-ignore
-          precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find((k: any) => k.toLowerCase() === item.nome.toLowerCase())] || 0;
+          precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find((k: string) => k.toLowerCase() === item.nome.toLowerCase())] || 0;
         }
 
         const applicableTax = isNftItem ? 0.10 : effectiveTax;
@@ -174,7 +175,7 @@ export default function useMarketData() {
       });
   }, [transactions, currencyRates, selectedCurrency, customAvgPrices, marketData, nftMarketData, effectiveTax]);
 
-  const handleTransaction = useCallback((nuevaTransacao: any) => {
+  const handleTransaction = useCallback((nuevaTransacao: Transaction) => {
     if (!nuevaTransacao) return;
     const cotacaoEntrada = nuevaTransacao.cotacao_entrada_usd ?? currencyRates.usd ?? 0.087;
     const totalPriceUsd = (nuevaTransacao.totalPrice || (nuevaTransacao.qty * nuevaTransacao.unitPrice)) * cotacaoEntrada;
@@ -188,11 +189,11 @@ export default function useMarketData() {
       timestamp: new Date().toISOString()
     };
 
-    setTransactions((prev: any) => {
+    setTransactions((prev: Transaction[]) => {
       const updated = [...prev, txObj];
       try {
         localStorage.setItem('sfl_transactions', JSON.stringify(updated));
-      } catch (e: any) {}
+      } catch (e) {}
       return updated;
     });
 
@@ -204,11 +205,11 @@ export default function useMarketData() {
     }
   }, [currencyRates.usd, user, setTransactions]);
 
-  const updateTransactionPrice = useCallback(async (txId: any, newCotacaoUsd: any) => {
+  const updateTransactionPrice = useCallback(async (txId: number | string, newCotacaoUsd: number | string) => {
     if (!user) return false;
     try {
       const { updateTransactionInCloud } = await import('../services/syncService');
-      const tx = transactions.find((t: any) => t.id === txId);
+      const tx = transactions.find((t: Transaction) => t.id === txId);
       if (!tx) return false;
 
       const newTotalUsd = tx.totalPrice * Number(newCotacaoUsd);
@@ -216,8 +217,8 @@ export default function useMarketData() {
       const success = await updateTransactionInCloud(user.id, txId, Number(newCotacaoUsd), newTotalUsd);
       
       if (success) {
-        setTransactions((prev: any) => {
-          const updated = prev.map((t: any) => {
+        setTransactions((prev: Transaction[]) => {
+          const updated = prev.map((t: Transaction) => {
             if (t.id === txId) {
               return {
                 ...t,
