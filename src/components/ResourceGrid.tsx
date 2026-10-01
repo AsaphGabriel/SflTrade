@@ -1,3 +1,4 @@
+import { NftItem } from "../services/historyService";
 // @ts-ignore
 import React, { useState } from 'react';
 import { t } from '../i18n';
@@ -96,7 +97,21 @@ function obterCategoriaItem(nomeItem: any) {
   return 'misc';
 }
 
-const ResourceGrid = ({
+
+
+export interface ResourceGridProps {
+  data?: Record<string, number>;
+  nftData?: { items?: NftItem[]; list?: NftItem[]; byName?: Record<string, NftItem> };
+  currentLang?: string;
+  onOpenBuy?: (name: string, meta?: any) => void;
+  onOpenSell?: (name: string, meta?: any) => void;
+  categoryFilter?: string | null;
+  onCategoryFilterChange?: ((cat: string) => void) | null;
+  searchTerm?: string | null;
+  onSearchTermChange?: ((term: string) => void) | null;
+}
+
+const ResourceGrid: React.FC<ResourceGridProps> = ({
   data = {},
   nftData = { list: [] },
   currentLang = 'en',
@@ -106,7 +121,7 @@ const ResourceGrid = ({
   onCategoryFilterChange = null,
   searchTerm: externalSearchTerm = null,
   onSearchTermChange = null
-}: any) => {
+}) => {
   // ── Categoria ───────────────────────────────────────────────────────────────
   const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
   const currentCategoryFilter = (categoryFilter !== null && categoryFilter !== undefined)
@@ -145,13 +160,13 @@ const ResourceGrid = ({
     }
   };
 
-  const [selectedChartResource, setSelectedChartResource] = useState(null);
+  const [selectedChartResource, setSelectedChartResource] = useState<any | null>(null);
 
   // Agrupamento de itens por categoria
   const grupos: Record<string, any> = {};
   CATEGORIAS_MERCADO.forEach((cat: any) => { grupos[cat.id] = []; });
 
-  Object.keys(data).forEach((item: any) => {
+  Object.keys(data).forEach((item: string) => {
     const catId = obterCategoriaItem(item);
     if (!grupos[catId]) grupos[catId] = [];
     grupos[catId].push(item);
@@ -164,7 +179,7 @@ const ResourceGrid = ({
   const isSearching = Boolean(term);
 
   // Helper para verificar correspondencia de NFT
-  const matchesNft = (item: any) => {
+  const matchesNft = (item: NftItem) => {
     if (!isSearching) return true;
     const nameMatch = item.name && item.name.toLowerCase().includes(term);
     const displayMatch = item.displayName && item.displayName.toLowerCase().includes(term);
@@ -187,7 +202,7 @@ const ResourceGrid = ({
         if (cat.isNftCategory) {
           return acc + nftList.filter(matchesNft).length;
         } else {
-          return acc + (grupos[cat.id] || []).filter((item: any) => item.toLowerCase().includes(term)).length;
+          return acc + (grupos[cat.id] || []).filter((item: string) => item.toLowerCase().includes(term)).length;
         }
       }, 0)
     : 1;
@@ -209,7 +224,7 @@ const ResourceGrid = ({
           <input
             type="text"
             value={searchTerm}
-            onChange={(e: any) => handleSearchChange(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSearchChange(e.target.value)}
             placeholder={t('searchPlaceholder', currentLang)}
             className="bg-cardbg border border-slate-700 text-white rounded-xl pl-3 pr-7 py-1.5 text-xs focus:outline-none focus:border-amber-400 w-48 md:w-64"
           />
@@ -235,7 +250,7 @@ const ResourceGrid = ({
             } else if (tab.isNft) {
               count = nftList.filter(matchesNft).length;
             } else {
-              count = (grupos[tab.id] || []).filter((item: any) => item.toLowerCase().includes(term)).length;
+              count = (grupos[tab.id] || []).filter((item: string) => item.toLowerCase().includes(term)).length;
             }
           } else {
             count = tab.id === 'all'
@@ -281,7 +296,7 @@ const ResourceGrid = ({
             if (nftsToRender.length === 0) return null;
 
             // Ordenação: menor Floor Price -> maior Floor Price
-            nftsToRender.sort((a: any, b: any) => (Number(a.floor) || 0) - (Number(b.floor) || 0));
+            nftsToRender.sort((a: NftItem, b: NftItem) => (Number(a.floor) || 0) - (Number(b.floor) || 0));
 
             return (
               <div key={cat.id} className="category-block">
@@ -298,7 +313,7 @@ const ResourceGrid = ({
                 </h3>
 
                 <div className="category-grid">
-                  {nftsToRender.map((nft: any) => {
+                  {nftsToRender.map((nft: NftItem) => {
                     const iconUrl = nft.image || (nft.collection === 'wearables'
                       ? `https://sunflower-land.com/play/wearables/images/${nft.id}.png`
                       : `https://sunflower-land.com/play/erc1155/images/${nft.id}.webp`);
@@ -338,7 +353,7 @@ const ResourceGrid = ({
 
                         <div className="market-card-actions mt-2">
                           <button
-                            onClick={(e: any) => {
+                            onClick={(e: React.MouseEvent) => {
                               e.stopPropagation();
                               if (onOpenBuy) onOpenBuy(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
@@ -347,7 +362,7 @@ const ResourceGrid = ({
                             {t('cardBuy', currentLang)}
                           </button>
                           <button
-                            onClick={(e: any) => {
+                            onClick={(e: React.MouseEvent) => {
                               e.stopPropagation();
                               if (onOpenSell) onOpenSell(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
@@ -368,13 +383,13 @@ const ResourceGrid = ({
 
           // Filtro do campo de busca
           if (searchTerm.trim() !== '') {
-            itens = itens.filter((item: any) => item.toLowerCase().includes(searchTerm.toLowerCase()));
+            itens = itens.filter((item: string) => item.toLowerCase().includes(searchTerm.toLowerCase()));
           }
 
           if (itens.length === 0) return null;
 
           // Ordenação: menor preço P2P -> maior preço P2P
-          itens.sort((a: any, b: any) => (data[a] || 0) - (data[b] || 0));
+          itens.sort((a: string, b: string) => (data[a] || 0) - (data[b] || 0));
 
           return (
             <div key={cat.id} className="category-block">
@@ -391,7 +406,7 @@ const ResourceGrid = ({
               </h3>
 
               <div className="category-grid">
-                {itens.map((item: any) => {
+                {itens.map((item: string) => {
                   const precoAtual = data[item];
                   const iconUrl = getItemIcon(item);
 
@@ -415,7 +430,7 @@ const ResourceGrid = ({
                       </div>
                       <div className="market-card-actions">
                         <button
-                          onClick={(e: any) => {
+                          onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
                             if (onOpenBuy) onOpenBuy(item);
                           }}
@@ -424,7 +439,7 @@ const ResourceGrid = ({
                           {t('cardBuy', currentLang)}
                         </button>
                         <button
-                          onClick={(e: any) => {
+                          onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
                             if (onOpenSell) onOpenSell(item);
                           }}

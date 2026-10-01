@@ -7,7 +7,7 @@ const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 minutos de TTL para cache de contin
 /**
  * Utilitários de Cache no localStorage com expiração (TTL)
  */
-export function getCachedData(key: any) {
+export function getCachedData(key: string) {
   try {
     const raw = localStorage.getItem(CACHE_PREFIX + key);
     if (!raw) return null;
@@ -19,19 +19,19 @@ export function getCachedData(key: any) {
       isExpired: age > DEFAULT_TTL_MS,
       age
     };
-  } catch (e: any) {
+  } catch (e) {
     console.warn(`[Cache] Falha ao ler cache para ${key}:`, e);
     return null;
   }
 }
 
-export function setCachedData(key: any, data: any) {
+export function setCachedData(key: string, data: unknown) {
   try {
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({
       timestamp: Date.now(),
       data
     }));
-  } catch (e: any) {
+  } catch (e) {
     console.warn(`[Cache] Falha ao salvar cache no localStorage:`, e);
   }
 }
@@ -39,7 +39,7 @@ export function setCachedData(key: any, data: any) {
 /**
  * Estratégia de requisição resiliente com fallback de proxies (Direto -> Worker -> CorsProxy)
  */
-export async function fetchWithFallback(url: any, options: any = {}) {
+export async function fetchWithFallback(url: string, options: RequestInit & { timeout?: number } = {}) {
   const { headers = {}, timeout = 4500 } = options;
 
   const strategies = [
@@ -56,7 +56,7 @@ export async function fetchWithFallback(url: any, options: any = {}) {
         const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
         if (match) return JSON.parse(match[1]);
         return JSON.parse(text);
-      } catch (err: any) {
+      } catch (err) {
         clearTimeout(id);
         throw err;
       }
@@ -70,14 +70,14 @@ export async function fetchWithFallback(url: any, options: any = {}) {
         clearTimeout(id);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
-      } catch (err: any) {
+      } catch (err) {
         clearTimeout(id);
         throw err;
       }
     },
     // 3. CorsProxy.io Fallback
     async () => {
-      const hasSensitiveKey = Boolean(headers['x-api-key'] || headers['Authorization']);
+      const hasSensitiveKey = Boolean((headers as Record<string, string>)['x-api-key'] || (headers as Record<string, string>)['Authorization']);
       if (hasSensitiveKey) {
         throw new Error('Proxy público bloqueado por segurança para requisições com API Key.');
       }
@@ -89,7 +89,7 @@ export async function fetchWithFallback(url: any, options: any = {}) {
         clearTimeout(id);
         if (!response.ok) throw new Error(`CorsProxy HTTP ${response.status}`);
         return await response.json();
-      } catch (err: any) {
+      } catch (err) {
         clearTimeout(id);
         throw err;
       }
@@ -101,7 +101,7 @@ export async function fetchWithFallback(url: any, options: any = {}) {
     try {
       const data = await strategy();
       if (data) return data;
-    } catch (err: any) {
+    } catch (err) {
       lastError = err;
     }
   }
@@ -121,7 +121,7 @@ export async function resolveFarmIdFromUsername(username: any) {
       setCachedData(cacheKey, data.farm_id);
       return data.farm_id;
     }
-  } catch (err: any) {
+  } catch (err) {
     console.warn(`[API] Erro ao converter username '${username}':`, err);
     const cached = getCachedData(`user_${username.toLowerCase()}`);
     if (cached) return cached.data;
@@ -173,7 +173,7 @@ export function normalizeFarmResponse(rawData: any, source: any) {
     const findExistingKey = (target: any, name: any) => {
       if (!name) return null;
       const targetLower = name.trim().toLowerCase();
-      return Object.keys(target).find((k: any) => k.trim().toLowerCase() === targetLower);
+      return Object.keys(target).find((k) => k.trim().toLowerCase() === targetLower);
     };
 
     const setOrMax = (target: any, name: any, count: any) => {
@@ -189,7 +189,7 @@ export function normalizeFarmResponse(rawData: any, source: any) {
 
     // 1. Inventário base (baú / itens totais)
     if (f.inventory && typeof f.inventory === 'object') {
-      Object.entries(f.inventory).forEach(([itemName, rawQty]: any) => {
+      Object.entries(f.inventory).forEach(([itemName, rawQty]) => {
         const count = Number(rawQty) || 0;
         if (count > 0 && itemName) {
           setOrMax(fullInventory, itemName, count);
@@ -201,7 +201,7 @@ export function normalizeFarmResponse(rawData: any, source: any) {
     // No Sunflower Land, f.inventory já contém a contagem total de itens/collectibles.
     // Usamos Math.max para preencher caso falte no inventário base, sem nunca somar/dobrar.
     if (f.collectibles && typeof f.collectibles === 'object') {
-      Object.entries(f.collectibles).forEach(([collName, items]: any) => {
+      Object.entries(f.collectibles).forEach(([collName, items]) => {
         const count = Array.isArray(items) ? items.length : Number(items || 0);
         if (count > 0 && collName) {
           setOrMax(fullInventory, collName, count);
@@ -211,7 +211,7 @@ export function normalizeFarmResponse(rawData: any, source: any) {
 
     // 3. Wardrobe (wearables do Bumpkin)
     if (f.wardrobe && typeof f.wardrobe === 'object') {
-      Object.entries(f.wardrobe).forEach(([wName, qty]: any) => {
+      Object.entries(f.wardrobe).forEach(([wName, qty]) => {
         const count = Number(qty) || 0;
         if (count > 0 && wName) {
           const cleanName = wName.trim();
@@ -275,7 +275,7 @@ export function normalizeFarmResponse(rawData: any, source: any) {
 /**
  * Orquestrador Dual com Fallback e Cache por TTL
  */
-export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = false }: any) {
+export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = false }: { farmId: number | string, apiKey?: string, forceRefresh?: boolean }) {
   if (!farmId) return null;
   const cacheKey = `farm_${farmId}`;
 
@@ -297,8 +297,8 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
       const rawOfficial = await fetchOfficialFarmData(farmId, apiKey);
       result = normalizeFarmResponse(rawOfficial, 'official');
       source = 'official';
-    } catch (err: any) {
-      console.warn('[DualAPI] Erro no endpoint Oficial Autenticado, aplicando fallback público:', err.message);
+    } catch (err) {
+      console.warn('[DualAPI] Erro no endpoint Oficial Autenticado, aplicando fallback público:', (err as Error).message);
     }
   }
 
@@ -310,8 +310,8 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
         result = normalizeFarmResponse(rawPublic, 'public');
         source = 'public';
       }
-    } catch (err: any) {
-      console.warn('[DualAPI] Erro no endpoint Público:', err.message);
+    } catch (err) {
+      console.warn('[DualAPI] Erro no endpoint Público:', (err as Error).message);
     }
   }
 
@@ -355,8 +355,8 @@ export async function fetchNftMarketData(forceRefresh: any = false) {
     const wearables = Array.isArray(data.wearables) ? data.wearables : [];
 
     const boostCollectibles = collectibles
-      .filter((item: any) => item && item.have_boost === 1 && item.name)
-      .map((item: any) => ({
+      .filter((item: Record<string, any>) => item && item.have_boost === 1 && item.name)
+      .map((item: Record<string, any>) => ({
         ...item,
         displayName: item.name, // collectibles usam o próprio nome como displayName
         collection: 'collectibles',
@@ -366,8 +366,8 @@ export async function fetchNftMarketData(forceRefresh: any = false) {
       }));
 
     const boostWearables = wearables
-      .filter((item: any) => item && item.have_boost === 1 && item.name)
-      .map((item: any) => {
+      .filter((item: Record<string, any>) => item && item.have_boost === 1 && item.name)
+      .map((item: Record<string, any>) => {
         const isParsnipWearable = item.name.toLowerCase() === 'parsnip';
         const displayName = isParsnipWearable ? 'Parsnip (Wearable)' : item.name;
         return {
@@ -405,7 +405,7 @@ export async function fetchNftMarketData(forceRefresh: any = false) {
 
     setCachedData(cacheKey, result);
     return result;
-  } catch (err: any) {
+  } catch (err) {
     console.warn('[API] Erro ao buscar cotações de NFTs:', err);
     const cached = getCachedData(cacheKey);
     if (cached) return cached.data;

@@ -1,14 +1,13 @@
-// @ts-ignore
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-function getItemIcon(itemName: any) {
+function getItemIcon(itemName: string) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function formatarPreco(valor: any) {
+function formatarPreco(valor: number) {
   if (valor === undefined || valor === null || isNaN(valor)) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
@@ -17,19 +16,36 @@ function formatarPreco(valor: any) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-const TransactionModal = ({
-  isOpen = true,
+import { NftItem } from '../services/historyService';
+import { Transaction, PortfolioItem } from '../types/models';
+
+export interface TransactionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (tx: Transaction) => void;
+  type?: 'buy' | 'sell';
+  initialResource?: string;
+  portfolioData?: PortfolioItem[];
+  marketData?: Record<string, number>;
+  nftMarketData?: { list?: NftItem[]; byName?: Record<string, NftItem> };
+  initialResourceMeta?: null | { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number };
+  effectiveTax?: number;
+  currentLang?: string;
+}
+
+const TransactionModal: React.FC<TransactionModalProps> = ({
+  isOpen,
   onClose,
-  type = 'buy',
   onSubmit,
-  effectiveTax = 0.15,
-  marketData = {},
-  nftMarketData = { list: [], byName: {} },
-  portfolioData = [],
-  currentLang = 'en',
+  type = 'buy',
   initialResource = '',
-  initialResourceMeta = null
-}: any) => {
+  portfolioData = [],
+  marketData = {},
+  nftMarketData = { list: [] },
+  initialResourceMeta = {},
+  effectiveTax = 0.03,
+  currentLang = 'en'
+}) => {
   const [resourceSearch, setResourceSearch] = useState(initialResource || '');
   const [selectedResource, setSelectedResource] = useState(initialResource || '');
   const [quantity, setQuantity] = useState(type === 'buy' ? '1' : '');
@@ -38,7 +54,7 @@ const TransactionModal = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [maxStock, setMaxStock] = useState(0);
 
-  const dropdownRef = useRef(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const initialProcessedRef = useRef('');
 
   // Lock scroll do body enquanto o modal está aberto (evita zoom/shift em mobile)
@@ -49,7 +65,7 @@ const TransactionModal = ({
   }, []);
 
 
-  const handleSelectResource = useCallback((nomeRecurso: any, currentQty: any = '') => {
+  const handleSelectResource = useCallback((nomeRecurso: string, currentQty: string | number = '') => {
     try {
       if (!nomeRecurso) return;
       setSelectedResource(nomeRecurso);
@@ -61,32 +77,30 @@ const TransactionModal = ({
 
       if (safeMarketData[nomeRecurso] !== undefined) {
         const precoApi = safeMarketData[nomeRecurso];
-        setUnitPrice(precoApi);
-        const qVal = parseFloat(currentQty || quantity) || (type === 'buy' ? 1 : 0);
+        setUnitPrice(String(precoApi));
+        const qVal = parseFloat(String(currentQty || quantity)) || (type === 'buy' ? 1 : 0);
         if (qVal > 0) {
           setTotalPrice((qVal * precoApi).toFixed(4));
         }
       } else if (nftMarketData?.byName && (nftMarketData.byName[nomeRecurso] || nftMarketData.byName[nomeRecurso.toLowerCase()])) {
         const nftItem = nftMarketData.byName[nomeRecurso] || nftMarketData.byName[nomeRecurso.toLowerCase()];
         const precoFloor = Number(nftItem.floor || 0);
-        // @ts-ignore
-        setUnitPrice(precoFloor);
-        const qVal = parseFloat(currentQty || quantity) || (type === 'buy' ? 1 : 0);
+                setUnitPrice(String(precoFloor));
+        const qVal = parseFloat(String(currentQty || quantity)) || (type === 'buy' ? 1 : 0);
         if (qVal > 0) {
           setTotalPrice((qVal * precoFloor).toFixed(4));
         }
       } else if (initialResourceMeta?.unitPrice) {
         const precoMeta = Number(initialResourceMeta.unitPrice || 0);
-        // @ts-ignore
-        setUnitPrice(precoMeta);
-        const qVal = parseFloat(currentQty || quantity) || (type === 'buy' ? 1 : 0);
+                setUnitPrice(String(precoMeta));
+        const qVal = parseFloat(String(currentQty || quantity)) || (type === 'buy' ? 1 : 0);
         if (qVal > 0) {
           setTotalPrice((qVal * precoMeta).toFixed(4));
         }
       }
 
       if (type === 'sell') {
-        const itemEstoque = safePortfolioData.find((p: any) => p && p.nome && p.nome.toLowerCase() === nomeRecurso.toLowerCase());
+        const itemEstoque = safePortfolioData.find((p: PortfolioItem) => p && p.nome && p.nome.toLowerCase() === nomeRecurso.toLowerCase());
         if (itemEstoque && itemEstoque.qty > 0) {
           setMaxStock(itemEstoque.qty);
           setQuantity(itemEstoque.qty.toString());
@@ -98,7 +112,7 @@ const TransactionModal = ({
           setMaxStock(0);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.warn('[TransactionModal] Erro ao selecionar recurso:', err);
     }
   }, [marketData, nftMarketData, portfolioData, type, initialResourceMeta]);
@@ -118,9 +132,8 @@ const TransactionModal = ({
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: any) => {
-      // @ts-ignore
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
     };
@@ -139,7 +152,7 @@ const TransactionModal = ({
     }
   };
 
-  const handleQuantityChange = (val: any) => {
+  const handleQuantityChange = (val: string) => {
     setQuantity(val);
     const q = parseFloat(val) || 0;
     const u = parseFloat(unitPrice) || 0;
@@ -148,7 +161,7 @@ const TransactionModal = ({
     }
   };
 
-  const handleUnitPriceChange = (val: any) => {
+  const handleUnitPriceChange = (val: string) => {
     setUnitPrice(val);
     const q = parseFloat(quantity) || 0;
     const u = parseFloat(val) || 0;
@@ -157,7 +170,7 @@ const TransactionModal = ({
     }
   };
 
-  const handleTotalPriceChange = (val: any) => {
+  const handleTotalPriceChange = (val: string) => {
     setTotalPrice(val);
     const q = parseFloat(quantity) || 0;
     const tVal = parseFloat(val) || 0;
@@ -168,20 +181,20 @@ const TransactionModal = ({
 
   const filteredResources = useMemo(() => {
     const termo = resourceSearch.toLowerCase().trim();
-    let listaBase: any[] = [];
+    let listaBase: string[] = [];
 
     if (type === 'sell') {
-      listaBase = (portfolioData || []).filter((item: any) => item && item.qty > 0.0001).map((item: any) => item.nome);
+      listaBase = (portfolioData || []).filter((item: PortfolioItem) => item && item.qty > 0.0001).map((item: PortfolioItem) => item.nome);
     } else {
       const resourceNames = Object.keys(marketData || {});
-      const nftNames = (nftMarketData?.list || []).map((n: any) => n.name);
+      const nftNames = (nftMarketData?.list || []).map((n: NftItem) => n.name);
       listaBase = [...new Set([...resourceNames, ...nftNames])].sort();
     }
 
-    return listaBase.filter((r: any) => r && r.toLowerCase().includes(termo));
+    return listaBase.filter((r: string) => r && r.toLowerCase().includes(termo));
   }, [resourceSearch, type, portfolioData, marketData, nftMarketData]);
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const recursoFinal = selectedResource || resourceSearch.trim();
 
@@ -191,13 +204,14 @@ const TransactionModal = ({
     }
 
     const nftItem = nftMarketData?.byName?.[recursoFinal] || nftMarketData?.byName?.[recursoFinal.toLowerCase()] ||
-      Object.values(nftMarketData?.byName || {}).find((n: any) => n.name?.toLowerCase() === recursoFinal.toLowerCase() || n.displayName?.toLowerCase() === recursoFinal.toLowerCase());
-    const itemEstoque = (portfolioData || []).find((p: any) => p && p.nome && p.nome.toLowerCase() === recursoFinal.toLowerCase());
+      Object.values(nftMarketData?.byName || {}).find((n: NftItem) => n.name?.toLowerCase() === recursoFinal.toLowerCase() || n.displayName?.toLowerCase() === recursoFinal.toLowerCase());
+    const itemEstoque = (portfolioData || []).find((p: PortfolioItem) => p && p.nome && p.nome.toLowerCase() === recursoFinal.toLowerCase());
     const isNft = Boolean(initialResourceMeta?.isNft || nftItem || itemEstoque?.isNft);
     const nftId = initialResourceMeta?.nft_id || nftItem?.id || itemEstoque?.nft_id || null;
     const boostText = initialResourceMeta?.boost_text || nftItem?.boost_text || itemEstoque?.boost_text || '';
 
     onSubmit({
+      nome: recursoFinal,
       tipo: type,
       recurso: recursoFinal,
       isNft,
@@ -217,9 +231,9 @@ const TransactionModal = ({
     (selectedResource && selectedResource.toLowerCase() !== 'parsnip' && nftMarketData?.byName && (
       nftMarketData.byName[selectedResource] ||
       nftMarketData.byName[selectedResource.toLowerCase()] ||
-      Object.values(nftMarketData.byName).find((n: any) => n.name?.toLowerCase() === selectedResource.toLowerCase() || n.displayName?.toLowerCase() === selectedResource.toLowerCase())
+      Object.values(nftMarketData.byName).find((n: NftItem) => n.name?.toLowerCase() === selectedResource.toLowerCase() || n.displayName?.toLowerCase() === selectedResource.toLowerCase())
     )) ||
-    ((portfolioData || []).find((p: any) => p && p.nome && p.nome.toLowerCase() === selectedResource?.toLowerCase())?.isNft)
+    ((portfolioData || []).find((p: PortfolioItem) => p && p.nome && p.nome.toLowerCase() === selectedResource?.toLowerCase())?.isNft)
   );
   const currentTaxRate = isItemNft ? 0.10 : effectiveTax;
 
@@ -248,7 +262,7 @@ const TransactionModal = ({
               type="text"
               value={resourceSearch}
               onFocus={() => setIsDropdownOpen(true)}
-              onChange={(e: any) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 setResourceSearch(e.target.value);
                 setSelectedResource(e.target.value);
                 setIsDropdownOpen(true);
@@ -267,7 +281,7 @@ const TransactionModal = ({
                     {type === 'sell' ? t('noStockSell', currentLang) : t('noItemFound', currentLang)}
                   </div>
                 ) : (
-                  filteredResources.map((rec: any) => (
+                  filteredResources.map((rec: string) => (
                     <div
                       key={rec}
                       onClick={() => handleSelectResource(rec)}
@@ -311,7 +325,7 @@ const TransactionModal = ({
               type="number"
               step="any"
               value={quantity}
-              onChange={(e: any) => handleQuantityChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleQuantityChange(e.target.value)}
               placeholder="0.00"
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
               required
@@ -334,7 +348,7 @@ const TransactionModal = ({
               type="number"
               step="any"
               value={unitPrice}
-              onChange={(e: any) => handleUnitPriceChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUnitPriceChange(e.target.value)}
               placeholder="0.0000"
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
               required
@@ -350,7 +364,7 @@ const TransactionModal = ({
               type="number"
               step="any"
               value={totalPrice}
-              onChange={(e: any) => handleTotalPriceChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTotalPriceChange(e.target.value)}
               placeholder="0.0000"
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
               required
