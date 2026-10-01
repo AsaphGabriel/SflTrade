@@ -36,7 +36,7 @@ export default function useFarmProfile(onFarmLoaded: any) {
       } else {
         setFarmData(null);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[FarmSearch] Erro ao carregar dados da fazenda:', err);
       setFarmData(null);
     }

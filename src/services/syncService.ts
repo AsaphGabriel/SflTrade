@@ -74,8 +74,8 @@ export async function fetchRemoteUserData(userId: any) {
       portfolios: portfoliosData || [],
       transactions: transactionsData || []
     };
-  } catch (err: any) {
-    console.warn('[SyncService] Exceção em fetchRemoteUserData:', err?.message || err);
+  } catch (err: unknown) {
+    console.warn('[SyncService] Exceção em fetchRemoteUserData:', (err as Error)?.message || err);
     return null;
   }
 }
@@ -194,8 +194,8 @@ export async function syncLocalToSupabase(userId: any, { localTransactions = [],
     }
 
     console.log('[SyncService] Sincronização Local -> Supabase finalizada!');
-  } catch (err: any) {
-    console.warn('[SyncService] Erro na sincronização Local -> Supabase:', err?.message || err);
+  } catch (err: unknown) {
+    console.warn('[SyncService] Erro na sincronização Local -> Supabase:', (err as Error)?.message || err);
   }
 }
 
@@ -229,8 +229,8 @@ export async function saveTransactionRemote(userId: any, transaction: any) {
       }
       console.warn('[SyncService] Erro ao salvar transação no Supabase:', error.message || error);
     }
-  } catch (err: any) {
-    console.warn('[SyncService] Exceção ao salvar transação no Supabase:', err?.message || err);
+  } catch (err: unknown) {
+    console.warn('[SyncService] Exceção ao salvar transação no Supabase:', (err as Error)?.message || err);
   }
 }
 
@@ -263,8 +263,8 @@ export async function savePortfoliosRemote(userId: any, portfolioList: any) {
         console.warn('[SyncService] Erro ao salvar portfólio no Supabase:', error.message || error);
       }
     }
-  } catch (err: any) {
-    console.warn('[SyncService] Exceção ao salvar portfólio no Supabase:', err?.message || err);
+  } catch (err: unknown) {
+    console.warn('[SyncService] Exceção ao salvar portfólio no Supabase:', (err as Error)?.message || err);
   }
 }
 
@@ -299,8 +299,8 @@ export async function saveSettingsRemote(userId: any, settings: any) {
       }
       console.warn('[SyncService] Erro ao salvar configurações no Supabase:', error.message || error);
     }
-  } catch (err: any) {
-    console.warn('[SyncService] Exceção ao salvar configurações no Supabase:', err?.message || err);
+  } catch (err: unknown) {
+    console.warn('[SyncService] Exceção ao salvar configurações no Supabase:', (err as Error)?.message || err);
   }
 }
 
@@ -321,7 +321,7 @@ export async function updateTransactionInCloud(userId: any, txId: any, newCotaca
 
     if (error) throw error;
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[SyncService] Erro ao atualizar transação:', err);
     return false;
   }

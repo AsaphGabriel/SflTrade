@@ -3,14 +3,14 @@ import { onAuthStateChange } from '../services/authService';
 import { fetchRemoteUserData, syncLocalToSupabase } from '../services/syncService';
 
 export default function useAuthSync(onSettingsSynced: any) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [transactions, setTransactions] = useState(() => {
     try {
       // @ts-ignore
       return JSON.parse(localStorage.getItem('sfl_transactions')) || [];
-    } catch (e: any) {
+    } catch (e: unknown) {
       return [];
     }
   });
@@ -75,8 +75,8 @@ export default function useAuthSync(onSettingsSynced: any) {
         onSettingsSynced(remote.settings);
       }
       console.log('[MarketData] Sincronização cloud concluída com sucesso!');
-    } catch (err: any) {
-      console.warn('[MarketData] Erro ao realizar syncCloud:', err?.message || err);
+    } catch (err: unknown) {
+      console.warn('[MarketData] Erro ao realizar syncCloud:', (err as Error)?.message || err);
     } finally {
       isSyncingRef.current = false;
       setIsSyncing(false);
@@ -102,7 +102,7 @@ export default function useAuthSync(onSettingsSynced: any) {
           initialSyncDone.current = true;
           if (syncCloudRef.current) await syncCloudRef.current(currentUser, false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn('[MarketData] Erro ao recuperar sessão inicial:', err);
       }
     };

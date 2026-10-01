@@ -90,7 +90,7 @@ export function purgeLegacyMockCache() {
 
       localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn('[HistoryService] Erro ao purgar cache legado:', e);
   }
 }
@@ -104,7 +104,7 @@ function setLocalCache(key: string, data: unknown) {
       timestamp: Date.now(),
       data
     }));
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn(`[HistoryService] Erro ao salvar cache local '${key}':`, e);
   }
 }
@@ -114,7 +114,7 @@ function getLocalCache(key: string) {
     const item = localStorage.getItem(key);
     if (!item) return null;
     return JSON.parse(item);
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn(`[HistoryService] Erro ao ler cache local '${key}':`, e);
     return null;
   }
@@ -221,7 +221,7 @@ export function recordDailySnapshot(tokenPriceUsd: number = 0.05, marketData: Re
     // A gravação global agora é responsabilidade exclusiva de Edge Functions ou Cron Jobs (service_role)
     // para evitar exposição de RLS e erros 42501 no console do cliente.
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn('[HistoryService] Erro ao gravar snapshot horário:', e);
   }
 }
@@ -429,8 +429,8 @@ export async function fetchTokenHistory(timeframe: string | number = '30D', curr
     if (!error && Array.isArray(data) && data.length > 0) {
       rawPoints = data;
     }
-  } catch (err: any) {
-    console.warn('[HistoryService] Supabase token_price_history indisponível:', err.message);
+  } catch (err: unknown) {
+    console.warn('[HistoryService] Supabase token_price_history indisponível:', (err as Error).message);
   }
 
   // 2. Fallback local acumulado ('sfl_hourly_history' / 'sfl_daily_history')
@@ -446,7 +446,7 @@ export async function fetchTokenHistory(timeframe: string | number = '30D', curr
           })).filter((h: any) => h.price_usd > 0);
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn('[HistoryService] Erro ao ler sfl_hourly_history para token:', e);
     }
   }
@@ -492,8 +492,8 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
           price_usd: Number(d.price_usd)
         }));
       }
-    } catch (err: any) {
-      console.warn(`[HistoryService] Erro na tabela resource_price_history para ${resourceId}:`, err.message);
+    } catch (err: unknown) {
+      console.warn(`[HistoryService] Erro na tabela resource_price_history para ${resourceId}:`, (err as Error).message);
     }
   }
 
@@ -516,8 +516,8 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
           price_usd: Number(d.avg_price_usd)
         }));
       }
-    } catch (err: any) {
-      console.warn(`[HistoryService] Supabase View v_resource_daily_metrics indisponível para ${resourceId}:`, err.message);
+    } catch (err: unknown) {
+      console.warn(`[HistoryService] Supabase View v_resource_daily_metrics indisponível para ${resourceId}:`, (err as Error).message);
     }
   }
 
@@ -540,7 +540,7 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
             });
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn(`[HistoryService] Erro ao ler sfl_hourly_history para recurso ${resourceId}:`, e);
     }
   }
@@ -646,8 +646,8 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
           });
         }
       }
-    } catch (err: any) {
-      console.warn(`[HistoryService] Supabase indisponível para movers (${safeTimeframe}):`, err?.message || err);
+    } catch (err: unknown) {
+      console.warn(`[HistoryService] Supabase indisponível para movers (${safeTimeframe}):`, (err as Error)?.message || err);
     }
 
     // Fallback local caso Supabase não tenha retornado baselines
@@ -683,7 +683,7 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
             }
           }
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.warn('[HistoryService] Erro ao carregar baseline local para movers:', e);
       }
     }
@@ -782,7 +782,7 @@ export function recordNftSnapshot(tokenPriceUsd: number = 0.05, nftList: NftItem
     // 2. Transmissão para o Supabase (DESATIVADO - ARCH-01)
     // A gravação global agora é responsabilidade exclusiva de Edge Functions ou Cron Jobs (service_role)
     // para evitar exposição de RLS e erros 42501 no console do cliente.
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn('[HistoryService] Falha ao registrar snapshot de NFTs:', e);
   }
 }
@@ -831,8 +831,8 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
           last_sale_sfl: d.last_sale_sfl ? Number(d.last_sale_sfl) : null
         }));
       }
-    } catch (err: any) {
-      console.warn(`[HistoryService] Erro ao consultar nft_price_history para NFT #${nftId}:`, err?.message || err);
+    } catch (err: unknown) {
+      console.warn(`[HistoryService] Erro ao consultar nft_price_history para NFT #${nftId}:`, (err as Error)?.message || err);
     }
   }
 
@@ -865,8 +865,8 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
           sma_30d_sfl: d.sma_30d_sfl ? Number(d.sma_30d_sfl) : null
         }));
       }
-    } catch (err: any) {
-      console.warn(`[HistoryService] Erro ao consultar v_nft_daily_metrics para NFT #${nftId}:`, err?.message || err);
+    } catch (err: unknown) {
+      console.warn(`[HistoryService] Erro ao consultar v_nft_daily_metrics para NFT #${nftId}:`, (err as Error)?.message || err);
     }
   }
 
@@ -1027,8 +1027,8 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
           });
         }
       }
-    } catch (err: any) {
-      console.warn(`[HistoryService] Supabase indisponível para movers de NFT (${safeTimeframe}):`, err?.message || err);
+    } catch (err: unknown) {
+      console.warn(`[HistoryService] Supabase indisponível para movers de NFT (${safeTimeframe}):`, (err as Error)?.message || err);
     }
 
     // Fallback local: usa o baseline local ou o último snapshot de NFTs
@@ -1053,7 +1053,7 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
             });
           }
         }
-      } catch (e: any) {}
+      } catch (e: unknown) {}
     }
 
     nftBaselineCache[safeTimeframe] = {

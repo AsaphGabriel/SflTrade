@@ -170,13 +170,13 @@ export function normalizeFarmResponse(rawData: any, source: any) {
     // Unifica inventário sem duplicar: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
     const fullInventory: Record<string, any> = {};
 
-    const findExistingKey = (target: any, name: any) => {
+    const findExistingKey = (target: any, name: string) => {
       if (!name) return null;
       const targetLower = name.trim().toLowerCase();
       return Object.keys(target).find((k) => k.trim().toLowerCase() === targetLower);
     };
 
-    const setOrMax = (target: any, name: any, count: any) => {
+    const setOrMax = (target: any, name: string, count: any) => {
       if (!name || count <= 0) return;
       const cleanName = name.trim();
       const existingKey = findExistingKey(target, cleanName);

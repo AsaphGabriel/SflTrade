@@ -42,7 +42,7 @@ export default function useMarketPrices(user: any) {
     try {
       const raw = localStorage.getItem('sfl_custom_avg_prices');
       return raw ? JSON.parse(raw) : {};
-    } catch (e: any) {
+    } catch (e: unknown) {
       return {};
     }
   });
@@ -141,7 +141,7 @@ export default function useMarketPrices(user: any) {
           pol: sfl.pol || 1.194
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('[MarketData] Erro ao buscar cotações do exchange:', err);
     }
 
@@ -165,7 +165,7 @@ export default function useMarketPrices(user: any) {
       } else {
         setError(true);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('[MarketData] Erro ao buscar preços P2P:', err);
       setError(true);
     }
@@ -178,7 +178,7 @@ export default function useMarketPrices(user: any) {
           recordNftSnapshot(fetchedUsd, nftRes.list);
         }, 100);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('[MarketData] Erro ao buscar NFTs com boost:', err);
     } finally {
       setLoading(false);

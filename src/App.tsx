@@ -1,5 +1,4 @@
-// @ts-ignore
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useMarketData from './hooks/useMarketData';
 import Header from './components/Header';
 import PortfolioTable from './components/PortfolioTable';
@@ -11,8 +10,7 @@ import FarmDashboard from './components/FarmDashboard';
 import MarketMoversCards from './components/MarketMoversCards';
 import PriceChartModal from './components/PriceChartModal';
 import DonationModal from './components/DonationModal';
-// @ts-ignore
-import { t } from './i18n';
+
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -20,8 +18,8 @@ const App = () => {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
-  const [modalResourceMeta, setModalResourceMeta] = useState(null);
-  const [selectedChartResource, setSelectedChartResource] = useState(null);
+  const [modalResourceMeta, setModalResourceMeta] = useState<any>(null);
+  const [selectedChartResource, setSelectedChartResource] = useState<any>(null);
   
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
   const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
@@ -32,7 +30,7 @@ const App = () => {
   const [resourceCategoryFilter, setResourceCategoryFilter] = useState('all');
   const [marketSearchTerm, setMarketSearchTerm] = useState('');
 
-  const handleMoversCategoryChange = (cat: any) => {
+  const handleMoversCategoryChange = (cat: string) => {
     setActiveMoversCategory(cat);
     // Ao clicar nos cards de maiores altas/baixas, navega para a categoria correspondente
     // na ResourceGrid, mas apenas se não houver uma busca ativa (para não interferir com o filtro de busca).
@@ -45,7 +43,7 @@ const App = () => {
     }
   };
 
-  const handleResourceCategoryChange = (catId: any) => {
+  const handleResourceCategoryChange = (catId: string) => {
     setResourceCategoryFilter(catId);
     if (catId === 'power_ups') {
       setActiveMoversCategory('power_ups');
@@ -113,13 +111,13 @@ const App = () => {
     if (farmId) searchFarm(farmId, keyStr, true);
   };
 
-  const openBuy = (recurso: any = '', meta: any = null) => {
+  const openBuy = (recurso: string = '', meta: { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number; name?: string; resource?: string } | null = null) => {
     setModalResource(recurso);
     setModalResourceMeta(meta);
     setIsBuyModalOpen(true);
   };
 
-  const openSell = (recurso: any = '', meta: any = null) => {
+  const openSell = (recurso: string = '', meta: { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number; name?: string; resource?: string } | null = null) => {
     setModalResource(recurso);
     setModalResourceMeta(meta);
     setIsSellModalOpen(true);
@@ -186,7 +184,7 @@ const App = () => {
                 currentLang={currentLang}
                 activeCategory={activeMoversCategory}
                 onCategoryChange={handleMoversCategoryChange}
-                onSelectResource={(res: any, meta: any) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
+                onSelectResource={(res: string, meta: { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number; name?: string; resource?: string } | null) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
               />
               <ResourceGrid 
                 data={marketData} 
@@ -289,7 +287,7 @@ const App = () => {
           onClose={() => setIsAuthModalOpen(false)}
           user={user}
           currentLang={currentLang}
-          onAuthChange={(updatedUser: any) => setUser(updatedUser)}
+          onAuthChange={(updatedUser: { id: string; email?: string } | null) => setUser(updatedUser)}
           onSyncCloud={syncCloud}
           isSyncing={isSyncing}
         />

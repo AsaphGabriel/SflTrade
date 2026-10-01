@@ -236,7 +236,7 @@ export default function useMarketData() {
         return true;
       }
       return false;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('[MarketData] Erro em updateTransactionPrice:', err);
       return false;
     }
