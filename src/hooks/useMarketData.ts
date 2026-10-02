@@ -31,7 +31,7 @@ export default function useMarketData() {
   } = useMarketPrices(user);
 
   // @ts-ignore
-  const { farmData, setFarmData, searchFarm } = useFarmProfile((land: Record<string, any>) => {
+  const { farmData, setFarmData, searchFarm } = useFarmProfile((land: Record<string, unknown>) => {
     if (land.type) updateIsland(String(land.type).toLowerCase());
     if (land.vip !== undefined) updateVip(Boolean(land.vip));
     if (land.shrine !== undefined) updateShrine(Boolean(land.shrine));

@@ -123,10 +123,10 @@ function getLocalCache(key: string) {
 /**
  * Utilitário linear O(N) para calcular média móvel (Simple Moving Average - SMA) sem travamentos de CPU
  */
-export function calculateMovingAverage(data: any = [], windowSize: number = 7, valueKey: string = 'price_sfl') {
+export function calculateMovingAverage(data: Record<string, unknown>[] = [], windowSize: number = 7, valueKey: string = 'price_sfl') {
   if (!Array.isArray(data) || data.length === 0) return [];
   const safeWindow = Math.max(1, windowSize);
-  let result: any[] = [];
+  let result: Record<string, unknown>[] = [];
   let runningSum = 0;
 
   for (let i = 0; i < data.length; i++) {
@@ -179,9 +179,9 @@ export function recordDailySnapshot(tokenPriceUsd: number = 0.05, marketData: Re
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 90);
     const cutoffStr = cutoffDate.toISOString().split('T')[0];
-    hourlyHistory = hourlyHistory.filter((h: any) => (h.day || h.hourKey) >= cutoffStr);
+    hourlyHistory = hourlyHistory.filter((h: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => (h.day || h.hourKey) >= cutoffStr);
 
-    const existingHourlyIndex = hourlyHistory.findIndex((h: any) => h.hourKey === hourKey);
+    const existingHourlyIndex = hourlyHistory.findIndex((h: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => h.hourKey === hourKey);
     if (existingHourlyIndex >= 0) {
       hourlyHistory[existingHourlyIndex] = {
         ...hourlyHistory[existingHourlyIndex],
@@ -202,12 +202,12 @@ export function recordDailySnapshot(tokenPriceUsd: number = 0.05, marketData: Re
       });
     }
 
-    hourlyHistory.sort((a: any, b: any) => (a.hourKey || a.day).localeCompare(b.hourKey || b.day));
+    hourlyHistory.sort((a: { timestamp: number; [key: string]: unknown }, b: { timestamp: number; [key: string]: unknown }) => (a.hourKey || a.day).localeCompare(b.hourKey || b.day));
 
     // Downsampling: mantém todas as horas dos últimos 7 dias; para dias anteriores (até 90 dias), mantém apenas 1 amostra diária
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const seenDays = new Set();
-    hourlyHistory = hourlyHistory.filter((h: any) => {
+    hourlyHistory = hourlyHistory.filter((h: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => {
       const hDay = h.day || (h.hourKey ? h.hourKey.split(' ')[0] : null);
       if (hDay && hDay >= sevenDaysAgo) return true; // Mantém todas as horas dos últimos 7 dias
       if (hDay && seenDays.has(hDay)) return false; // Remove horas intermediárias de dias antigos
@@ -263,9 +263,9 @@ export function createInitialResourcePoint(resourceId: string | number, currentP
 /**
  * Helper com timeout rápido para requisições ao Supabase (evita travamentos caso bloqueado por Brave Shields/Adblock)
  */
-async function withTimeout(promise: any, timeoutMs: number = 2500) {
+async function withTimeout(promise: Promise<unknown>, timeoutMs: number = 2500) {
   let timeoutId;
-  const timeoutPromise = new Promise((_: any, reject: any) => {
+  const timeoutPromise = new Promise((_: (value: unknown) => void, reject: (reason?: unknown) => void) => {
     timeoutId = setTimeout(() => reject(new Error('Supabase request timeout')), timeoutMs);
   });
   try {
@@ -282,8 +282,8 @@ async function withTimeout(promise: any, timeoutMs: number = 2500) {
  * - 30D: 30 pontos (1 a cada 1 dia)
  * - 90D: 30 pontos (1 a cada 3 dias = 90 dias total)
  */
-export function aggregateHistoryByInterval(rawData: any[] = [], timeframe: string | number = '30D', fallbackPrice: number = 0) {
-  let tfStr = String(timeframe as any).toUpperCase();
+export function aggregateHistoryByInterval(rawData: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }[] = [], timeframe: string | number = '30D', fallbackPrice: number = 0) {
+  let tfStr = String(timeframe).toUpperCase();
   if (timeframe === 1) tfStr = '24H';
   if (timeframe === 7) tfStr = '7D';
   if (timeframe === 30) tfStr = '30D';
@@ -309,16 +309,16 @@ export function aggregateHistoryByInterval(rawData: any[] = [], timeframe: strin
   const nowMs = Date.now();
   const sortedRaw = Array.isArray(rawData)
     ? [...rawData]
-      .map((item: any) => {
+      .map((item: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }) => {
         const t = new Date(item.timestamp || item.day || 0).getTime();
         const p = Number(item.floor_sfl ?? item.avg_floor_sfl ?? item.price_sfl ?? item.avg_price_sfl ?? item.price_usd ?? item.price ?? 0);
         return { ...item, t, p };
       })
-      .filter((item: any) => !isNaN(item.t) && item.t > 0 && !isNaN(item.p) && item.p > 0)
-      .sort((a: any, b: any) => a.t - b.t)
+      .filter((item: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }) => !isNaN(item.t) && item.t > 0 && !isNaN(item.p) && item.p > 0)
+      .sort((a: { timestamp: number; [key: string]: unknown }, b: { timestamp: number; [key: string]: unknown }) => a.t - b.t)
     : [];
 
-  let buckets: any[] = [];
+  let buckets: { t: number; p: number; price_usd?: number }[] = [];
 
   for (let i = 0; i < numBuckets; i++) {
     const bucketStartMs = nowMs - (numBuckets - i) * stepMs;
@@ -327,13 +327,13 @@ export function aggregateHistoryByInterval(rawData: any[] = [], timeframe: strin
     const bucketEndDate = new Date(bucketEndMs);
 
     // Filtra pontos da série bruta dentro da janela do bucket
-    const matches = sortedRaw.filter((item: any) => item.t >= bucketStartMs && item.t < bucketEndMs);
+    const matches = sortedRaw.filter((item: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }) => item.t >= bucketStartMs && item.t < bucketEndMs);
 
     let avgVal = 0;
     let isFallback = false;
 
     if (matches.length > 0) {
-      const sum = matches.reduce((acc: any, curr: any) => acc + curr.p, 0);
+      const sum = matches.reduce((acc: number, curr: { p: number; [key: string]: unknown }) => acc + curr.p, 0);
       avgVal = sum / matches.length;
     } else if (sortedRaw.length > 0) {
       // Interpolação entre o ponto anterior mais próximo e o ponto posterior mais próximo
@@ -392,7 +392,7 @@ export function aggregateHistoryByInterval(rawData: any[] = [], timeframe: strin
   const withSma7 = calculateMovingAverage(buckets, 7, 'price_sfl');
   const withSma30 = calculateMovingAverage(withSma7, 30, 'price_sfl');
 
-  return withSma30.map((item: any) => ({
+  return withSma30.map((item: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }) => ({
     ...item,
     sma_7d_sfl: item.sma_7d,
     sma_30d_sfl: item.sma_30d
@@ -404,7 +404,7 @@ export function aggregateHistoryByInterval(rawData: any[] = [], timeframe: strin
  */
 export async function fetchTokenHistory(timeframe: string | number = '30D', currentPrice: number = 0.05) {
   let days = 30;
-  const tfStr = String(timeframe as any).toUpperCase();
+  const tfStr = String(timeframe).toUpperCase();
   if (tfStr === '24H' || tfStr === '1' || tfStr === '24') days = 1;
   else if (tfStr === '7D' || tfStr === '7') days = 7;
   else if (tfStr === '30D' || tfStr === '30') days = 30;
@@ -414,7 +414,7 @@ export async function fetchTokenHistory(timeframe: string | number = '30D', curr
   startDate.setDate(startDate.getDate() - days - 1);
   const isoStartDate = startDate.toISOString();
 
-  let rawPoints: any[] = [];
+  let rawPoints: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }[] = [];
 
   // 1. Tentar consulta no Supabase (Dados Globais)
   try {
@@ -440,10 +440,10 @@ export async function fetchTokenHistory(timeframe: string | number = '30D', curr
       if (rawHourly) {
         const historyList = JSON.parse(rawHourly);
         if (Array.isArray(historyList) && historyList.length > 0) {
-          rawPoints = historyList.map((h: any) => ({
+          rawPoints = historyList.map((h: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => ({
             timestamp: h.timestamp || h.day,
             price_usd: Number(h.token_price_usd)
-          })).filter((h: any) => h.price_usd > 0);
+          })).filter((h: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => h.price_usd > 0);
         }
       }
     } catch (e: unknown) {
@@ -461,7 +461,7 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
   if (!resourceId) return [];
 
   let days = 30;
-  const tfStr = String(timeframe as any).toUpperCase();
+  const tfStr = String(timeframe).toUpperCase();
   if (tfStr === '24H' || tfStr === '1' || tfStr === '24') days = 1;
   else if (tfStr === '7D' || tfStr === '7') days = 7;
   else if (tfStr === '30D' || tfStr === '30') days = 30;
@@ -471,7 +471,7 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
   startDate.setDate(startDate.getDate() - days - 1);
   const dateStr = startDate.toISOString().split('T')[0];
 
-  let rawPoints: any[] = [];
+  let rawPoints: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }[] = [];
 
   // Se timeframe for 24h ou 7D, prioriza a tabela bruta resource_price_history com timestamps precisos
   if (days <= 7) {
@@ -486,7 +486,7 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
       );
 
       if (!error && Array.isArray(data) && data.length > 0) {
-        rawPoints = data.map((d: any) => ({
+        rawPoints = data.map((d: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => ({
           timestamp: d.timestamp,
           price_sfl: Number(d.price_sfl),
           price_usd: Number(d.price_usd)
@@ -510,7 +510,7 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
       );
 
       if (!error && Array.isArray(data) && data.length > 0) {
-        rawPoints = data.map((d: any) => ({
+        rawPoints = data.map((d: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => ({
           timestamp: d.day,
           price_sfl: Number(d.avg_price_sfl),
           price_usd: Number(d.avg_price_usd)
@@ -529,8 +529,8 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
         const historyList = JSON.parse(rawHourly);
         if (Array.isArray(historyList) && historyList.length > 0) {
           rawPoints = historyList
-            .filter((h: any) => h.resources && h.resources[resourceId] !== undefined)
-            .map((h: any) => {
+            .filter((h: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => h.resources && h.resources[resourceId] !== undefined)
+            .map((h: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => {
               const pSfl = Number(h.resources[resourceId]);
               return {
                 timestamp: h.timestamp || h.day,
@@ -553,10 +553,10 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
  * Otimizado para usar a cotação real instantânea e comparar com a referência histórica exata do período.
  */
 const BASELINE_CACHE_TTL_MS = 3 * 60 * 1000; // Cache de 3 min apenas para a consulta de baseline no Supabase
-const baselineCache: Record<string, any> = {};
+const baselineCache: Record<string, unknown> = {};
 
-export async function fetchMarketMovers(currentMarketData: Record<string, any> = {}, timeframe: string | number = '24h') {
-  const tfStr = String(timeframe as any).toUpperCase();
+export async function fetchMarketMovers(currentMarketData: Record<string, { sfl?: number; usd?: number; changePct?: number; [key: string]: unknown }> = {}, timeframe: string | number = '24h') {
+  const tfStr = String(timeframe).toUpperCase();
   let safeTimeframe = '24h';
   let hoursBack = 24;
   let minAgeMs = 12 * 60 * 60 * 1000; // Mínimo de 12h de idade para ser considerado baseline de 24h
@@ -579,7 +579,7 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
   const targetTimeMs = nowMs - hoursBack * 60 * 60 * 1000;
 
   // 1. Reutiliza ou busca mapa de baseline histórica (somente a consulta do banco é armazenada em cache)
-  let baselineMap: Record<string, any> = {};
+  let baselineMap: Record<string, { baselineSfl: number; baselineUsd: number }> = {};
   const cachedBaseline = baselineCache[safeTimeframe];
   if (cachedBaseline && (nowMs - cachedBaseline.timestamp < BASELINE_CACHE_TTL_MS)) {
     baselineMap = cachedBaseline.map;
@@ -598,13 +598,13 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
         );
 
         if (!rawError && Array.isArray(rawHistory) && rawHistory.length > 0) {
-          const byRes: Record<string, any> = {};
-          rawHistory.forEach((r: any) => {
+          const byRes: Record<string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]> = {};
+          rawHistory.forEach((r: { created_at?: string; timestamp?: string | number; resource_id?: string; price_sfl?: number; price_usd?: number; day?: string; [key: string]: unknown }) => {
             if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
             byRes[r.resource_id].push(r);
           });
 
-          Object.entries(byRes).forEach(([resId, rows]: any) => {
+          Object.entries(byRes).forEach(([resId, rows]: [string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]]) => {
             let closest = rows[0];
             let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
             for (const row of rows) {
@@ -632,14 +632,14 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
         );
 
         if (!dailyError && Array.isArray(dailyMetrics) && dailyMetrics.length > 0) {
-          const byRes: Record<string, any> = {};
-          dailyMetrics.forEach((r: any) => {
+          const byRes: Record<string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]> = {};
+          dailyMetrics.forEach((r: { created_at?: string; timestamp?: string | number; resource_id?: string; price_sfl?: number; price_usd?: number; day?: string; [key: string]: unknown }) => {
             if (!byRes[r.resource_id]) byRes[r.resource_id] = [];
             byRes[r.resource_id].push(r);
           });
 
-          Object.entries(byRes).forEach(([resId, rows]: any) => {
-            const pastRows = rows.filter((r: any) => r.day <= targetDateStr);
+          Object.entries(byRes).forEach(([resId, rows]: [string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]]) => {
+            const pastRows = rows.filter((r: { created_at?: string; timestamp?: string | number; resource_id?: string; price_sfl?: number; price_usd?: number; day?: string; [key: string]: unknown }) => r.day <= targetDateStr);
             if (pastRows.length > 0) {
               baselineMap[resId] = Number(pastRows[pastRows.length - 1].avg_price_sfl);
             }
@@ -657,7 +657,7 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
         if (rawHourly) {
           const historyList = JSON.parse(rawHourly);
           if (Array.isArray(historyList) && historyList.length > 0) {
-            const sorted = [...historyList].sort((a: any, b: any) =>
+            const sorted = [...historyList].sort((a: { timestamp: number; [key: string]: unknown }, b: { timestamp: number; [key: string]: unknown }) =>
               (new Date(a.timestamp || a.day).getTime()) - (new Date(b.timestamp || b.day).getTime())
             );
 
@@ -675,7 +675,7 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
 
             const bestAge = nowMs - new Date(bestSnapshot.timestamp || bestSnapshot.day).getTime();
             if (bestSnapshot && bestSnapshot.resources && bestAge >= minAgeMs) {
-              Object.entries(bestSnapshot.resources).forEach(([resId, price]: any) => {
+              Object.entries(bestSnapshot.resources).forEach(([resId, price]: [string, number]) => {
                 if (Number(price) > 0) {
                   baselineMap[resId] = Number(price);
                 }
@@ -695,9 +695,9 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
   }
 
   // 2. Calcula as variações percentuais usando a cotação real AO VIVO enviada em currentMarketData
-  let variations: any[] = [];
+  let variations: { resource: string; sfl: number; usd: number; changePct: number; baselineSfl: number; baselineUsd: number; [key: string]: unknown }[] = [];
 
-  Object.entries(currentMarketData).forEach(([resourceId, rawCurrent]: any) => {
+  Object.entries(currentMarketData).forEach(([resourceId, rawCurrent]: [string, { sfl?: number; usd?: number; changePct?: number; [key: string]: unknown }]) => {
     const currentPrice = Number(rawCurrent);
     if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) return;
 
@@ -722,13 +722,13 @@ export async function fetchMarketMovers(currentMarketData: Record<string, any> =
   });
 
   // Ordena por maior variação positiva
-  variations.sort((a: any, b: any) => b.changePct - a.changePct);
+  variations.sort((a: { timestamp: number; [key: string]: unknown }, b: { timestamp: number; [key: string]: unknown }) => b.changePct - a.changePct);
 
   // Top 3 que mais valorizaram (apenas os que tiveram variação real)
-  const topGainers = variations.filter((v: any) => v.changePct > 0).slice(0, 3);
+  const topGainers = variations.filter((v: { changePct: number; [key: string]: unknown }) => v.changePct > 0).slice(0, 3);
 
   // Top 3 que mais desvalorizaram (apenas os que tiveram variação negativa real)
-  const topLosers = [...variations].filter((v: any) => v.changePct < 0).reverse().slice(0, 3);
+  const topLosers = [...variations].filter((v: { changePct: number; [key: string]: unknown }) => v.changePct < 0).reverse().slice(0, 3);
 
   return {
     timeframe: safeTimeframe,
@@ -759,7 +759,7 @@ export function recordNftSnapshot(tokenPriceUsd: number = 0.05, nftList: NftItem
     const localSnapshot = {
       timestamp: now.toISOString(),
       tokenPriceUsd: currentTokenUsd,
-      items: nftList.map((n: any) => ({
+      items: nftList.map((n: { name?: string; floor?: number; [key: string]: unknown }) => ({
         id: n.id,
         name: n.name,
         collection: n.collection || 'collectibles',
@@ -794,7 +794,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
   if (nftId === undefined || nftId === null) return [];
 
   let days = 30;
-  const tfStr = String(timeframe as any).toUpperCase();
+  const tfStr = String(timeframe).toUpperCase();
   if (tfStr === '24H' || tfStr === '1' || tfStr === '24') days = 1;
   else if (tfStr === '7D' || tfStr === '7') days = 7;
   else if (tfStr === '30D' || tfStr === '30') days = 30;
@@ -804,7 +804,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
   startDate.setDate(startDate.getDate() - days - 1);
   const dateStr = startDate.toISOString().split('T')[0];
 
-  let rawPoints: any[] = [];
+  let rawPoints: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }[] = [];
 
   // Se timeframe for 24h ou 7D, prioriza tabela bruta nft_price_history
   if (days <= 7) {
@@ -812,7 +812,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
       let query = supabase
         .from('nft_price_history')
         .select('*')
-        .eq('nft_id', Number(nftId as any))
+        .eq('nft_id', Number(nftId))
         .gte('timestamp', startDate.toISOString())
         .order('timestamp', { ascending: true });
         
@@ -822,7 +822,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
       const { data, error } = await withTimeout(query);
 
       if (!error && Array.isArray(data) && data.length > 0) {
-        rawPoints = data.map((d: any) => ({
+        rawPoints = data.map((d: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => ({
           timestamp: d.timestamp,
           floor_sfl: Number(d.floor_sfl),
           price_sfl: Number(d.floor_sfl),
@@ -842,7 +842,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
       let query = supabase
         .from('v_nft_daily_metrics')
         .select('*')
-        .eq('nft_id', Number(nftId as any))
+        .eq('nft_id', Number(nftId))
         .gte('day', dateStr)
         .order('day', { ascending: true });
         
@@ -852,7 +852,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
       const { data, error } = await withTimeout(query);
 
       if (!error && Array.isArray(data) && data.length > 0) {
-        rawPoints = data.map((d: any) => ({
+        rawPoints = data.map((d: { created_at?: string; timestamp?: string | number; price_sfl?: number; price?: number; price_usd?: number; volume?: number; resources?: Record<string, number>; [key: string]: unknown }) => ({
           timestamp: d.day,
           floor_sfl: Number(d.avg_floor_sfl),
 
@@ -888,7 +888,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
     // (dados corrompidos de IDs de NFTs reciclados para itens diferentes no passado)
     const sanityMin = currentFloorSfl / 20;
     const sanityMax = currentFloorSfl * 20;
-    const sanityFiltered = rawPoints.filter((p: any) => {
+    const sanityFiltered = rawPoints.filter((p: { p: number; price_usd?: number; [key: string]: unknown }) => {
       const v = Number(p.floor_sfl || p.price_sfl || p.avg_floor_sfl || p.avg_price_sfl || 0);
       return v > 0 && v >= sanityMin && v <= sanityMax;
     });
@@ -942,7 +942,7 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
   const { targetDays, minAgeHours, cacheTtlMs } = timeframeConfig[safeTimeframe];
   const targetTimeMs = nowMs - (targetDays * 24 * 60 * 60 * 1000);
 
-  let baselineMap: Record<string, any> = {};
+  let baselineMap: Record<string, { baselineSfl: number; baselineUsd: number }> = {};
   const cached = nftBaselineCache[safeTimeframe];
 
   if (cached && (nowMs - cached.timestamp < cacheTtlMs) && cached.map && Object.keys(cached.map).length > 0) {
@@ -969,13 +969,13 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
         );
 
         if (!error && Array.isArray(data) && data.length > 0) {
-          const byNft: Record<string, any> = {};
-          data.forEach((r: any) => {
+          const byNft: Record<string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]> = {};
+          data.forEach((r: { created_at?: string; timestamp?: string | number; resource_id?: string; price_sfl?: number; price_usd?: number; day?: string; [key: string]: unknown }) => {
             const key = `${r.name}_${r.collection}_${r.nft_id}`;
             if (!byNft[key]) byNft[key] = [];
             byNft[key].push(r);
           });
-          Object.entries(byNft).forEach(([key, rows]: any) => {
+          Object.entries(byNft).forEach(([key, rows]: [string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]]) => {
             let closest = rows[0];
             let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
             for (const row of rows) {
@@ -1005,13 +1005,13 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
         );
 
         if (!error && Array.isArray(data) && data.length > 0) {
-          const byNft: Record<string, any> = {};
-          data.forEach((r: any) => {
+          const byNft: Record<string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]> = {};
+          data.forEach((r: { created_at?: string; timestamp?: string | number; resource_id?: string; price_sfl?: number; price_usd?: number; day?: string; [key: string]: unknown }) => {
             const key = `${r.name}_${r.collection}_${r.nft_id}`;
             if (!byNft[key]) byNft[key] = [];
             byNft[key].push(r);
           });
-          Object.entries(byNft).forEach(([key, rows]: any) => {
+          Object.entries(byNft).forEach(([key, rows]: [string, { day: string; price_sfl: number; price_usd: number; [key: string]: unknown }[]]) => {
             let closest = rows[0];
             let minDiff = Math.abs(new Date(closest.day).getTime() - targetTimeMs);
             for (const row of rows) {
@@ -1045,7 +1045,7 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
           const minFallbackAgeMs = 0; 
           
           if (snapshotAgeMs >= minFallbackAgeMs && Array.isArray(snapshot.items)) {
-            snapshot.items.forEach((item: any) => {
+            snapshot.items.forEach((item: { t: number; p: number; price_usd?: number; volume?: number; [key: string]: unknown }) => {
               const key = `${item.name}_${item.collection}_${item.nft_id || item.id}`;
               if (Number(item.floor) > 0) {
                 baselineMap[key] = Number(item.floor);
@@ -1063,10 +1063,10 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
   }
 
   // Calcula variações percentuais baseadas no Floor Price
-  let variations: any[] = [];
+  let variations: { resource: string; sfl: number; usd: number; changePct: number; baselineSfl: number; baselineUsd: number; [key: string]: unknown }[] = [];
   const safeList = Array.isArray(nftMarketList) ? nftMarketList : [];
 
-  safeList.forEach((nft: any) => {
+  safeList.forEach((nft: { name?: string; floor?: number; [key: string]: unknown }) => {
     const currentFloor = Number(nft.floor);
     if (!currentFloor || isNaN(currentFloor) || currentFloor <= 0) return;
 
@@ -1100,10 +1100,10 @@ export async function fetchNftMarketMovers(nftMarketList: NftItem[] = [], timefr
   });
 
   // Ordenação correta: desc por changePct
-  variations.sort((a: any, b: any) => b.changePct - a.changePct);
+  variations.sort((a: { timestamp: number; [key: string]: unknown }, b: { timestamp: number; [key: string]: unknown }) => b.changePct - a.changePct);
 
-  const topGainers = variations.filter((v: any) => v.changePct > 0).slice(0, 3);
-  const topLosers = variations.filter((v: any) => v.changePct < 0).slice(-3).reverse();
+  const topGainers = variations.filter((v: { changePct: number; [key: string]: unknown }) => v.changePct > 0).slice(0, 3);
+  const topLosers = variations.filter((v: { changePct: number; [key: string]: unknown }) => v.changePct < 0).slice(-3).reverse();
 
   return {
     timeframe: safeTimeframe,

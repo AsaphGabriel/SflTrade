@@ -112,7 +112,7 @@ export async function fetchWithFallback(url: string, options: RequestInit & { ti
 /**
  * Resolve nome de usuário para Farm ID (usando sfl.world)
  */
-export async function resolveFarmIdFromUsername(username: any) {
+export async function resolveFarmIdFromUsername(username: string | number) {
   try {
     const url = `https://sfl.world/api/v1/land/info/username/${encodeURIComponent(username)}`;
     const cacheKey = `user_${username.toLowerCase()}`;
@@ -132,7 +132,7 @@ export async function resolveFarmIdFromUsername(username: any) {
 /**
  * Requisição 1: Endpoint Público / Agregador (sfl.world)
  */
-export async function fetchPublicLandData(farmId: any) {
+export async function fetchPublicLandData(farmId: string | number) {
   const url = `https://sfl.world/api/v1.1/land/${farmId}`;
   return await fetchWithFallback(url);
 }
@@ -141,7 +141,7 @@ export async function fetchPublicLandData(farmId: any) {
  * Requisição 2: Endpoint Oficial Autenticado (sunflower-land.com)
  * Requer x-api-key no cabeçalho HTTP
  */
-export async function fetchOfficialFarmData(farmId: any, apiKey: any) {
+export async function fetchOfficialFarmData(farmId: string | number, apiKey: string) {
   if (!apiKey || !apiKey.startsWith('sfl.')) {
     throw new Error('API Key inválida ou ausente para requisição oficial.');
   }
@@ -159,7 +159,7 @@ export async function fetchOfficialFarmData(farmId: any, apiKey: any) {
 /**
  * Normaliza os dados retornados de ambas as APIs para manter compatibilidade no UI
  */
-export function normalizeFarmResponse(rawData: any, source: any) {
+export function normalizeFarmResponse(rawData: { bumpkin?: { experience?: number; level?: number; equipped?: Record<string, string>; skills?: Record<string, number> }; inventory?: Record<string, string | number>; wardrobe?: Record<string, number>; coins?: number; gem?: number; [key: string]: unknown }, source: string) {
   if (!rawData) return null;
 
   // Se vier da API Oficial (sunflower-land.com)
@@ -168,15 +168,15 @@ export function normalizeFarmResponse(rawData: any, source: any) {
     const computedLevel = f.bumpkin?.experience ? getBumpkinLevel(f.bumpkin.experience) : (f.bumpkin?.level || f.level || 1);
 
     // Unifica inventário sem duplicar: itens do baú + collectibles posicionados na ilha + wearables do wardrobe
-    const fullInventory: Record<string, any> = {};
+    const fullInventory: Record<string, unknown> = {};
 
-    const findExistingKey = (target: any, name: string) => {
+    const findExistingKey = (target: Record<string, number>, name: string) => {
       if (!name) return null;
       const targetLower = name.trim().toLowerCase();
       return Object.keys(target).find((k) => k.trim().toLowerCase() === targetLower);
     };
 
-    const setOrMax = (target: any, name: string, count: any) => {
+    const setOrMax = (target: Record<string, number>, name: string, count: number) => {
       if (!name || count <= 0) return;
       const cleanName = name.trim();
       const existingKey = findExistingKey(target, cleanName);
@@ -224,7 +224,7 @@ export function normalizeFarmResponse(rawData: any, source: any) {
 
     // 4. Bumpkin equipped (wearables atualmente vestidos)
     if (f.bumpkin?.equipped && typeof f.bumpkin.equipped === 'object') {
-      Object.values(f.bumpkin.equipped).forEach((eqItem: any) => {
+      Object.values(f.bumpkin.equipped).forEach((eqItem: string) => {
         if (eqItem && typeof eqItem === 'string') {
           const cleanName = eqItem.trim();
           const isParsnip = cleanName.toLowerCase() === 'parsnip';
@@ -333,7 +333,7 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
  * Busca cotações de NFTs (Floor e Last Sale) filtrando apenas itens com buff (have_boost === 1).
  * Garante que `floor` e `lastSalePrice` são sempre números válidos.
  */
-export async function fetchNftMarketData(forceRefresh: any = false) {
+export async function fetchNftMarketData(forceRefresh: boolean = false) {
   const cacheKey = 'nft_market_boosts';
   if (!forceRefresh) {
     const cached = getCachedData(cacheKey);
@@ -355,8 +355,8 @@ export async function fetchNftMarketData(forceRefresh: any = false) {
     const wearables = Array.isArray(data.wearables) ? data.wearables : [];
 
     const boostCollectibles = collectibles
-      .filter((item: Record<string, any>) => item && item.have_boost === 1 && item.name)
-      .map((item: Record<string, any>) => ({
+      .filter((item: Record<string, unknown>) => item && item.have_boost === 1 && item.name)
+      .map((item: Record<string, unknown>) => ({
         ...item,
         displayName: item.name, // collectibles usam o próprio nome como displayName
         collection: 'collectibles',
@@ -366,8 +366,8 @@ export async function fetchNftMarketData(forceRefresh: any = false) {
       }));
 
     const boostWearables = wearables
-      .filter((item: Record<string, any>) => item && item.have_boost === 1 && item.name)
-      .map((item: Record<string, any>) => {
+      .filter((item: Record<string, unknown>) => item && item.have_boost === 1 && item.name)
+      .map((item: Record<string, unknown>) => {
         const isParsnipWearable = item.name.toLowerCase() === 'parsnip';
         const displayName = isParsnipWearable ? 'Parsnip (Wearable)' : item.name;
         return {
@@ -382,9 +382,9 @@ export async function fetchNftMarketData(forceRefresh: any = false) {
 
     const allBoosts = [...boostCollectibles, ...boostWearables];
 
-    const byName: Record<string, any> = {};
-    const byId: Record<string, any> = {};
-    allBoosts.forEach((nft: any) => {
+    const byName: Record<string, unknown> = {};
+    const byId: Record<string, unknown> = {};
+    allBoosts.forEach((nft: { name?: string; id?: string | number; [key: string]: unknown }) => {
       if (nft.name) {
         byName[nft.name] = nft;
         if (nft.displayName && nft.displayName !== nft.name) {

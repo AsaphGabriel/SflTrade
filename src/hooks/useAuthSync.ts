@@ -1,9 +1,10 @@
+import { User } from '@supabase/supabase-js';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChange } from '../services/authService';
 import { fetchRemoteUserData, syncLocalToSupabase } from '../services/syncService';
 
-export default function useAuthSync(onSettingsSynced: any) {
-  const [user, setUser] = useState<any>(null);
+export default function useAuthSync(onSettingsSynced?: (settings: Record<string, unknown>) => void) {
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [transactions, setTransactions] = useState(() => {
@@ -19,7 +20,7 @@ export default function useAuthSync(onSettingsSynced: any) {
   const isSyncingRef = useRef(false);
   const lastBackgroundSyncRef = useRef(0);
 
-  const syncCloud = useCallback(async (targetUser: any = user, isManual: any = false) => {
+  const syncCloud = useCallback(async (targetUser: User | null = user, isManual: boolean = false) => {
     if (!targetUser) return;
     if (isSyncingRef.current) {
       console.log('[MarketData] Sincronização já em andamento, ignorando nova chamada.');
@@ -52,7 +53,7 @@ export default function useAuthSync(onSettingsSynced: any) {
       const remote = await fetchRemoteUserData(targetUser.id);
 
       if (remote && remote.transactions && remote.transactions.length > 0) {
-        const formattedRemoteTxs = remote.transactions.map((rt: any) => ({
+        const formattedRemoteTxs = remote.transactions.map((rt: { id: string; type: string; quantity: number; total_sfl: number; total_usd: number; resource_id: string; created_at: string; price_sfl: number; token_price_usd_at_purchase: number; [key: string]: unknown }) => ({
           id: rt.id,
           recurso: rt.resource_id,
           tipo: rt.type ? rt.type.toLowerCase() : 'buy',
@@ -109,7 +110,7 @@ export default function useAuthSync(onSettingsSynced: any) {
     initAuth();
 
     // @ts-ignore
-    subscription = onAuthStateChange(async (event: any, session: any) => {
+    subscription = onAuthStateChange(async (event: string, session: { user: User } | null) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
 

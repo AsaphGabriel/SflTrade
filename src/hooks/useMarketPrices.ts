@@ -1,3 +1,4 @@
+import { User } from '@supabase/supabase-js';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { t } from '../i18n';
 import { fetchWithFallback, fetchNftMarketData } from '../services/api';
@@ -24,7 +25,7 @@ const DADOS_PRECOS_INICIAIS = {
   "Umbrella Bait":0.0254, "Crimson Baitfish":0.0404, "Saltwort":0.03836
 };
 
-export default function useMarketPrices(user: any) {
+export default function useMarketPrices(user?: User | null) {
   const [selectedIsland, setSelectedIsland] = useState(localStorage.getItem('sfl_island') || 'volcano');
   const [isVip, setIsVip] = useState(localStorage.getItem('sfl_vip') === 'true');
   const [isShrine, setIsShrine] = useState(localStorage.getItem('sfl_shrine') === 'true');
@@ -47,7 +48,7 @@ export default function useMarketPrices(user: any) {
     }
   });
 
-  const updateIsland = useCallback((val: any) => {
+  const updateIsland = useCallback((val: string) => {
     setSelectedIsland(val);
     localStorage.setItem('sfl_island', val);
     if (user) {
@@ -57,7 +58,7 @@ export default function useMarketPrices(user: any) {
     }
   }, [user, isVip, isShrine, selectedCurrency]);
 
-  const updateVip = useCallback((val: any) => {
+  const updateVip = useCallback((val: boolean) => {
     setIsVip(val);
     localStorage.setItem('sfl_vip', String(val));
     if (user) {
@@ -67,7 +68,7 @@ export default function useMarketPrices(user: any) {
     }
   }, [user, selectedIsland, isShrine, selectedCurrency]);
 
-  const updateShrine = useCallback((val: any) => {
+  const updateShrine = useCallback((val: boolean) => {
     setIsShrine(val);
     localStorage.setItem('sfl_shrine', String(val));
     if (user) {
@@ -77,7 +78,7 @@ export default function useMarketPrices(user: any) {
     }
   }, [user, selectedIsland, isVip, selectedCurrency]);
 
-  const updateCurrency = useCallback((val: any) => {
+  const updateCurrency = useCallback((val: string) => {
     setSelectedCurrency(val);
     localStorage.setItem('sfl_currency', val);
     if (user) {
@@ -87,8 +88,8 @@ export default function useMarketPrices(user: any) {
     }
   }, [user, selectedIsland, isVip, isShrine]);
 
-  const updateCustomAvgPrice = useCallback((resourceName: any, avgSfl: any, flowerUsdRate: any) => {
-    setCustomAvgPrices((prev: any) => {
+  const updateCustomAvgPrice = useCallback((resourceName: string, avgSfl: number, flowerUsdRate: number) => {
+    setCustomAvgPrices((prev: Record<string, { avgSfl?: number | null; flowerUsdRate?: number | null; sfl?: number; usd?: number; avgUsd?: number | null }> | undefined) => {
       const updated = { ...prev };
       if (!resourceName) return updated;
       const key = resourceName.toLowerCase();
@@ -150,7 +151,7 @@ export default function useMarketPrices(user: any) {
       if (dataPrices) {
         const p2pData = dataPrices.data?.p2p || dataPrices.p2p;
         if (p2pData) {
-          setMarketData((prev: any) => ({ ...prev, ...p2pData }));
+          setMarketData((prev: Record<string, unknown>) => ({ ...prev, ...p2pData }));
           setTimeout(() => {
             recordDailySnapshot(fetchedUsd, p2pData);
           }, 50);

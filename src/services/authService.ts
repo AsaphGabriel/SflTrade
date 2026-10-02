@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 /**
  * Cadastrar novo usuário com e-mail e senha
  */
-export async function signUp({ email, password }: any) {
+export async function signUp({ email, password }: { email: string; password?: string }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -15,7 +15,7 @@ export async function signUp({ email, password }: any) {
 /**
  * Login com e-mail e senha
  */
-export async function signInWithPassword({ email, password }: any) {
+export async function signInWithPassword({ email, password }: { email: string; password?: string }) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -27,7 +27,7 @@ export async function signInWithPassword({ email, password }: any) {
 /**
  * Login via Magic Link / OTP por e-mail
  */
-export async function signInWithOtp({ email }: any) {
+export async function signInWithOtp({ email }: { email: string }) {
   const { data, error } = await supabase.auth.signInWithOtp({
     email,
     options: {
@@ -67,8 +67,8 @@ export async function getUser() {
 /**
  * Escutar mudanças de estado de autenticação
  */
-export function onAuthStateChange(callback: any) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+export function onAuthStateChange(callback: (event: string, session: { user: { id: string; email?: string } } | null) => void) {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: { user: { id: string; email?: string } } | null) => {
     callback(event, session);
   });
   return subscription;

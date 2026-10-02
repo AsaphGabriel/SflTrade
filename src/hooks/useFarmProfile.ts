@@ -1,16 +1,16 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { resolveFarmIdFromUsername, fetchFarmDataSmart } from '../services/api';
 
-export default function useFarmProfile(onFarmLoaded: any) {
+export default function useFarmProfile(onFarmLoaded?: (land: Record<string, unknown>) => void) {
   const [farmData, setFarmData] = useState(null);
   const farmInitializedRef = useRef(false);
 
-  const searchFarm = useCallback(async (query: any, apiKeyOverride: any = null, forceRefresh: any = false) => {
+  const searchFarm = useCallback(async (query: string | number, apiKeyOverride?: string | null, forceRefresh: boolean = false) => {
     if (!query) return;
     let landId = query;
     const apiKeyToUse = apiKeyOverride ?? localStorage.getItem('sfl_api_key') ?? '';
 
-    if (/[a-zA-Z]/.test(query)) {
+    if (/[a-zA-Z]/.test(String(query))) {
       const resolvedId = await resolveFarmIdFromUsername(query);
       if (resolvedId) {
         landId = resolvedId;

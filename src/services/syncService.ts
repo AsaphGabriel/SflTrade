@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 /**
  * Utilitário para verificar se o erro é de permissão/RLS (ex: 42501 Forbidden)
  */
-function isPermissionOrForbiddenError(error: any) {
+function isPermissionOrForbiddenError(error: { message?: string; status?: number; [key: string]: unknown } | unknown) {
   if (!error) return false;
   const code = String(error.code || '');
   const msg = String(error.message || '');
@@ -19,7 +19,7 @@ function isPermissionOrForbiddenError(error: any) {
 /**
  * Busca todas as informações do usuário no Supabase (settings, portfolios, transactions)
  */
-export async function fetchRemoteUserData(userId: any) {
+export async function fetchRemoteUserData(userId: string) {
   if (!userId) return null;
 
   try {
@@ -83,7 +83,7 @@ export async function fetchRemoteUserData(userId: any) {
 /**
  * Sincroniza dados locais (LocalStorage) para o Supabase (Push local -> remote)
  */
-export async function syncLocalToSupabase(userId: any, { localTransactions = [], localSettings = {}, localPortfolios = [] }: any) {
+export async function syncLocalToSupabase(userId: string, { localTransactions = [], localSettings = {}, localPortfolios = [] }: { localTransactions?: { resource_id?: string; recurso?: string; type?: string; quantity?: number; qty?: number; price_sfl?: number; unitPrice?: number; timestamp?: number; [key: string]: unknown }[]; localSettings?: Record<string, unknown>; localPortfolios?: { nome: string; customAvgPrice?: number }[] }) {
   if (!userId) return;
 
   try {
@@ -127,20 +127,20 @@ export async function syncLocalToSupabase(userId: any, { localTransactions = [],
       }
 
       // Chave robusta de identificação de transação
-      const makeKey = (res: any, type: any, qty: any, price: any) => {
+      const makeKey = (res: string, type: string, qty: number, price: number) => {
         return `${String(res).toLowerCase()}_${String(type).toUpperCase()}_${Number(qty).toFixed(4)}_${Number(price).toFixed(6)}`;
       };
 
       const existingSet = new Set(
-        (existingTx || []).map((t: any) => makeKey(t.resource_id, t.type, t.quantity, t.price_sfl))
+        (existingTx || []).map((t: { resource_id?: string; recurso?: string; type?: string; quantity?: number; qty?: number; price_sfl?: number; unitPrice?: number; total_price_usd?: number; totalPrice?: number; timestamp?: number; created_at?: string; id?: string; [key: string]: unknown }) => makeKey(t.resource_id, t.type, t.quantity, t.price_sfl))
       );
 
       const newTxsToInsert = localTransactions
-        .filter((t: any) => {
+        .filter((t: { resource_id?: string; recurso?: string; type?: string; quantity?: number; qty?: number; price_sfl?: number; unitPrice?: number; total_price_usd?: number; totalPrice?: number; timestamp?: number; created_at?: string; id?: string; [key: string]: unknown }) => {
           const key = makeKey(t.recurso || t.resource_id, t.tipo || t.type, t.qty || t.quantity, t.unitPrice || t.price_sfl);
           return !existingSet.has(key);
         })
-        .map((t: any) => ({
+        .map((t: { resource_id?: string; recurso?: string; type?: string; quantity?: number; qty?: number; price_sfl?: number; unitPrice?: number; total_price_usd?: number; totalPrice?: number; timestamp?: number; created_at?: string; id?: string; [key: string]: unknown }) => ({
           user_id: userId,
           resource_id: t.recurso || t.resource_id,
           type: (t.tipo || t.type || 'BUY').toUpperCase(),
@@ -171,7 +171,7 @@ export async function syncLocalToSupabase(userId: any, { localTransactions = [],
 
     // 3. Sincronizar Portfólios / Posições
     if (localPortfolios && localPortfolios.length > 0) {
-      const portfolioRows = localPortfolios.map((p: any) => ({
+      const portfolioRows = localPortfolios.map((p: { nome: string; customAvgPrice?: number }) => ({
         user_id: userId,
         resource_id: p.nome || p.resource_id,
         quantity: Number(p.qty || p.quantity || 0),
@@ -202,7 +202,7 @@ export async function syncLocalToSupabase(userId: any, { localTransactions = [],
 /**
  * Persiste uma nova transação individual diretamente no Supabase quando logado
  */
-export async function saveTransactionRemote(userId: any, transaction: any) {
+export async function saveTransactionRemote(userId: string, transaction: { type: string; recurso: string; qty: number; unitPrice: number; totalPrice: number; timestamp?: number; }) {
   if (!userId || !transaction) return;
 
   try {
@@ -237,11 +237,11 @@ export async function saveTransactionRemote(userId: any, transaction: any) {
 /**
  * Persiste portfólios atualizados diretamente no Supabase
  */
-export async function savePortfoliosRemote(userId: any, portfolioList: any) {
+export async function savePortfoliosRemote(userId: string, portfolioList: { nome: string; customAvgPrice?: number }[]) {
   if (!userId || !portfolioList || portfolioList.length === 0) return;
 
   try {
-    const rows = portfolioList.map((p: any) => ({
+    const rows = portfolioList.map((p: { nome: string; customAvgPrice?: number }) => ({
       user_id: userId,
       resource_id: p.nome || p.resource_id,
       quantity: Number(p.qty || p.quantity || 0),
@@ -271,7 +271,7 @@ export async function savePortfoliosRemote(userId: any, portfolioList: any) {
 /**
  * Persiste configurações alteradas no Supabase
  */
-export async function saveSettingsRemote(userId: any, settings: any) {
+export async function saveSettingsRemote(userId: string, settings: Record<string, unknown>) {
   if (!userId || !settings) return;
 
   try {
@@ -307,7 +307,7 @@ export async function saveSettingsRemote(userId: any, settings: any) {
 /**
  * Atualiza o preço da transação no Supabase
  */
-export async function updateTransactionInCloud(userId: any, txId: any, newCotacaoUsd: any, newTotalUsd: any) {
+export async function updateTransactionInCloud(userId: string, txId: string, newCotacaoUsd: number, newTotalUsd: number) {
   if (!userId || !txId) return false;
   try {
     const { error } = await supabase
