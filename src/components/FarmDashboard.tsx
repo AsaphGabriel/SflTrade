@@ -124,10 +124,16 @@ const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" 
 export interface FarmDashboardProps {
   mode?: 'perfil' | 'inventory' | 'info';
   setMode?: (mode: 'perfil' | 'inventory' | 'info') => void;
-  farmData?: Record<string, any> | null;
+  farmData?: {
+    bumpkin?: { experience?: number; level?: number; equipped?: Record<string, string>; skills?: Record<string, number>; };
+    land?: { verified?: boolean; vip?: boolean; vip_info?: { exp_text?: string; }; referrals?: { totalReferrals?: number; }; level?: number; coins?: number; gem?: number; marks?: number; charm?: number; cheer?: number; taxResource?: number; type?: string; balance?: number | string; };
+    inventory?: Record<string, string | number>;
+    wardrobe?: Record<string, number>;
+    id?: string | number; source?: string; isFromCache?: boolean; officialError?: string | null;
+  } | null;
   loading?: boolean;
   marketData?: Record<string, number>;
-  nftMarketData?: { byName?: Record<string, any>; [key: string]: any };
+  nftMarketData?: { byName?: Record<string, { id?: string | number; source?: string; isFromCache?: boolean; officialError?: string | null; name?: string; floor?: number; [key: string]: unknown }>; [key: string]: unknown };
   flowerPrice?: number;
   selectedCurrency?: string;
   currentLang?: string;
@@ -138,8 +144,8 @@ export interface FarmDashboardProps {
   onSaveProfile?: () => void;
   profileMsg?: { text: string; type: string };
   searchFarm?: (query?: string, apiKeyOverride?: string, forceRefresh?: boolean) => Promise<void> | void;
-  user?: Record<string, any> | null;
-  syncCloud?: (user?: Record<string, any> | null, force?: boolean) => Promise<void> | void;
+  user?: { id?: string; email?: string; [key: string]: unknown } | null;
+  syncCloud?: (user?: Record<string, unknown> | null, force?: boolean) => Promise<void> | void;
   isSyncing?: boolean;
   onOpenAuthModal?: () => void;
   onNavigateTab?: (tab: string) => void;
@@ -261,11 +267,11 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
 
   // Processamento do Inventário e Valoração Financeira com Deduplicação Canônica
   const inventoryAnalysis = useMemo(() => {
-    const rawInventory = farmData?.land?.inventory || {};
+    const rawInventory = farmData?.inventory || {};
     const aggregated = new Map();
     const nftByName = nftMarketData?.byName || {};
 
-    Object.entries(rawInventory).forEach(([itemName, rawQty]: [string, any]) => {
+    Object.entries(rawInventory).forEach(([itemName, rawQty]) => {
       const qty = Number(rawQty);
       if (qty <= 0 || !itemName) return;
 
@@ -278,8 +284,8 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
       // 1. Verifica se é um NFT rastreado (Floor Price)
       const nftMeta = !isCropParsnip
         ? (nftByName[trimmedName] || Object.values(nftByName).find(
-            (nft: Record<string, any>) => (nft.displayName && nft.displayName.toLowerCase() === lowerName) ||
-                   (nft.name && nft.name.toLowerCase() === lowerName && nft.name.toLowerCase() !== 'parsnip')
+            (nft: Record<string, unknown>) => (nft.displayName && (nft.displayName as string).toLowerCase() === lowerName) ||
+                   (nft.name && (nft.name as string).toLowerCase() === lowerName && (nft.name as string).toLowerCase() !== 'parsnip')
           ))
         : null;
 
@@ -292,11 +298,11 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
       let category = 'other';
 
       if (nftMeta) {
-        canonicalKey = `nft_${nftMeta.collection || 'nft'}_${nftMeta.id ?? nftMeta.name.toLowerCase()}`;
-        canonicalName = nftMeta.displayName || nftMeta.name;
+        canonicalKey = `nft_${nftMeta.collection || 'nft'}_${nftMeta.id ?? ((nftMeta.name as string) || '').toLowerCase()}`;
+        canonicalName = (nftMeta.displayName as string) || (nftMeta.name as string);
         unitPriceSfl = Number(nftMeta.floor || nftMeta.currentPrice || 0);
         isNft = true;
-        boostText = nftMeta.boost_text || '';
+        boostText = (nftMeta.boost_text as string) || '';
         nftImage = nftMeta.image || (nftMeta.collection === 'wearables'
           ? `https://sunflower-land.com/play/wearables/images/${nftMeta.id}.png`
           : `https://sunflower-land.com/play/erc1155/images/${nftMeta.id}.webp`);
@@ -352,7 +358,7 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
       totalStockSfl += item.totalValueSfl;
     });
 
-    const sflBalance = parseFloat(farmData?.land?.balance || 0);
+    const sflBalance = parseFloat(String(farmData?.land?.balance || 0));
     const sflBalanceFiat = sflBalance * flowerPrice;
     const totalNetWorthSfl = totalStockSfl + sflBalance;
     const totalNetWorthFiat = totalNetWorthSfl * flowerPrice;
@@ -648,11 +654,11 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            <StatCard label={t('level', currentLang)} value={farmData.land.level} icon="🏝️" />
+            <StatCard label={t('level', currentLang)} value={farmData.land.level || 0} icon="🏝️" />
             <StatCard label={t('balance', currentLang)} value={`${formatNum(inventoryAnalysis.sflBalance)} FLOWER`} subValue={`~${formatCurrency(inventoryAnalysis.sflBalanceFiat)}`} icon="💰" colorClass="text-emerald-400" />
-            <StatCard label={t('coins', currentLang)} value={formatNum(farmData.land.coins)} icon="🪙" />
-            <StatCard label={t('gem', currentLang)} value={formatNum(farmData.land.gem)} icon="💎" colorClass="text-cyan-400" />
-            <StatCard label={t('marks', currentLang)} value={formatNum(farmData.land.marks)} icon="🏷️" colorClass="text-purple-400" />
+            <StatCard label={t('coins', currentLang)} value={formatNum((farmData.land.coins || 0))} icon="🪙" />
+            <StatCard label={t('gem', currentLang)} value={formatNum((farmData.land.gem || 0))} icon="💎" colorClass="text-cyan-400" />
+            <StatCard label={t('marks', currentLang)} value={formatNum((farmData.land.marks || 0))} icon="🏷️" colorClass="text-purple-400" />
             <StatCard label={t('charm', currentLang)} value={farmData.land.charm || 0} icon="💖" colorClass="text-rose-400" />
             <StatCard label={t('cheer', currentLang)} value={farmData.land.cheer || 0} icon="🎉" colorClass="text-amber-300" />
             <StatCard label={t('taxResource', currentLang)} value={`${((farmData.land.taxResource || 0) * 100).toFixed(1)}%`} icon="⚖️" colorClass="text-amber-400" />
@@ -807,9 +813,9 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
                 ⭐ {t('activeSkills', currentLang)} ({Object.keys(farmData.bumpkin.skills).length})
               </span>
               <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-                {Object.keys(farmData.bumpkin.skills).map((skill: string, index: number) => (
+                {Object.keys(farmData.bumpkin.skills).map((skill: string) => (
                   <span
-                    key={index}
+                    key={skill}
                     className="bg-slate-900 text-amber-300 text-xs px-3 py-1.5 rounded-xl border border-slate-700 font-semibold flex items-center gap-1.5 shadow-sm"
                   >
                     <span>✨</span>

@@ -1,5 +1,5 @@
 import { NftItem } from "../services/historyService";
-// @ts-ignore
+
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PriceChartModal from './PriceChartModal';
@@ -57,13 +57,13 @@ const CATEGORIAS_MERCADO = [
   }
 ];
 
-function getItemIcon(itemName: any) {
+function getItemIcon(itemName: string) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-// @ts-ignore
-function getCategoryIcon(catId: any, sampleNft: any = '') {
+
+function getCategoryIcon(catId: string) {
   if (catId === 'power_ups') {
     return 'https://sunflower-land.com/play/erc1155/images/2129.webp';
   }
@@ -74,13 +74,13 @@ function getCategoryIcon(catId: any, sampleNft: any = '') {
     minerals: 'Wood',
     misc: 'Sunflorian Emblem'
   };
-  // @ts-ignore
-  const itemName = assetMap[catId];
+  
+  const itemName = assetMap[catId as keyof typeof assetMap];
   return itemName ? getItemIcon(itemName) : '';
 }
 
-function formatarPreco(valor: any) {
-  if (valor === undefined || valor === null || isNaN(valor)) return '0';
+function formatarPreco(valor: number | string | undefined | null) {
+  if (valor === undefined || valor === null || isNaN(Number(valor))) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
   if (num >= 10) return num.toFixed(2);
@@ -88,10 +88,10 @@ function formatarPreco(valor: any) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-function obterCategoriaItem(nomeItem: any) {
+function obterCategoriaItem(nomeItem: string) {
   for (const cat of CATEGORIAS_MERCADO) {
-    if (cat.itens && cat.itens.some((i: any) => i.toLowerCase() === nomeItem.toLowerCase())) {
-      return cat.id;
+    if (cat.itens && cat.itens.some((i: string) => i.toLowerCase() === nomeItem.toLowerCase())) {
+      return (cat.id as string);
     }
   }
   return 'misc';
@@ -103,8 +103,8 @@ export interface ResourceGridProps {
   data?: Record<string, number>;
   nftData?: { items?: NftItem[]; list?: NftItem[]; byName?: Record<string, NftItem> };
   currentLang?: string;
-  onOpenBuy?: (name: string, meta?: any) => void;
-  onOpenSell?: (name: string, meta?: any) => void;
+  onOpenBuy?: (name: string, meta?: Record<string, unknown> | null) => void;
+  onOpenSell?: (name: string, meta?: Record<string, unknown> | null) => void;
   categoryFilter?: string | null;
   onCategoryFilterChange?: ((cat: string) => void) | null;
   searchTerm?: string | null;
@@ -128,7 +128,7 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
     ? categoryFilter
     : internalCategoryFilter;
 
-  const handleSelectCategory = (catId: any) => {
+  const handleSelectCategory = (catId: string) => {
     setInternalCategoryFilter(catId);
     if (onCategoryFilterChange) onCategoryFilterChange(catId);
   };
@@ -143,7 +143,7 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
     ? (externalSearchTerm ?? '')   // controlado: sempre usa o valor do parent
     : internalSearchTerm;          // autônomo: usa estado interno
 
-  const handleSearchChange = (val: any) => {
+  const handleSearchChange = (val: string) => {
     if (isControlled) {
       // Modo controlado: reseta aba se necessário, propaga pro parent
       if (val.trim() && currentCategoryFilter !== 'all') {
@@ -160,11 +160,11 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
     }
   };
 
-  const [selectedChartResource, setSelectedChartResource] = useState<any | null>(null);
+  const [selectedChartResource, setSelectedChartResource] = useState<Record<string, unknown> | null>(null);
 
   // Agrupamento de itens por categoria
-  const grupos: Record<string, any> = {};
-  CATEGORIAS_MERCADO.forEach((cat: any) => { grupos[cat.id] = []; });
+  const grupos: Record<string, string[]> = {};
+  CATEGORIAS_MERCADO.forEach((cat: { id: string; titleKey: string; isNftCategory?: boolean; itens: string[] }) => { grupos[(cat.id as string)] = []; });
 
   Object.keys(data).forEach((item: string) => {
     const catId = obterCategoriaItem(item);
@@ -173,7 +173,6 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
   });
 
   const nftList = Array.isArray(nftData?.list) ? nftData.list : [];
-  const firstNftName = nftList.length > 0 ? nftList[0].name : 'Stone Beetle';
 
   const term = searchTerm.trim().toLowerCase();
   const isSearching = Boolean(term);
@@ -194,23 +193,23 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
     ? CATEGORIAS_MERCADO
     : (currentCategoryFilter === 'all'
         ? CATEGORIAS_MERCADO
-        : CATEGORIAS_MERCADO.filter((cat: any) => cat.id === currentCategoryFilter));
+        : CATEGORIAS_MERCADO.filter((cat: { id: string; titleKey: string; isNftCategory?: boolean; itens: string[] }) => (cat.id as string) === currentCategoryFilter));
 
   // Total de correspondencias durante a busca
   const totalMatches = isSearching
-    ? CATEGORIAS_MERCADO.reduce((acc: any, cat: any) => {
-        if (cat.isNftCategory) {
+    ? CATEGORIAS_MERCADO.reduce((acc: number, cat: { id: string; titleKey: string; isNftCategory?: boolean; itens: string[] }) => {
+        if ((cat.isNftCategory as boolean)) {
           return acc + nftList.filter(matchesNft).length;
         } else {
-          return acc + (grupos[cat.id] || []).filter((item: string) => item.toLowerCase().includes(term)).length;
+          return acc + (grupos[(cat.id as string)] || []).filter((item: string) => item.toLowerCase().includes(term)).length;
         }
-      }, 0)
+      }, 0 as number)
     : 1;
 
   // Construcao da lista de Abas
   const tabs = [
     { id: 'all', key: 'marketTabAll' },
-    ...CATEGORIAS_MERCADO.map((cat: any) => ({ id: cat.id, key: cat.titleKey, isNft: cat.isNftCategory }))
+    ...CATEGORIAS_MERCADO.map((cat: { id: string; titleKey: string; isNftCategory?: boolean; itens: string[] }) => ({ id: (cat.id as string), key: (cat.titleKey as string), isNft: (cat.isNftCategory as boolean) }))
   ];
 
   return (
@@ -242,44 +241,44 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
 
       {/* Barra de Abas Amarelas por Categoria com Contagens Dinamicas */}
       <div id="category-tabs" className="category-tabs-bar scrollbar-hide" role="tablist">
-        {tabs.map((tab: any) => {
+        {tabs.map((tab: { id: string; key: string; isNft?: boolean }) => {
           let count = 0;
           if (isSearching) {
-            if (tab.id === 'all') {
+            if ((tab.id as string) === 'all') {
               count = totalMatches;
             } else if (tab.isNft) {
               count = nftList.filter(matchesNft).length;
             } else {
-              count = (grupos[tab.id] || []).filter((item: string) => item.toLowerCase().includes(term)).length;
+              count = (grupos[(tab.id as string)] || []).filter((item: string) => item.toLowerCase().includes(term)).length;
             }
           } else {
-            count = tab.id === 'all'
+            count = (tab.id as string) === 'all'
               ? (Object.keys(data).length + nftList.length)
               : tab.isNft
               ? nftList.length
-              : (CATEGORIAS_MERCADO.find((c: any) => c.id === tab.id)?.itens.filter((i: any) => data[i] !== undefined).length || 0);
+              : (CATEGORIAS_MERCADO.find((c: { id: string; itens: string[] }) => (c.id as string) === (tab.id as string))?.itens.filter((i: string) => data[i] !== undefined).length || 0);
           }
 
-          const isActive = currentCategoryFilter === tab.id;
-          const iconUrl = tab.id !== 'all' ? getCategoryIcon(tab.id, firstNftName) : '';
+          const isActive = currentCategoryFilter === (tab.id as string);
+          const iconUrl = (tab.id as string) !== 'all' ? getCategoryIcon((tab.id as string)) : '';
 
           return (
             <button
-              key={tab.id}
+              key={(tab.id as string)}
               className={`category-tab ${isActive ? 'active' : ''}`}
               role="tab"
               aria-selected={isActive}
-              onClick={() => handleSelectCategory(tab.id)}
+              onClick={() => handleSelectCategory((tab.id as string))}
             >
               {iconUrl && (
                 <img
                   src={iconUrl}
-                  alt={tab.id}
+                  alt={(tab.id as string)}
                   className="category-tab-icon"
                   onError={handleImageError}
                 />
               )}
-              <span>{t(tab.key, currentLang)}</span>
+              <span>{t((tab.key as string), currentLang)}</span>
               <span className="tab-count">{count}</span>
             </button>
           );
@@ -288,9 +287,9 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
 
       {/* Grade Principal de Categorias e Cartões */}
       <div className="market-categories-container">
-        {categoriesToRender.map((cat: any) => {
+        {categoriesToRender.map((cat: { id: string; titleKey: string; isNftCategory?: boolean; itens: string[] }) => {
           // Renderizacao especial para categoria de Power Ups (NFTs)
-          if (cat.isNftCategory) {
+          if ((cat.isNftCategory as boolean)) {
             let nftsToRender = isSearching ? nftList.filter(matchesNft) : [...nftList];
 
             if (nftsToRender.length === 0) return null;
@@ -299,17 +298,17 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
             nftsToRender.sort((a: NftItem, b: NftItem) => (Number(a.floor) || 0) - (Number(b.floor) || 0));
 
             return (
-              <div key={cat.id} className="category-block">
+              <div key={(cat.id as string)} className="category-block">
                 <h3 className="market-category-title">
-                  {getCategoryIcon(cat.id, firstNftName) && (
+                  {getCategoryIcon((cat.id as string)) && (
                     <img
-                      src={getCategoryIcon(cat.id, firstNftName)}
-                      alt={cat.id}
+                      src={getCategoryIcon((cat.id as string))}
+                      alt={(cat.id as string)}
                       className="w-5 h-5 object-contain inline-block"
                       onError={handleImageError}
                     />
                   )}
-                  <span>{t(cat.titleKey, currentLang)}</span>
+                  <span>{t((cat.titleKey as string), currentLang)}</span>
                 </h3>
 
                 <div className="category-grid">
@@ -323,7 +322,7 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
                         key={`${nft.collection || 'nft'}-${nft.id || nft.name}`} 
 
                         className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between w-full min-w-0"
-                        // @ts-ignore
+                        
                         onClick={() => setSelectedChartResource({ name: nft.displayName || nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
                         title={currentLang === 'pt' ? 'Clique para ver gráfico de Floor Price e médias móveis' : 'Click to view Floor Price and moving average chart'}
                       >
@@ -379,7 +378,7 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
             );
           }
 
-          let itens = grupos[cat.id] || [];
+          let itens = grupos[(cat.id as string)] || [];
 
           // Filtro do campo de busca
           if (searchTerm.trim() !== '') {
@@ -392,17 +391,17 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
           itens.sort((a: string, b: string) => (data[a] || 0) - (data[b] || 0));
 
           return (
-            <div key={cat.id} className="category-block">
+            <div key={(cat.id as string)} className="category-block">
               <h3 className="market-category-title">
-                {getCategoryIcon(cat.id) && (
+                {getCategoryIcon((cat.id as string)) && (
                   <img
-                    src={getCategoryIcon(cat.id)}
-                    alt={cat.id}
+                    src={getCategoryIcon((cat.id as string))}
+                    alt={(cat.id as string)}
                     className="w-5 h-5 object-contain inline-block"
                     onError={handleImageError}
                   />
                 )}
-                <span>{t(cat.titleKey, currentLang)}</span>
+                <span>{t((cat.titleKey as string), currentLang)}</span>
               </h3>
 
               <div className="category-grid">
@@ -414,7 +413,7 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
                     <div 
                       key={item} 
                       className="market-card item-card cursor-pointer hover:border-amber-400"
-                      onClick={() => setSelectedChartResource(item)}
+                      onClick={() => setSelectedChartResource({ name: item })}
                       title={currentLang === 'pt' ? 'Clique para ver gráfico de histórico e médias móveis' : 'Click to view history and moving average chart'}
                     >
                       <div className="market-card-img-wrap">

@@ -1,15 +1,14 @@
-// @ts-ignore
 import React, { useState, useEffect } from 'react';
 import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-function getItemIcon(itemName: any) {
+function getItemIcon(itemName: string) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function formatarPreco(valor: any) {
-  if (valor === undefined || valor === null || isNaN(valor)) return '0';
+function formatarPreco(valor: number | string | undefined | null) {
+  if (valor === undefined || valor === null || isNaN(Number(valor))) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
   if (num >= 10) return num.toFixed(2);
@@ -17,13 +16,12 @@ function formatarPreco(valor: any) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-function formatarMoeda(valor: any, currency: any = 'usd') {
-  if (valor === undefined || valor === null || isNaN(valor)) return '$0.00 USD';
+function formatarMoeda(valor: number | string | undefined | null, currency: string = 'usd') {
+  if (valor === undefined || valor === null || isNaN(Number(valor))) return '$0.00 USD';
   const num = Number(valor);
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
   const currLower = (currency || 'usd').toLowerCase();
-  // @ts-ignore
-  const sym = symbolMap[currLower] || '$';
+    const sym = symbolMap[currLower as keyof typeof symbolMap] || '$';
   const currCode = currency.toUpperCase();
   const sinal = num < 0 ? '-' : '';
   const absNum = Math.abs(num);
@@ -42,16 +40,25 @@ function formatarMoeda(valor: any, currency: any = 'usd') {
   return `${sinal}${sym}${formattedStr} ${currCode}`;
 }
 
-const PositionDetailsModal = ({
+
+export interface PositionDetailsModalProps {
+  position: { nome: string; qty?: number; precoMedio?: number; cotacaoMediaFlowerUsd?: number; custoTotalUsd?: number; valorVendaLiquidoTotalUsd?: number; lucroAbsolutoUsd?: number; lucroPercentualUsd?: number; currentPrice?: number; cotacaoFlowerUsd?: number; isNft?: boolean; boost_text?: string; totalSflValue?: number; lucroAbsolutoMoeda?: number; lucroPercentualMoeda?: number; image?: string; collection?: string; nft_id?: string | number; } | null;
+  allTransactions?: { id: string; type: string; recurso?: string; qty?: number; totalPrice?: number; unitPrice?: number; total_price_usd?: number; timestamp?: string | number; created_at?: string | number; flower_usd_rate?: number; price_sfl?: number; quantity?: number; }[];
+  currentLang?: string;
+  selectedCurrency?: string;
+  onUpdateCustomAvgPrice?: (name: string, avgSfl: number | string | null, flowerUsdRate: number | string | null) => void;
+  onUpdateTransactionPrice?: (txId: string, val: string | number) => Promise<boolean> | void;
+  onClose: () => void;
+}
+
+const PositionDetailsModal: React.FC<PositionDetailsModalProps> = ({
   position,
   allTransactions = [],
   currentLang = 'en',
-  // @ts-ignore
-  selectedCurrency = 'usd',
   onUpdateCustomAvgPrice,
   onUpdateTransactionPrice,
   onClose
-}: any) => {
+}) => {
   if (!position || !position.nome) return null;
 
   const {
@@ -69,7 +76,7 @@ const PositionDetailsModal = ({
   const [editSfl, setEditSfl] = useState('');
   const [editFlowerUsd, setEditFlowerUsd] = useState('');
 
-  const [editingTxId, setEditingTxId] = useState(null);
+  const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [editTxFlowerUsd, setEditTxFlowerUsd] = useState('');
   const [isSavingTx, setIsSavingTx] = useState(false);
 
@@ -78,12 +85,12 @@ const PositionDetailsModal = ({
     setEditFlowerUsd(cotacaoMediaFlowerUsd ? cotacaoMediaFlowerUsd.toString() : '');
   }, [precoMedio, cotacaoMediaFlowerUsd]);
 
-  const handleEditTx = (txId: any, currentCotacao: any) => {
+  const handleEditTx = (txId: string, currentCotacao: number | string) => {
     setEditingTxId(txId);
     setEditTxFlowerUsd(currentCotacao.toString());
   };
 
-  const handleSaveTx = async (txId: any) => {
+  const handleSaveTx = async (txId: string) => {
     if (!onUpdateTransactionPrice) return;
     setIsSavingTx(true);
     const success = await onUpdateTransactionPrice(txId, editTxFlowerUsd);
@@ -98,8 +105,8 @@ const PositionDetailsModal = ({
   };
 
   const resourceTxList = (Array.isArray(allTransactions) ? allTransactions : [])
-    .filter((t: any) => t && t.recurso && nome && String(t.recurso).toLowerCase() === String(nome).toLowerCase())
-    .sort((a: any, b: any) => {
+    .filter((t: { recurso?: string; }) => t && t.recurso && nome && String(t.recurso).toLowerCase() === String(nome).toLowerCase())
+    .sort((a: { id?: string; timestamp?: string | number; created_at?: string | number }, b: { id?: string; timestamp?: string | number; created_at?: string | number }) => {
       const timeA = new Date(a.timestamp || a.created_at || a.id || 0).getTime() || 0;
       const timeB = new Date(b.timestamp || b.created_at || b.id || 0).getTime() || 0;
       return timeB - timeA;
@@ -112,7 +119,7 @@ const PositionDetailsModal = ({
         : `https://sunflower-land.com/play/erc1155/images/${position.nft_id}.webp`)
     : getItemIcon(nome));
 
-  const handleSaveCustomAvg = (e: any) => {
+  const handleSaveCustomAvg = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const valSfl = editSfl !== '' ? parseFloat(editSfl) : null;
@@ -120,7 +127,7 @@ const PositionDetailsModal = ({
       if (onUpdateCustomAvgPrice) {
         onUpdateCustomAvgPrice(nome, valSfl, valFlowerUsd);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.warn('[PositionDetailsModal] Erro ao salvar preço médio customizado:', err);
     } finally {
       setIsEditing(false);
@@ -132,15 +139,14 @@ const PositionDetailsModal = ({
       if (onUpdateCustomAvgPrice) {
         onUpdateCustomAvgPrice(nome, null, null);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.warn('[PositionDetailsModal] Erro ao restaurar preço médio:', err);
     } finally {
       setIsEditing(false);
     }
   };
 
-  // @ts-ignore
-  const previewUnitUsd = (parseFloat(editSfl || 0) * parseFloat(editFlowerUsd || 0)).toFixed(4);
+    const previewUnitUsd = (parseFloat(editSfl || '0') * parseFloat(editFlowerUsd || '0')).toFixed(4);
 
   return (
     <div 
@@ -149,7 +155,7 @@ const PositionDetailsModal = ({
     >
       <div 
         className="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-lg w-full shadow-2xl space-y-3 max-h-[85vh] flex flex-col relative"
-        onClick={(e: any) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         
         {/* Cabeçalho Compacto do Modal */}
@@ -211,7 +217,7 @@ const PositionDetailsModal = ({
                       type="number"
                       step="any"
                       value={editSfl}
-                      onChange={(e: any) => setEditSfl(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditSfl(e.target.value)}
                       placeholder="0.0239"
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                     />
@@ -225,7 +231,7 @@ const PositionDetailsModal = ({
                       type="number"
                       step="any"
                       value={editFlowerUsd}
-                      onChange={(e: any) => setEditFlowerUsd(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFlowerUsd(e.target.value)}
                       placeholder="0.0670"
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-mono font-bold"
                     />
@@ -304,7 +310,7 @@ const PositionDetailsModal = ({
                 {currentLang === 'pt' ? 'Lucro/Prejuízo Real:' : 'Real PnL:'}
               </span>
               <span className={`font-mono font-bold text-xs ${corLucroUsd}`}>
-                {lucroAbsolutoUsd >= 0 ? '+' : ''}{formatarMoeda(lucroAbsolutoUsd, 'usd')} ({lucroPercentualUsd.toFixed(1)}%)
+                {(lucroAbsolutoUsd || 0) >= 0 ? '+' : ''}{formatarMoeda(lucroAbsolutoUsd, 'usd')} ({(lucroPercentualUsd || 0).toFixed(1)}%)
               </span>
             </div>
           </div>
@@ -321,7 +327,7 @@ const PositionDetailsModal = ({
               </div>
             ) : (
               <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-                {resourceTxList.map((tx: any, idx: any) => {
+                {resourceTxList.map((tx: { id: string; recurso?: string; tipo?: string; cotacao_entrada_usd?: number; token_price_usd_at_purchase?: number;  timestamp?: string | number; created_at?: string | number; type?: string; qty?: number; totalPrice?: number; unitPrice?: number; total_price_usd?: number; }, idx: number) => {
                   const isBuy = tx.tipo === 'buy';
                   const dateFormatted = new Date(tx.timestamp || tx.created_at || tx.id).toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
                     day: '2-digit',
@@ -330,7 +336,7 @@ const PositionDetailsModal = ({
                     minute: '2-digit'
                   });
                   const cotacaoTx = tx.cotacao_entrada_usd || tx.token_price_usd_at_purchase || cotacaoMediaFlowerUsd || 0.05;
-                  const totalUsd = tx.total_price_usd || (tx.totalPrice * cotacaoTx);
+                  const totalUsd = tx.total_price_usd || ((tx.totalPrice || 0) * cotacaoTx);
                   const stableKey = tx.id || `${tx.recurso || 'tx'}-${tx.timestamp || 'ts'}-${idx}`;
 
                   return (
@@ -347,7 +353,7 @@ const PositionDetailsModal = ({
                               type="number"
                               step="0.0001"
                               value={editTxFlowerUsd}
-                              onChange={(e: any) => setEditTxFlowerUsd(e.target.value)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditTxFlowerUsd(e.target.value)}
                               className="w-full bg-slate-950 text-white rounded p-1 border border-slate-700 text-xs text-center"
                               disabled={isSavingTx}
                             />

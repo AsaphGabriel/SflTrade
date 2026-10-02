@@ -4,7 +4,7 @@ import { t } from '../i18n';
 import { PriceChartSVG, ChartPoint } from './charts/PriceChartSVG';
 
 export interface PriceChartModalProps {
-  resourceId?: any;
+  resourceId?: string | { id?: string | number; name?: string; floor?: number; boost_text?: string; isNft?: boolean; [key: string]: unknown; };
   isToken?: boolean;
   flowerPriceUsd?: number;
   flowerPrice?: number;
@@ -56,9 +56,9 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
         if (isToken) {
           data = await fetchTokenHistory(timeframe, flowerPriceUsd);
         } else if (isNftObj && targetNftId !== null) {
-          data = await fetchNftHistory(targetNftId, timeframe, targetFloor, targetName);
+          data = await fetchNftHistory(targetNftId as string | number, timeframe, targetFloor, targetName as string);
         } else if (targetName) {
-          data = await fetchResourceHistory(targetName, timeframe, currentPriceRef);
+          data = await fetchResourceHistory(targetName as string, timeframe, currentPriceRef);
         }
 
         if (isMounted) {
@@ -131,7 +131,7 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-amber-400">
-                  {titleName} - {currentLang === 'pt' ? (isNftObj ? 'Histórico de Floor Price' : 'Histórico de Preços') : (isNftObj ? 'Floor Price History' : 'Price History')}
+                  {titleName as string} - {currentLang === 'pt' ? (isNftObj ? 'Histórico de Floor Price' : 'Histórico de Preços') : (isNftObj ? 'Floor Price History' : 'Price History')}
                 </h3>
                 {targetBoost && (
                   <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.2 rounded">

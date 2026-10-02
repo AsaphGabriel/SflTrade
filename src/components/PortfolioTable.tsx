@@ -1,16 +1,15 @@
-// @ts-ignore
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PositionDetailsModal from './PositionDetailsModal';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-function getItemIcon(itemName: any) {
+function getItemIcon(itemName: string) {
   if (!itemName) return FALLBACK_SVG;
   return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
 }
 
-function formatarPreco(valor: any) {
-  if (valor === undefined || valor === null || isNaN(valor)) return '0';
+function formatarPreco(valor: number | string | undefined | null) {
+  if (valor === undefined || valor === null || isNaN(Number(valor))) return '0';
   const num = Number(valor);
   if (num === 0) return '0';
   if (num >= 10) return num.toFixed(2);
@@ -18,13 +17,12 @@ function formatarPreco(valor: any) {
   return parseFloat(num.toPrecision(3)).toString();
 }
 
-function formatarMoeda(valor: any, currency: any = 'usd') {
-  if (valor === undefined || valor === null || isNaN(valor)) return '$0.00 USD';
+function formatarMoeda(valor: number | string | undefined | null, currency: string = 'usd') {
+  if (valor === undefined || valor === null || isNaN(Number(valor))) return '$0.00 USD';
   const num = Number(valor);
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
   const currLower = (currency || 'usd').toLowerCase();
-  // @ts-ignore
-  const sym = symbolMap[currLower] || '$';
+    const sym = symbolMap[currLower as keyof typeof symbolMap] || '$';
   const currCode = currency.toUpperCase();
   const sinal = num < 0 ? '-' : '';
   const absNum = Math.abs(num);
@@ -43,7 +41,56 @@ function formatarMoeda(valor: any, currency: any = 'usd') {
   return `${sinal}${sym}${formattedStr} ${currCode}`;
 }
 
-const PortfolioTable = ({
+
+export interface PortfolioPosition {
+  nome: string;
+  qty?: number;
+  saldo?: number;
+  tipo_ativo?: string;
+  isNft?: boolean;
+  transactions?: { id: string; type: string; qty: number; totalPrice: number; unitPrice: number; }[];
+  customAvgPrice?: number;
+  lucroAbsolutoUsd?: number;
+  lucroPercentualUsd?: number;
+  precoP2P?: number;
+  valorVendaLiquidoTotal?: number;
+  precoVendaLiquidoUnitario?: number;
+  lucroAbsoluto?: number;
+  lucroPercentual?: number;
+  precoMedioUsd?: number;
+  custoTotal?: number;
+  boost_text?: string;
+  image?: string;
+  collection?: string;
+  nft_id?: string | number;
+  custoTotalUsd?: number;
+  valorVendaLiquidoTotalUsd?: number;
+  precoMedio?: number;
+  cotacaoMediaFlowerUsd?: number;
+  totalSflValue?: number;
+  currentPrice?: number;
+  lucroAbsolutoMoeda?: number;
+  lucroPercentualMoeda?: number;
+  [key: string]: unknown;
+}
+
+export interface PortfolioTableProps {
+  data: PortfolioPosition[];
+  marketData?: Record<string, number>;
+  flowerPrice?: number;
+  onTradeClick?: (name: string) => void;
+  onAddAsset?: () => void;
+  onSetTargetPrice?: (name: string, val: string | number) => void;
+  onSetAlertLevel?: (name: string, val: string) => void;
+  selectedCurrency?: string;
+  onUpdateCustomAvgPrice?: (name: string, avgSfl: number | string | null, flowerUsdRate: number | string | null) => void;
+  onUpdateTransactionPrice?: (txId: string, val: string | number) => Promise<boolean> | void;
+  onOpenSell?: (name?: string, meta?: Record<string, unknown> | null) => void;
+  transactions?: { id: string; type: string; qty: number; totalPrice: number; unitPrice: number; }[];
+  currentLang?: string;
+}
+
+const PortfolioTable: React.FC<PortfolioTableProps> = ({
   data = [],
   transactions = [],
   currentLang = 'en',
@@ -51,13 +98,12 @@ const PortfolioTable = ({
   onUpdateCustomAvgPrice,
   onUpdateTransactionPrice,
   onOpenSell
-}: any) => {
-  const [selectedPosition, setSelectedPosition] = useState(null);
+}) => {
+  const [selectedPosition, setSelectedPosition] = useState<PortfolioPosition | null>(null);
 
   // Busca item atualizado dos dados
   const activePositionItem = selectedPosition 
-    // @ts-ignore
-    ? (data.find((p: any) => p.nome.toLowerCase() === selectedPosition.nome.toLowerCase()) || selectedPosition)
+        ? (data.find((p: PortfolioPosition) => p.nome.toLowerCase() === selectedPosition.nome.toLowerCase()) || selectedPosition)
     : null;
 
   // Estado quando não há recursos em estoque
@@ -82,9 +128,9 @@ const PortfolioTable = ({
 
       {/* Visão Mobile (< md): Cards Individuais */}
       <div className="grid grid-cols-1 gap-3 md:hidden">
-        {data.map((item: any) => {
-          const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
-          const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        {data.map((item: PortfolioPosition) => {
+          const corLucroToken = (item.lucroAbsoluto || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          const corLucroMoeda = (item.lucroAbsolutoMoeda || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
           const iconUrl = item.image || (item.isNft
             ? (item.collection === 'wearables'
                 ? `https://sunflower-land.com/play/wearables/images/${item.nft_id}.png`
@@ -124,7 +170,7 @@ const PortfolioTable = ({
                   </div>
                 </div>
                 <button
-                  onClick={(e: any) => {
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                     e.stopPropagation();
                     if (onOpenSell) onOpenSell(item.nome, item);
                   }}
@@ -138,14 +184,14 @@ const PortfolioTable = ({
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thTotalCost', currentLang)}</span>
                   <span className="font-mono text-slate-200">{formatarPreco(item.custoTotal)} FLOWER</span>
-                  {item.custoTotalUsd > 0 && (
-                    <span className="font-mono text-[10px] text-amber-300 block">${item.custoTotalUsd.toFixed(2)}</span>
+                  {(item.custoTotalUsd || 0) > 0 && (
+                    <span className="font-mono text-[10px] text-amber-300 block">${(item.custoTotalUsd || 0).toFixed(2)}</span>
                   )}
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thAvgPrice', currentLang)}</span>
                   <span className="font-mono text-slate-300">{formatarPreco(item.precoMedio)} FLOWER</span>
-                  {item.precoMedioUsd > 0 && (
+                  {(item.precoMedioUsd || 0) > 0 && (
                     <span className="font-mono text-[10px] text-slate-400 block">${formatarPreco(item.precoMedioUsd)}/un</span>
                   )}
                 </div>
@@ -155,7 +201,7 @@ const PortfolioTable = ({
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">{t('thP2pPrice', currentLang)}</span>
-                  <span className="font-mono text-amber-400 font-semibold">{item.precoP2P > 0 ? formatarPreco(item.precoP2P) + ' FLOWER' : 'N/A'}</span>
+                  <span className="font-mono text-amber-400 font-semibold">{(item.precoP2P || 0) > 0 ? formatarPreco(item.precoP2P) + ' FLOWER' : 'N/A'}</span>
                 </div>
               </div>
 
@@ -163,11 +209,11 @@ const PortfolioTable = ({
                 <span className="text-slate-400 font-semibold">{t('thEstPl', currentLang)}:</span>
                 <div className="font-mono font-bold text-right flex flex-wrap justify-end items-center gap-1.5 text-xs">
                   <span className={corLucroToken}>
-                    {item.lucroAbsoluto >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} FLOWER ({item.lucroPercentual.toFixed(1)}%)
+                    {(item.lucroAbsoluto || 0) >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} FLOWER ({(item.lucroPercentual || 0).toFixed(1)}%)
                   </span>
                   <span className="text-slate-600">|</span>
                   <span className={corLucroMoeda}>
-                    {item.lucroAbsolutoMoeda >= 0 ? '+' : ''}{formatarMoeda(item.lucroAbsolutoMoeda, selectedCurrency)} ({item.lucroPercentualMoeda.toFixed(1)}%)
+                    {(item.lucroAbsolutoMoeda || 0) >= 0 ? '+' : ''}{formatarMoeda(item.lucroAbsolutoMoeda, selectedCurrency)} ({(item.lucroPercentualMoeda || 0).toFixed(1)}%)
                   </span>
                 </div>
               </div>
@@ -192,9 +238,9 @@ const PortfolioTable = ({
             </tr>
           </thead>
           <tbody>
-            {data.map((item: any) => {
-              const corLucroToken = item.lucroAbsoluto >= 0 ? 'text-emerald-400' : 'text-rose-400';
-              const corLucroMoeda = item.lucroAbsolutoMoeda >= 0 ? 'text-emerald-400' : 'text-rose-400';
+            {data.map((item: PortfolioPosition) => {
+              const corLucroToken = (item.lucroAbsoluto || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
+              const corLucroMoeda = (item.lucroAbsolutoMoeda || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
               const iconUrl = item.image || (item.isNft
                 ? (item.collection === 'wearables'
                     ? `https://sunflower-land.com/play/wearables/images/${item.nft_id}.png`
@@ -232,18 +278,18 @@ const PortfolioTable = ({
                   <td className="p-3 font-mono">{formatarPreco(item.qty)}</td>
                   <td className="p-3 font-semibold font-mono">
                     {formatarPreco(item.custoTotal)} SFL
-                    {item.custoTotalUsd > 0 && (
-                      <div className="text-[10px] text-amber-300 font-normal">${item.custoTotalUsd.toFixed(2)}</div>
+                    {(item.custoTotalUsd || 0) > 0 && (
+                      <div className="text-[10px] text-amber-300 font-normal">${(item.custoTotalUsd || 0).toFixed(2)}</div>
                     )}
                   </td>
                   <td className="p-3 text-slate-400 font-mono">
                     {formatarPreco(item.precoMedio)} SFL
-                    {item.precoMedioUsd > 0 && (
+                    {(item.precoMedioUsd || 0) > 0 && (
                       <div className="text-[10px] text-slate-400 font-normal">${formatarPreco(item.precoMedioUsd)}/un</div>
                     )}
                   </td>
                   <td className="p-3 text-amber-400 font-semibold font-mono">
-                    {item.precoP2P > 0 ? formatarPreco(item.precoP2P) + ' FLOWER' : 'N/A'}
+                    {(item.precoP2P || 0) > 0 ? formatarPreco(item.precoP2P) + ' FLOWER' : 'N/A'}
                   </td>
                   <td className="p-3 font-bold text-slate-100 font-mono">
                     {formatarPreco(item.valorVendaLiquidoTotal)} SFL
@@ -254,16 +300,16 @@ const PortfolioTable = ({
                   <td className="p-3 text-right font-mono">
                     <div className="flex flex-col items-end gap-0.5">
                       <span className={`font-bold ${corLucroToken}`}>
-                        {item.lucroAbsoluto >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} FLOWER ({item.lucroPercentual.toFixed(1)}%)
+                        {(item.lucroAbsoluto || 0) >= 0 ? '+' : ''}{formatarPreco(item.lucroAbsoluto)} FLOWER ({(item.lucroPercentual || 0).toFixed(1)}%)
                       </span>
                       <span className={`text-[11px] font-semibold ${corLucroMoeda}`}>
-                        {item.lucroAbsolutoMoeda >= 0 ? '+' : ''}{formatarMoeda(item.lucroAbsolutoMoeda, selectedCurrency)} ({item.lucroPercentualMoeda.toFixed(1)}%)
+                        {(item.lucroAbsolutoMoeda || 0) >= 0 ? '+' : ''}{formatarMoeda(item.lucroAbsolutoMoeda, selectedCurrency)} ({(item.lucroPercentualMoeda || 0).toFixed(1)}%)
                       </span>
                     </div>
                   </td>
                   <td className="p-3 text-center">
                     <button
-                      onClick={(e: any) => {
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation();
                         if (onOpenSell) onOpenSell(item.nome, item);
                       }}

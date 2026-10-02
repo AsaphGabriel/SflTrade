@@ -4,14 +4,16 @@ import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
 export interface MarketMoverItem {
+  [key: string]: unknown;
+  floor: number;
   resource?: string;
-  name?: string;
+  name: string;
   changePct: number;
   image?: string;
   isNft?: boolean;
   collection?: string;
-  nft_id?: string | number;
-  id?: string | number;
+  nft_id: number;
+  id: number;
   boost_text?: string;
   currentPrice?: number;
   basePrice?: number;
@@ -24,8 +26,8 @@ export interface MarketMoversData {
 }
 
 export interface MarketMoversCardsProps {
-  marketData?: Record<string, any>;
-  nftMarketData?: { list: any[] } & Record<string, any>;
+  marketData?: Record<string, unknown>;
+  nftMarketData?: { list: { id: number; name: string; floor: number; resource?: string; [key: string]: unknown }[]; [key: string]: unknown };
   currentLang?: string;
   onSelectResource?: (resourceName: string, meta: MarketMoverItem) => void;
   activeCategory?: 'resources' | 'power_ups' | null;
@@ -55,7 +57,7 @@ interface MoverListCardProps {
   loading: boolean;
   type: 'gainers' | 'losers';
   currentLang: string;
-  onSelectResource?: (resourceName: string, meta: any) => void;
+  onSelectResource?: (resourceName: string, meta: MarketMoverItem) => void;
   renderRankBadge: (index: number) => React.ReactNode;
 }
 
@@ -204,7 +206,7 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
       try {
         let data = null;
         if (activeCategory === 'power_ups') {
-          data = await fetchNftMarketMovers(nftMarketData?.list || [], timeframe);
+          data = await fetchNftMarketMovers((nftMarketData?.list || []) as MarketMoverItem[], timeframe);
         } else {
           data = await fetchMarketMovers(marketData, timeframe);
         }

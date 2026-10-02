@@ -1,9 +1,36 @@
-// @ts-ignore
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PriceChartModal from './PriceChartModal';
 
-const Header = ({
+
+export interface HeaderProps {
+  currentLang?: string;
+  setCurrentLang?: (lang: string) => void;
+  user?: Record<string, unknown> | null;
+  onOpenAuthModal?: () => void;
+  onOpenDonationModal?: () => void;
+  flowerPrice?: number;
+  flowerPriceUsd?: number;
+  effectiveTax?: number;
+  selectedIsland?: string;
+  onIslandChange?: (val: string) => void;
+  isVip?: boolean;
+  onVipToggle?: (val: boolean) => void;
+  isShrine?: boolean;
+  onShrineToggle?: (val: boolean) => void;
+  onLangChange?: (val: string) => void;
+  selectedCurrency?: string;
+  onCurrencyChange?: (val: string) => void;
+  onRefresh?: () => void;
+  onOpenBuy?: (name?: string) => void;
+  onOpenSell?: (name?: string) => void;
+  onSearchFarm?: (query?: string, apiKeyOverride?: string, forceRefresh?: boolean) => void | Promise<void>;
+  updatedTimeText?: string;
+  savedFarmId?: string;
+  onOpenDonation?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({
   flowerPrice,
   flowerPriceUsd,
   effectiveTax,
@@ -26,27 +53,25 @@ const Header = ({
   user,
   onOpenAuthModal,
   onOpenDonation
-}: any) => {
+}) => {
   const [farmSearch, setFarmSearch] = useState('');
   const [convQty, setConvQty] = useState('');
   const [showTokenChart, setShowTokenChart] = useState(false);
 
   // Dispara a busca quando o usuário aperta Enter ou clica na lupa
-  const handleSearchSubmit = (e: any) => {
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (onSearchFarm && farmSearch.trim() !== '') {
-      onSearchFarm(farmSearch.trim());
+      onSearchFarm?.(farmSearch.trim());
     }
   };
 
   // Calcula o valor do conversor rápido
-  // @ts-ignore
-  const converterResultado = (parseFloat(convQty || 0) * flowerPrice).toFixed(4);
+    const converterResultado = (parseFloat(convQty || "0") * (flowerPrice || 0)).toFixed(4);
   
   // Símbolo da moeda selecionada
   const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
-  // @ts-ignore
-  const sym = symbolMap[selectedCurrency] || '$';
+    const sym = symbolMap[selectedCurrency as keyof typeof symbolMap] || '$';
 
   return (
     <>
@@ -67,7 +92,7 @@ const Header = ({
               <input 
                 type="text" 
                 value={farmSearch}
-                onChange={(e: any) => setFarmSearch(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFarmSearch(e.target.value)}
                 placeholder={savedFarmId || "Farm ID / Nick"}
                 className="w-24 bg-transparent text-xs text-white focus:outline-none placeholder-slate-500"
               />
@@ -105,12 +130,12 @@ const Header = ({
           <button
             onClick={onOpenAuthModal}
             className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 hover:border-amber-400/50 transition cursor-pointer text-xs font-semibold"
-            title={user ? `Conectado como ${user.email}` : 'Clique para entrar ou cadastrar'}
+            title={user ? `Conectado como ${user.email as string}` : 'Clique para entrar ou cadastrar'}
           >
             {user ? (
               <span className="text-emerald-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="truncate max-w-[110px]">{user.email}</span>
+                <span className="truncate max-w-[110px]">{user.email as string}</span>
               </span>
             ) : (
               <span className="text-slate-300 flex items-center gap-1.5">
@@ -125,7 +150,7 @@ const Header = ({
             <span className="text-xs">🌐</span>
             <select 
               value={currentLang} 
-              onChange={(e: any) => onLangChange(e.target.value)} 
+              onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onLangChange?.(e.target.value)} 
               className="bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer"
             >
               <option value="en" className="bg-slate-900 text-white">EN</option>
@@ -138,7 +163,7 @@ const Header = ({
             <span className="text-xs">🏝️</span>
             <select 
               value={selectedIsland} 
-              onChange={(e: any) => onIslandChange(e.target.value)} 
+              onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onIslandChange?.(e.target.value)} 
               className="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer"
             >
               <option value="basic" className="bg-slate-900 text-slate-400">{t('islandBasic', currentLang)}</option>
@@ -154,7 +179,7 @@ const Header = ({
             <input 
               type="checkbox" 
               checked={isVip} 
-              onChange={(e: any) => onVipToggle(e.target.checked)} 
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onVipToggle?.(e.target.checked)} 
               className="accent-amber-400 rounded cursor-pointer"
             />
             <span className="text-xs font-bold text-amber-300 flex items-center gap-1">👑 <span>{t('labelVip', currentLang)}</span></span>
@@ -164,7 +189,7 @@ const Header = ({
             <input 
               type="checkbox" 
               checked={isShrine} 
-              onChange={(e: any) => onShrineToggle(e.target.checked)} 
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onShrineToggle?.(e.target.checked)} 
               className="accent-emerald-400 rounded cursor-pointer"
             />
             <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">⛩️ <span>{t('labelShrine', currentLang)}</span></span>
@@ -172,10 +197,10 @@ const Header = ({
 
           {/* Botões de Ação */}
           <div className="flex flex-wrap items-center gap-1.5 ml-auto lg:ml-0">
-            <button onClick={() => onOpenBuy('')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
+            <button onClick={() => onOpenBuy?.('')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
               {t('btnBuy', currentLang)}
             </button>
-            <button onClick={() => onOpenSell('')} className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
+            <button onClick={() => onOpenSell?.('')} className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
               {t('btnSell', currentLang)}
             </button>
             <button onClick={onRefresh} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-3 rounded-xl text-xs transition cursor-pointer">
@@ -212,7 +237,7 @@ const Header = ({
               </button>
             </div>
             <div className="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1 cursor-pointer" onClick={() => setShowTokenChart(true)}>
-              {sym} {flowerPrice.toFixed(4)} {selectedCurrency.toUpperCase()}
+              {sym} {(flowerPrice || 0).toFixed(4)} {(selectedCurrency || "USD").toUpperCase()}
             </div>
           </div>
           
@@ -220,7 +245,7 @@ const Header = ({
             {/* O SELETOR DE MOEDA VOLTOU! */}
             <select 
               value={selectedCurrency} 
-              onChange={(e: any) => onCurrencyChange(e.target.value)} 
+              onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onCurrencyChange?.(e.target.value)} 
               className="bg-slate-900 border border-slate-700 text-white rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-amber-400 cursor-pointer"
             >
               <option value="usd">USD ($)</option>
@@ -233,7 +258,7 @@ const Header = ({
             <div className="text-right text-xs text-slate-400 ml-2">
               <span>{t('activeTaxLabel', currentLang)}</span> 
               <span className={`font-bold text-sm block md:inline font-mono ${selectedIsland === 'basic' ? 'text-slate-400' : 'text-amber-400'}`}>
-                {selectedIsland === 'basic' ? ' N/A' : ` ${(effectiveTax * 100).toFixed(1)}%`}
+                {selectedIsland === 'basic' ? ' N/A' : ` ${((effectiveTax || 0) * 100).toFixed(1)}%`}
               </span>
             </div>
           </div>
@@ -245,7 +270,7 @@ const Header = ({
           <input 
             type="number" 
             value={convQty}
-            onChange={(e: any) => setConvQty(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setConvQty(e.target.value)}
             placeholder="0" 
             className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400"
           />
