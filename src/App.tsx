@@ -26,11 +26,11 @@ const App = () => {
   
   const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
 
-  const [activeMoversCategory, setActiveMoversCategory] = useState('resources');
+  const [activeMoversCategory, setActiveMoversCategory] = useState<'resources' | 'power_ups'>('resources');
   const [resourceCategoryFilter, setResourceCategoryFilter] = useState('all');
   const [marketSearchTerm, setMarketSearchTerm] = useState('');
 
-  const handleMoversCategoryChange = (cat: string) => {
+  const handleMoversCategoryChange = (cat: 'resources' | 'power_ups') => {
     setActiveMoversCategory(cat);
     // Ao clicar nos cards de maiores altas/baixas, navega para a categoria correspondente
     // na ResourceGrid, mas apenas se não houver uma busca ativa (para não interferir com o filtro de busca).

@@ -1,11 +1,26 @@
-// @ts-ignore
 import React, { useState, useMemo } from 'react';
 import { t } from '../i18n';
 import { getBumpkinXPDetails } from '../utils/bumpkinLevel';
 import { handleImageError } from '../utils/imageFallback';
 
+export interface InventoryItem {
+  id?: string;
+  name: string;
+  qty: number;
+  unitPriceSfl: number;
+  totalValueSfl: number;
+  category: string;
+  isNft: boolean;
+  boostText: string;
+  boost_text?: string;
+  displayName?: string;
+  image?: string | null;
+  nftImage?: string | null;
+  [key: string]: unknown;
+}
+
 // Categorizador de Recursos do Inventário
-export function getItemCategory(name: any) {
+export function getItemCategory(name: string) {
   if (!name) return 'other';
   const n = name.toLowerCase();
   
@@ -50,7 +65,7 @@ export function getItemCategory(name: any) {
 }
 
 // Ícones / Emojis por Item
-export function getItemEmoji(name: any) {
+export function getItemEmoji(name: string) {
   if (!name) return '📦';
   const n = name.toLowerCase();
   if (n.includes('sunflower')) return '🌻';
@@ -92,7 +107,7 @@ export function getItemEmoji(name: any) {
   return '📦';
 }
 
-const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" }: any) => (
+const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" }: { label: string; value: string | number; subValue?: React.ReactNode; icon: string; colorClass?: string }) => (
   <div className="bg-slate-900/90 rounded-xl p-3.5 border border-slate-700/60 shadow-md flex flex-col justify-between hover:border-slate-600 transition">
     <div className="flex items-center justify-between gap-1">
       <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">{label}</span>
@@ -105,7 +120,84 @@ const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" 
   </div>
 );
 
-const FarmDashboard = ({
+
+export interface FarmDashboardProps {
+  mode?: 'perfil' | 'inventory' | 'info';
+  setMode?: (mode: 'perfil' | 'inventory' | 'info') => void;
+  farmData?: Record<string, any> | null;
+  loading?: boolean;
+  marketData?: Record<string, number>;
+  nftMarketData?: { byName?: Record<string, any>; [key: string]: any };
+  flowerPrice?: number;
+  selectedCurrency?: string;
+  currentLang?: string;
+  farmId?: string;
+  apiKey?: string;
+  setFarmId?: (id: string) => void;
+  setApiKey?: (key: string) => void;
+  onSaveProfile?: () => void;
+  profileMsg?: { text: string; type: string };
+  searchFarm?: (query?: string, apiKeyOverride?: string, forceRefresh?: boolean) => Promise<void> | void;
+  user?: Record<string, any> | null;
+  syncCloud?: (user?: Record<string, any> | null, force?: boolean) => Promise<void> | void;
+  isSyncing?: boolean;
+  onOpenAuthModal?: () => void;
+  onNavigateTab?: (tab: string) => void;
+}
+
+
+const InventoryItemCard = ({ item, formatNum }: { item: InventoryItem; formatNum: (num: string | number, dec?: number) => string }) => (
+  <div
+    className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm min-w-0"
+  >
+    <div className="flex items-start justify-between gap-1">
+      <img
+        src={item.nftImage || `https://sfl.world/img/source/${encodeURIComponent(item.name)}.png`}
+        alt={item.name}
+        className="w-7 h-7 object-contain drop-shadow image-rendering-pixelated group-hover:scale-110 transition-transform"
+        onError={handleImageError}
+      />
+      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+        item.isNft
+          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-bold'
+          : 'bg-slate-800 text-slate-400 border-slate-700/50'
+      }`}>
+        {item.isNft ? 'NFT' : item.category}
+      </span>
+    </div>
+
+    <div className="mt-2 min-w-0">
+      <span className="text-xs font-bold text-slate-200 block truncate" title={item.name}>
+        {item.name}
+      </span>
+      <span className="text-sm font-extrabold text-amber-400 font-mono block mt-0.5">
+        {formatNum(item.qty)}
+      </span>
+    </div>
+
+    <div className="mt-2 border-t border-slate-800/80 pt-1.5 text-[10px] text-slate-400 font-mono space-y-0.5 min-w-0">
+      <div className="flex justify-between">
+        <span>{item.isNft ? 'Floor:' : 'P2P:'}</span>
+        <span className={item.isNft ? 'text-amber-300 font-bold' : 'text-slate-300'}>
+          {item.unitPriceSfl > 0 ? `${formatNum(item.unitPriceSfl, item.isNft ? 2 : 4)} FLOWER` : 's/ cotação'}
+        </span>
+      </div>
+      {item.totalValueSfl > 0 && (
+        <div className="flex justify-between text-emerald-400 font-bold">
+          <span>Total:</span>
+          <span>{formatNum(item.totalValueSfl, 2)} FLOWER</span>
+        </div>
+      )}
+      {item.boostText && (
+         <div className="w-[calc(100%-10px)] mx-[5px] mt-1 h-[22px] px-1.5 flex items-center justify-center text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded box-border" title={item.boostText}>
+          <span className="w-full truncate text-center block">{item.boostText}</span>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const FarmDashboard: React.FC<FarmDashboardProps> = ({
   mode = 'info', // 'info' (Painel & Inventário) ou 'perfil' (Configurações & Credenciais)
   farmData,
   marketData = {},
@@ -125,7 +217,7 @@ const FarmDashboard = ({
   isSyncing = false,
   onOpenAuthModal = () => {},
   onNavigateTab = () => {}
-}: any) => {
+}) => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -142,15 +234,15 @@ const FarmDashboard = ({
     }
   }, [selectedCurrency]);
 
-  const formatNum = (num: any, decimals: any = 2) => {
-    if (num === null || num === undefined || isNaN(num)) return '-';
+  const formatNum = (num: number | string, decimals: number = 2) => {
+    if (num === null || num === undefined || isNaN(Number(num))) return '-';
     return Number(num).toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
       maximumFractionDigits: decimals
     });
   };
 
-  const formatCurrency = (amount: any) => {
-    if (amount === null || amount === undefined || isNaN(amount)) return `${currencySymbol}0.00`;
+  const formatCurrency = (amount: number | string) => {
+    if (amount === null || amount === undefined || isNaN(Number(amount))) return `${currencySymbol}0.00`;
     return `${currencySymbol}${Number(amount).toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -173,7 +265,7 @@ const FarmDashboard = ({
     const aggregated = new Map();
     const nftByName = nftMarketData?.byName || {};
 
-    Object.entries(rawInventory).forEach(([itemName, rawQty]: any) => {
+    Object.entries(rawInventory).forEach(([itemName, rawQty]: [string, any]) => {
       const qty = Number(rawQty);
       if (qty <= 0 || !itemName) return;
 
@@ -186,7 +278,7 @@ const FarmDashboard = ({
       // 1. Verifica se é um NFT rastreado (Floor Price)
       const nftMeta = !isCropParsnip
         ? (nftByName[trimmedName] || Object.values(nftByName).find(
-            (nft: any) => (nft.displayName && nft.displayName.toLowerCase() === lowerName) ||
+            (nft: Record<string, any>) => (nft.displayName && nft.displayName.toLowerCase() === lowerName) ||
                    (nft.name && nft.name.toLowerCase() === lowerName && nft.name.toLowerCase() !== 'parsnip')
           ))
         : null;
@@ -212,7 +304,7 @@ const FarmDashboard = ({
       } else {
         // 2. Busca preço unitário no mercado de recursos P2P (case-insensitive)
         canonicalKey = `res_${lowerName}`;
-        const matchedKey = Object.keys(marketData).find((k: any) => k.toLowerCase() === lowerName);
+        const matchedKey = Object.keys(marketData).find((k: string) => k.toLowerCase() === lowerName);
         if (matchedKey) {
           canonicalName = matchedKey;
           unitPriceSfl = marketData[matchedKey] || 0;
@@ -227,20 +319,20 @@ const FarmDashboard = ({
         // de instâncias espelhadas entre baú, ilha posicionada ou wardrobe
         const existing = aggregated.get(canonicalKey);
         existing.qty = Math.max(existing.qty, qty);
-        existing.totalValSfl = existing.qty * existing.unitPriceSfl;
-        existing.totalValFiat = existing.totalValSfl * flowerPrice;
+        existing.totalValueSfl = existing.qty * existing.unitPriceSfl;
+        existing.totalValFiat = existing.totalValueSfl * flowerPrice;
         if (!existing.nftImage && nftImage) existing.nftImage = nftImage;
         if (!existing.boostText && boostText) existing.boostText = boostText;
       } else {
-        const totalValSfl = qty * unitPriceSfl;
-        const totalValFiat = totalValSfl * flowerPrice;
+        const totalValueSfl = qty * unitPriceSfl;
+        const totalValFiat = totalValueSfl * flowerPrice;
 
         aggregated.set(canonicalKey, {
           id: canonicalKey,
           name: canonicalName,
           qty,
           unitPriceSfl,
-          totalValSfl,
+          totalValueSfl,
           totalValFiat,
           category,
           isNft,
@@ -255,9 +347,9 @@ const FarmDashboard = ({
     let totalStockSfl = 0;
     let pricedItemsCount = 0;
 
-    items.forEach((item: any) => {
+    items.forEach((item: InventoryItem) => {
       if (item.unitPriceSfl > 0) pricedItemsCount++;
-      totalStockSfl += item.totalValSfl;
+      totalStockSfl += item.totalValueSfl;
     });
 
     const sflBalance = parseFloat(farmData?.land?.balance || 0);
@@ -287,7 +379,7 @@ const FarmDashboard = ({
     const isSearching = Boolean(term);
 
     return inventoryAnalysis.items
-      .filter((item: any) => {
+      .filter((item: InventoryItem) => {
         const matchesCategory = isSearching || categoryFilter === 'all' || item.category === categoryFilter;
         const matchesSearch = !isSearching || (
           (item.name && item.name.toLowerCase().includes(term)) ||
@@ -296,8 +388,8 @@ const FarmDashboard = ({
         );
         return matchesCategory && matchesSearch;
       })
-      .sort((a: any, b: any) => {
-        if (sortBy === 'value') return b.totalValSfl - a.totalValSfl;
+      .sort((a: InventoryItem, b: InventoryItem) => {
+        if (sortBy === 'value') return b.totalValueSfl - a.totalValueSfl;
         if (sortBy === 'qty') return b.qty - a.qty;
         return a.name.localeCompare(b.name);
       });
@@ -387,7 +479,7 @@ const FarmDashboard = ({
               <input
                 type="text"
                 value={farmId}
-                onChange={(e: any) => setFarmId(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFarmId(e.target.value)}
                 placeholder="Ex: 123456"
                 className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
               />
@@ -409,7 +501,7 @@ const FarmDashboard = ({
               <input
                 type={showApiKey ? "text" : "password"}
                 value={apiKey}
-                onChange={(e: any) => setApiKey(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setApiKey(e.target.value)}
                 placeholder={t('apiKeyPlaceholder', currentLang)}
                 className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
               />
@@ -617,7 +709,7 @@ const FarmDashboard = ({
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e: any) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setSearchTerm(e.target.value)}
                 placeholder={t('searchInventory', currentLang)}
                 className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400 w-full sm:w-48"
               />
@@ -625,7 +717,7 @@ const FarmDashboard = ({
               {/* Ordenação */}
               <select
                 value={sortBy}
-                onChange={(e: any) => setSortBy(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setSortBy(e.target.value)}
                 className="bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-400"
               >
                 <option value="value">{t('sortByVal', currentLang)}</option>
@@ -645,7 +737,7 @@ const FarmDashboard = ({
               { id: 'emblems', label: t('catEmblems', currentLang), icon: '🏺' },
               { id: 'power_ups', label: t('cat_power_ups', currentLang) || 'Power Ups', icon: '⚡' },
               { id: 'other', label: t('catOther', currentLang), icon: '🌱' }
-            ].map((cat: any) => (
+            ].map((cat: { id: string, label: string, icon: string }) => (
               <button
                 key={cat.id}
                 onClick={() => setCategoryFilter(cat.id)}
@@ -664,61 +756,8 @@ const FarmDashboard = ({
           {/* Grid de Itens */}
           {filteredInventory.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-96 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
-              {filteredInventory.map((item: any) => (
-                <div
-                  key={item.id || item.name}
-                  className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm min-w-0"
-                >
-                  <div className="flex items-start justify-between gap-1">
-                    <img
-                      src={item.nftImage || `https://sfl.world/img/source/${encodeURIComponent(item.name)}.png`}
-                      alt={item.name}
-                      className="w-7 h-7 object-contain drop-shadow image-rendering-pixelated group-hover:scale-110 transition-transform"
-                      onError={handleImageError}
-                    />
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                      item.isNft
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-bold'
-                        : 'bg-slate-800 text-slate-400 border-slate-700/50'
-                    }`}>
-                      {item.isNft ? 'NFT' : item.category}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 min-w-0">
-                    <span className="text-xs font-bold text-slate-200 block truncate" title={item.name}>
-                      {item.name}
-                    </span>
-                    <span className="text-sm font-extrabold text-amber-400 font-mono block mt-0.5">
-                      {formatNum(item.qty)}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 border-t border-slate-800/80 pt-1.5 text-[10px] text-slate-400 font-mono space-y-0.5 min-w-0">
-                    <div className="flex justify-between">
-                      <span>{item.isNft ? 'Floor:' : 'P2P:'}</span>
-                      <span className={item.isNft ? 'text-amber-300 font-bold' : 'text-slate-300'}>
-                        {item.unitPriceSfl > 0 ? `${formatNum(item.unitPriceSfl, item.isNft ? 2 : 4)} FLOWER` : 's/ cotação'}
-                      </span>
-                    </div>
-                    {item.totalValSfl > 0 && (
-                      <div className="flex justify-between text-emerald-400 font-bold">
-                        <span>Total:</span>
-                        <span>{formatNum(item.totalValSfl, 2)} FLOWER</span>
-                      </div>
-                    )}
-                    {item.boostText && (
-                      <div 
-                        className="w-[calc(100%-10px)] mx-[5px] mt-1 h-[22px] px-1.5 flex items-center justify-center text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded box-border" 
-                        title={item.boostText}
-                      >
-                        <span className="w-full truncate text-center block">
-                          {item.boostText}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {filteredInventory.map((item: InventoryItem) => (
+                <InventoryItemCard key={item.id || item.name} item={item} formatNum={formatNum} />
               ))}
             </div>
           ) : (
@@ -768,7 +807,7 @@ const FarmDashboard = ({
                 ⭐ {t('activeSkills', currentLang)} ({Object.keys(farmData.bumpkin.skills).length})
               </span>
               <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-                {Object.keys(farmData.bumpkin.skills).map((skill: any, index: any) => (
+                {Object.keys(farmData.bumpkin.skills).map((skill: string, index: number) => (
                   <span
                     key={index}
                     className="bg-slate-900 text-amber-300 text-xs px-3 py-1.5 rounded-xl border border-slate-700 font-semibold flex items-center gap-1.5 shadow-sm"
