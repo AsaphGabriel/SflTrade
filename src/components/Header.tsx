@@ -1,3 +1,4 @@
+import { User } from '@supabase/supabase-js';
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PriceChartModal from './PriceChartModal';
@@ -6,7 +7,7 @@ import PriceChartModal from './PriceChartModal';
 export interface HeaderProps {
   currentLang?: string;
   setCurrentLang?: (lang: string) => void;
-  user?: Record<string, unknown> | null;
+  user?: User | null;
   onOpenAuthModal?: () => void;
   onOpenDonationModal?: () => void;
   flowerPrice?: number;

@@ -38,13 +38,13 @@ export { XP_TABLE };
  * @returns {number} O nível do Bumpkin (1 a 200)
  */
 export function getBumpkinLevel(experience: number | string) {
-  if (!experience || experience < 0) return 1;
+  if (!experience || Number(experience) < 0) return 1;
   
   // Busca do maior para o menor (se a experiência for maior ou igual ao XP da tabela, achamos o nível)
   // XP_TABLE[0] é o nível 1 (0 XP)
   // XP_TABLE[199] é o nível 200 (244.206.000 XP)
   for (let i = XP_TABLE.length - 1; i >= 0; i--) {
-    if (experience >= XP_TABLE[i]) {
+    if (Number(experience) >= XP_TABLE[i]) {
       return i + 1; // Array é base 0, nível começa em 1
     }
   }
@@ -60,7 +60,7 @@ export function getBumpkinXPDetails(experience: number | string) {
   const currentLevelMinXP = XP_TABLE[currentLevel - 1] || 0;
   const nextLevelXP = XP_TABLE[currentLevel] || XP_TABLE[XP_TABLE.length - 1];
   
-  const xpInLevel = Math.max(0, (experience || 0) - currentLevelMinXP);
+  const xpInLevel = Math.max(0, Number(experience || 0) - currentLevelMinXP);
   const xpNeededForLevel = Math.max(1, nextLevelXP - currentLevelMinXP);
   const progressPercent = Math.min(100, Math.max(0, (xpInLevel / xpNeededForLevel) * 100));
 
