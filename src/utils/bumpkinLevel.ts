@@ -37,7 +37,7 @@ export { XP_TABLE };
  * @param {number} experience A quantidade de XP atual
  * @returns {number} O nível do Bumpkin (1 a 200)
  */
-export function getBumpkinLevel(experience: any) {
+export function getBumpkinLevel(experience: number | string) {
   if (!experience || experience < 0) return 1;
   
   // Busca do maior para o menor (se a experiência for maior ou igual ao XP da tabela, achamos o nível)
@@ -55,7 +55,7 @@ export function getBumpkinLevel(experience: any) {
 /**
  * Retorna os detalhes de progresso de XP do Bumpkin.
  */
-export function getBumpkinXPDetails(experience: any) {
+export function getBumpkinXPDetails(experience: number | string) {
   const currentLevel = getBumpkinLevel(experience);
   const currentLevelMinXP = XP_TABLE[currentLevel - 1] || 0;
   const nextLevelXP = XP_TABLE[currentLevel] || XP_TABLE[XP_TABLE.length - 1];

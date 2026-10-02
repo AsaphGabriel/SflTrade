@@ -916,7 +916,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
 /**
  * Cache em memória para os baselines de variação de NFTs por período
  */
-const nftBaselineCache: Record<string, any> = {
+const nftBaselineCache: Record<string, { baselineSfl: number; baselineUsd: number }>  = {
   '24h': null,
   '7D': null,
   '30D': null,

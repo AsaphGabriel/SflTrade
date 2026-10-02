@@ -18,8 +18,8 @@ const App = () => {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
-  const [modalResourceMeta, setModalResourceMeta] = useState<any>(null);
-  const [selectedChartResource, setSelectedChartResource] = useState<any>(null);
+  const [modalResourceMeta, setModalResourceMeta] = useState<Record<string, unknown> | null>(null);
+  const [selectedChartResource, setSelectedChartResource] = useState<Record<string, unknown> | null>(null);
   
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
   const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
