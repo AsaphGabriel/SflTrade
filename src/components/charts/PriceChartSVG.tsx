@@ -80,21 +80,21 @@ export const PriceChartSVG: React.FC<PriceChartSVGProps> = ({
 
   return (
     <div className="relative w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-64 overflow-visible">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-80 overflow-visible">
         <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
         <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
         <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
 
         {yAvg !== null && isFinite(yAvg) && (
           <g>
-            <line x1={padding} y1={yAvg} x2={width - padding} y2={yAvg} stroke="#f59e0b" strokeWidth="1.8" strokeDasharray="6 3" />
+            <line x1={padding} y1={yAvg} x2={width - padding} y2={yAvg} stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6 3" />
             <text x={width - padding - 4} y={yAvg - 5} fill="#f59e0b" fontSize="10" fontWeight="bold" textAnchor="end">
               {currentLang === 'pt' ? 'Média' : 'Avg'}: {avgPeriodPrice.toFixed(3)} {unitSymbol}
             </text>
           </g>
         )}
 
-        {pricePath && <path d={pricePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />}
+        {pricePath && <path d={pricePath} fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" />}
 
         {data.map((d, i) => {
           if (!d) return null;

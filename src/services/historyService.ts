@@ -412,7 +412,7 @@ export async function fetchTokenHistory(timeframe: string | number = '30D', curr
   else if (tfStr === '90D' || tfStr === '90') days = 90;
 
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days - 1);
+  startDate.setDate(startDate.getDate() - days);
   const isoStartDate = startDate.toISOString();
 
   let rawPoints: { timestamp?: string; day?: string; floor_sfl?: number; price_sfl?: number; floor_usd?: number; price_usd?: number; isInitialData?: boolean; t?: number; p?: number; volume?: number; [key: string]: unknown }[] = []; // timestamp?: string; day?: string; floor_sfl?: number; price_sfl?: number; floor_usd?: number; price_usd?: number; isInitialData?: boolean; t?: number; p?: number; volume?: number; [key: string]: unknown }[] = [];
@@ -469,7 +469,7 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
   else if (tfStr === '90D' || tfStr === '90') days = 90;
 
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days - 1);
+  startDate.setDate(startDate.getDate() - days);
   const dateStr = startDate.toISOString().split('T')[0];
 
   let rawPoints: { timestamp?: string; day?: string; floor_sfl?: number; price_sfl?: number; floor_usd?: number; price_usd?: number; isInitialData?: boolean; t?: number; p?: number; volume?: number; [key: string]: unknown }[] = []; // timestamp?: string; day?: string; floor_sfl?: number; price_sfl?: number; floor_usd?: number; price_usd?: number; isInitialData?: boolean; t?: number; p?: number; volume?: number; [key: string]: unknown }[] = [];
@@ -557,7 +557,7 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
 export async function fetchMarketMovers(currentMarketData: Record<string, number> = {}, timeframe: '24h' | '7D' | '30D' | '90D' = '24h'): Promise<MarketMoversResult> {
   const targetTimeMs = getTargetTimestamp(timeframe);
   const nowMs = Date.now();
-  const minAgeMs = timeframe === '24h' ? 12 * 60 * 60 * 1000 : 3.5 * 24 * 60 * 60 * 1000;
+  
   
   let baselineMap: Record<string, number> = {};
   let oldestFoundMs = nowMs;
@@ -583,19 +583,14 @@ export async function fetchMarketMovers(currentMarketData: Record<string, number
         });
 
         Object.entries(byRes).forEach(([resId, rows]) => {
-          let closest = rows[0];
-          let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
-          for (const row of rows) {
-            const diff = Math.abs(new Date(row.timestamp).getTime() - targetTimeMs);
-            if (diff < minDiff) {
-              minDiff = diff;
-              closest = row;
+          const futureRows = rows.filter(r => new Date(r.timestamp).getTime() >= targetTimeMs);
+          if (futureRows.length > 0) {
+            const closest = futureRows[0];
+            const closestAge = nowMs - new Date(closest.timestamp).getTime();
+            if (closest.price_sfl > 0) {
+              baselineMap[resId] = Number(closest.price_sfl);
+              if (closestAge > (nowMs - oldestFoundMs)) oldestFoundMs = nowMs - closestAge;
             }
-          }
-          const closestAge = nowMs - new Date(closest.timestamp).getTime();
-          if (closest && closest.price_sfl > 0 && closestAge >= minAgeMs) {
-            baselineMap[resId] = Number(closest.price_sfl);
-            if (closestAge > (nowMs - oldestFoundMs)) oldestFoundMs = nowMs - closestAge;
           }
         });
       }
@@ -723,7 +718,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
   else if (tfStr === '90D' || tfStr === '90') days = 90;
 
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days - 1);
+  startDate.setDate(startDate.getDate() - days);
   const dateStr = startDate.toISOString().split('T')[0];
 
   let rawPoints: { timestamp?: string; day?: string; floor_sfl?: number; price_sfl?: number; floor_usd?: number; price_usd?: number; isInitialData?: boolean; t?: number; p?: number; volume?: number; [key: string]: unknown }[] = []; // timestamp?: string; day?: string; floor_sfl?: number; price_sfl?: number; floor_usd?: number; price_usd?: number; isInitialData?: boolean; t?: number; p?: number; volume?: number; [key: string]: unknown }[] = [];
@@ -734,10 +729,15 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
       let query = supabase
         .from('nft_price_history')
         .select('*')
-        .eq('nft_id', Number(nftId as any))
         .gte('timestamp', startDate.toISOString())
         .order('timestamp', { ascending: true });
-      if (nftName) query = (query as any).eq('name', nftName);
+      if (nftName) {
+        const cleanName = String(nftName).replace(' (Wearable)', '');
+        const col = String(nftName).includes('(Wearable)') ? 'wearables' : 'collectibles';
+        query = (query as any).eq('name', cleanName).eq('collection', col) as any;
+      } else {
+        query = (query as any).eq('nft_id', Number(nftId as any)) as any;
+      }
 
       const { data, error } = await withTimeout<any>(query as any);
 
@@ -762,10 +762,15 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
       let query = supabase
         .from('v_nft_daily_metrics')
         .select('*')
-        .eq('nft_id', Number(nftId as any))
         .gte('day', dateStr)
         .order('day', { ascending: true });
-      if (nftName) query = (query as any).eq('name', nftName);
+      if (nftName) {
+        const cleanName = String(nftName).replace(' (Wearable)', '');
+        const col = String(nftName).includes('(Wearable)') ? 'wearables' : 'collectibles';
+        query = (query as any).eq('name', cleanName).eq('collection', col) as any;
+      } else {
+        query = (query as any).eq('nft_id', Number(nftId as any)) as any;
+      }
 
       const { data, error } = await withTimeout<any>(query as any);
 
@@ -840,7 +845,7 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
 export async function fetchNftMarketMovers(currentNftList: any[] = [], timeframe: '24h' | '7D' | '30D' | '90D' = '24h'): Promise<MarketMoversResult> {
   const targetTimeMs = getTargetTimestamp(timeframe);
   const nowMs = Date.now();
-  const minAgeMs = timeframe === '24h' ? 12 * 60 * 60 * 1000 : 3.5 * 24 * 60 * 60 * 1000;
+  
   
   let baselineMap: Record<string, number> = {};
   let oldestFoundMs = nowMs;
@@ -867,19 +872,14 @@ export async function fetchNftMarketMovers(currentNftList: any[] = [], timeframe
         });
 
         Object.entries(byName).forEach(([nftName, rows]) => {
-          let closest = rows[0];
-          let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
-          for (const row of rows) {
-            const diff = Math.abs(new Date(row.timestamp).getTime() - targetTimeMs);
-            if (diff < minDiff) {
-              minDiff = diff;
-              closest = row;
+          const futureRows = rows.filter(r => new Date(r.timestamp).getTime() >= targetTimeMs);
+          if (futureRows.length > 0) {
+            const closest = futureRows[0];
+            const closestAge = nowMs - new Date(closest.timestamp).getTime();
+            if (closest.floor_sfl > 0) {
+              baselineMap[nftName] = Number(closest.floor_sfl);
+              if (closestAge > (nowMs - oldestFoundMs)) oldestFoundMs = nowMs - closestAge;
             }
-          }
-          const closestAge = nowMs - new Date(closest.timestamp).getTime();
-          if (closest && closest.floor_sfl > 0 && closestAge >= minAgeMs) {
-            baselineMap[nftName] = Number(closest.floor_sfl);
-            if (closestAge > (nowMs - oldestFoundMs)) oldestFoundMs = nowMs - closestAge;
           }
         });
       }

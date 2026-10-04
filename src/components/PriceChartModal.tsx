@@ -147,7 +147,7 @@ if (isMounted) {
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-stretch w-full gap-2">
           <div className="grid grid-cols-4 bg-slate-800 p-1 rounded-xl w-full gap-1">
             {[
               { id: '24h', label: '24h' },
@@ -206,7 +206,7 @@ if (isMounted) {
 
         <div className="relative bg-slate-950/70 rounded-2xl p-2 border border-slate-800 flex flex-col items-center">
           {loading ? (
-            <div className="h-52 flex items-center justify-center text-xs text-amber-400 animate-pulse">
+            <div className="h-72 flex items-center justify-center text-xs text-amber-400 animate-pulse">
               ... {currentLang === 'pt' ? 'Carregando histórico...' : 'Loading history...'}
             </div>
           ) : (
