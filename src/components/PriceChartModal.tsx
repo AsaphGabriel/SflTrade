@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { fetchResourceHistory, fetchTokenHistory, fetchNftHistory } from '../services/historyService';
 import { t } from '../i18n';
@@ -55,11 +54,11 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
       try {
         let data: ChartPoint[] = [];
         if (isToken) {
-          data = await fetchTokenHistory(timeframe, flowerPriceUsd);
+          data = await fetchTokenHistory(timeframe, flowerPriceUsd as any) as any;
         } else if (isNftObj && targetNftId !== null) {
-          data = await fetchNftHistory(targetNftId as string | number, timeframe, targetFloor, targetName as string);
+          data = await fetchNftHistory(targetNftId as string | number, timeframe, targetFloor as any, targetName as string) as any;
         } else if (targetName) {
-          data = await fetchResourceHistory(targetName as string, timeframe, currentPriceRef);
+          data = await fetchResourceHistory(targetName as string, timeframe, currentPriceRef as any) as any;
         }
 
         if (isMounted) {
@@ -75,19 +74,7 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
     return () => { isMounted = false; };
   }, [timeframe, isToken, targetName, targetNftId, targetFloor, flowerPriceUsd, currentPriceRef, isNftObj]);
 
-  let displayData = history;
-  if (!isToken && !isNftObj) {
-    const usdRate = flowerPriceUsd || 0.05;
-    displayData = displayData.map((d: ChartPoint) => {
-      if (!d) return d;
-      const originalPriceSfl = Number(d.price_sfl ?? d.avg_price_sfl ?? 0);
-      let calculatedPrice = originalPriceSfl;
-      if (selectedCurrency !== 'usd' && d.price_usd && usdRate > 0) {
-         calculatedPrice = (d.price_usd / usdRate);
-      }
-      return { ...d, avg_price_sfl: calculatedPrice, price_sfl: calculatedPrice };
-    });
-  }
+  const displayData = history;
 
   const isAccumulatingHistory = displayData.length <= 1 || displayData.every((d) => d && d.isInitialData);
 

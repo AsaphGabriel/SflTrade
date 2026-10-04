@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const translations: Record<string, Record<string, string>> = {
   en: {
     // ... [Mantenha as chaves antigas aqui] ...
@@ -309,7 +308,7 @@ export function t(key: string, lang: string = 'en', params: Record<string, strin
   // @ts-ignore
   let text = translations[lang]?.[key] || translations['en']?.[key] || key;
   Object.keys(params).forEach((p: string) => {
-    text = text.replace(`{${p}}`, params[p]);
+    text = text.replace(`{${p}}`, String(params[p]));
   });
   return text;
 }

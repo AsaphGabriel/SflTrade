@@ -1,36 +1,18 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { fetchMarketMovers, fetchNftMarketMovers } from '../services/historyService';
+import { MoverItem, MarketMoversResult } from '../utils/marketMath';
 import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
 
-export interface MarketMoverItem {
-  [key: string]: unknown;
-  floor: number;
-  resource?: string;
-  name: string;
-  changePct: number;
-  image?: string;
-  isNft?: boolean;
-  collection?: string;
-  nft_id: number;
-  id: number;
-  boost_text?: string;
-  currentPrice?: number;
-  basePrice?: number;
-}
 
-export interface MarketMoversData {
-  topGainers: MarketMoverItem[];
-  topLosers: MarketMoverItem[];
-  hasData: boolean;
-}
+
+
 
 export interface MarketMoversCardsProps {
   marketData?: Record<string, unknown>;
   nftMarketData?: { list: { id: number; name: string; floor: number; resource?: string; [key: string]: unknown }[]; [key: string]: unknown };
   currentLang?: string;
-  onSelectResource?: (resourceName: string, meta: MarketMoverItem | null) => void;
+  onSelectResource?: (resourceName: string, meta: MoverItem | null) => void;
   activeCategory?: 'resources' | 'power_ups' | null;
   onCategoryChange?: ((cat: 'resources' | 'power_ups') => void) | null;
 }
@@ -52,20 +34,19 @@ function formatarPreco(valor?: number | string | null) {
 
 interface MoverListCardProps {
   title: string;
-  emoji: string;
+  
   timeframe: string;
-  items: MarketMoverItem[];
+  items: MoverItem[];
   loading: boolean;
   type: 'gainers' | 'losers';
   currentLang: string;
-  onSelectResource?: (resourceName: string, meta: MarketMoverItem | null) => void;
+  onSelectResource?: (resourceName: string, meta: MoverItem | null) => void;
   renderRankBadge: (index: number) => React.ReactNode;
 }
 
 const MoverListCard: React.FC<MoverListCardProps> = ({
   title,
-  emoji,
-  timeframe,
+    timeframe,
   items,
   loading,
   type,
@@ -73,20 +54,27 @@ const MoverListCard: React.FC<MoverListCardProps> = ({
   onSelectResource,
   renderRankBadge
 }) => {
-  const isGainers = type === 'gainers';
-  const colorClass = isGainers ? 'emerald' : 'rose';
+    const isGainers = type === 'gainers';
+  const colorText = isGainers ? 'text-emerald-400' : 'text-rose-400';
+  const colorBorder = isGainers ? 'border-emerald-500/25' : 'border-rose-500/25';
+  const colorHoverBorder = isGainers ? 'hover:border-emerald-500/40' : 'hover:border-rose-500/40';
+  const colorBgBadge = isGainers ? 'bg-emerald-500/15' : 'bg-rose-500/15';
+  const colorBorderBadge = isGainers ? 'border-emerald-500/30' : 'border-rose-500/30';
+  const colorTextBadge = isGainers ? 'text-emerald-300' : 'text-rose-300';
+  const colorHoverText = isGainers ? 'group-hover:text-emerald-300' : 'group-hover:text-rose-300';
+  const hoverCardBorder = isGainers ? 'hover:border-emerald-500/50' : 'hover:border-rose-500/50';
   
   return (
-    <div className={`bg-slate-800/60 border border-${colorClass}-500/25 hover:border-${colorClass}-500/40 rounded-2xl p-3.5 md:p-4 shadow-xl flex flex-col justify-between transition`}>
+    <div className={`bg-slate-800/60 border ${colorBorder} ${colorHoverBorder} rounded-2xl p-3.5 md:p-4 shadow-xl flex flex-col justify-between transition`}>
       <div>
         <div className="flex items-center justify-between border-b border-slate-700/50 pb-2.5 mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{emoji}</span>
-            <h3 className={`text-sm font-bold text-${colorClass}-400 tracking-wide`}>
+            
+            <h3 className={`text-sm font-bold ${colorText} tracking-wide`}>
               {title}
             </h3>
           </div>
-          <span className={`text-[10px] font-bold text-${colorClass}-300 bg-${colorClass}-500/15 border border-${colorClass}-500/30 px-2 py-0.5 rounded-full uppercase`}>
+          <span className={`text-[10px] font-bold ${colorTextBadge} ${colorBgBadge} border ${colorBorderBadge} px-2 py-0.5 rounded-full uppercase`}>
             {timeframe}
           </span>
         </div>
@@ -99,13 +87,13 @@ const MoverListCard: React.FC<MoverListCardProps> = ({
           </div>
         ) : items.length > 0 ? (
           <div className="space-y-2">
-            {items.map((item: MarketMoverItem, idx: number) => {
+            {items.map((item: MoverItem, idx: number) => {
               const isHighlight = isGainers ? item.changePct >= 0 : item.changePct < 0;
               return (
                 <div
-                  key={(item.resource || item.name || "")}
-                  onClick={() => onSelectResource && onSelectResource((item.resource || item.name || ""), item)}
-                  className={`bg-slate-900/60 hover:bg-slate-900/90 border border-slate-800/80 hover:border-${colorClass}-500/50 rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition group shadow-sm`}
+                  key={(item.name || "")}
+                  onClick={() => onSelectResource && onSelectResource((item.name || ""), item)}
+                  className={`bg-slate-900/60 hover:bg-slate-900/90 border border-slate-800/80 ${hoverCardBorder} rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition group shadow-sm`}
                   title={t('clickToViewChart', currentLang)}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -113,17 +101,17 @@ const MoverListCard: React.FC<MoverListCardProps> = ({
                     <img
                       src={item.image || (item.isNft
                         ? (item.collection === 'wearables'
-                            ? `https://sunflower-land.com/play/wearables/images/${item.nft_id || item.id}.png`
-                            : `https://sunflower-land.com/play/erc1155/images/${item.nft_id || item.id}.webp`)
-                        : getItemIcon((item.resource || item.name || "")))}
-                      alt={(item.resource || item.name || "")}
+                            ? `https://sunflower-land.com/play/wearables/images/${item.nft_id}.png`
+                            : `https://sunflower-land.com/play/erc1155/images/${item.nft_id}.webp`)
+                        : getItemIcon((item.name || "")))}
+                      alt={(item.name || "")}
                       className="w-8 h-8 object-contain drop-shadow image-rendering-pixelated shrink-0"
                       onError={handleImageError}
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-xs md:text-sm font-bold text-slate-100 group-hover:text-${colorClass}-300 transition truncate`}>
-                          {(item.resource || item.name || "")}
+                        <span className={`text-xs md:text-sm font-bold text-slate-100 ${colorHoverText} transition truncate`}>
+                          {(item.name || "")}
                         </span>
                         {item.boost_text && (
                           <span className="text-[9px] sm:text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 max-w-[110px] truncate block" title={item.boost_text}>
@@ -133,10 +121,10 @@ const MoverListCard: React.FC<MoverListCardProps> = ({
                       </div>
                       <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-slate-200">
-                          {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPrice)} FLOWER
+                          {item.isNft ? `${t('floorPrice', currentLang)}: ` : ''}{formatarPreco(item.currentPriceSfl)} FLOWER
                         </span>
                         <span className="text-slate-500 text-[10px]">
-                          ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePrice)})
+                          ({t('basePriceLabel', currentLang)} {formatarPreco(item.basePriceSfl)})
                         </span>
                       </div>
                     </div>
@@ -145,7 +133,7 @@ const MoverListCard: React.FC<MoverListCardProps> = ({
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
                     <span className={`text-xs md:text-sm font-black px-2.5 py-1 rounded-lg border flex items-center gap-0.5 shadow-sm ${
                       isHighlight
-                        ? `text-${colorClass}-400 bg-${colorClass}-500/15 border-${colorClass}-500/30`
+                        ? `${colorText} ${colorBgBadge} ${colorBorderBadge}`
                         : 'text-slate-300 bg-slate-800 border-slate-700'
                     }`}>
                       {item.changePct > 0 ? '▲ +' : (item.changePct < 0 ? '▼ ' : '')}{item.changePct}%
@@ -196,7 +184,7 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
   };
 
   const [timeframe, setTimeframe] = useState('24h');
-  const [moversData, setMoversData] = useState<MarketMoversData>({ topGainers: [], topLosers: [], hasData: false });
+  const [moversData, setMoversData] = useState<MarketMoversResult>({ topGainers: [], topLosers: [], hasData: false });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -207,9 +195,9 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
       try {
         let data = null;
         if (activeCategory === 'power_ups') {
-          data = await fetchNftMarketMovers((nftMarketData?.list || []) as any[], timeframe) as any;
+          data = await fetchNftMarketMovers((nftMarketData?.list || []) as any[], timeframe as any) as any;
         } else {
-          data = await fetchMarketMovers(marketData, timeframe);
+          data = await fetchMarketMovers(marketData as any, timeframe as any);
         }
 
         if (isMounted) {
@@ -231,7 +219,7 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
   }, [marketData, nftMarketData, timeframe, activeCategory]);
 
   
-  const { topGainers = [], topLosers = [] } = moversData;
+  const { topGainers = [], topLosers = [], actualTimeframeLabel } = moversData;
 
   const renderRankBadge = (index: number) => {
     const colors = [
@@ -253,7 +241,7 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-lg">📈</span>
+              
               <h2 className="text-base md:text-lg font-bold text-slate-100">
                 {t('moversTitle', currentLang)}
               </h2>
@@ -319,8 +307,8 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
                 {/* CARD 1: 3 RECURSOS QUE MAIS VALORIZARAM */}
         <MoverListCard
           title={t('topGainersTitle', currentLang)}
-          emoji="🚀"
-          timeframe={timeframe}
+          
+          timeframe={actualTimeframeLabel || timeframe}
           items={topGainers}
           loading={loading}
           type="gainers"
@@ -332,8 +320,8 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
         
         <MoverListCard
           title={t('topLosersTitle', currentLang)}
-          emoji="📉"
-          timeframe={timeframe}
+          
+          timeframe={actualTimeframeLabel || timeframe}
           items={topLosers}
           loading={loading}
           type="losers"

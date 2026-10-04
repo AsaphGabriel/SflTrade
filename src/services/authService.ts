@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from './supabase';
 
 /**
@@ -7,7 +6,7 @@ import { supabase } from './supabase';
 export async function signUp({ email, password }: { email: string; password?: string }) {
   const { data, error } = await supabase.auth.signUp({
     email,
-    password,
+    password: password || "",
   });
   if (error) throw error;
   return data;
@@ -19,7 +18,7 @@ export async function signUp({ email, password }: { email: string; password?: st
 export async function signInWithPassword({ email, password }: { email: string; password?: string }) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    password,
+    password: password || "",
   });
   if (error) throw error;
   return data;

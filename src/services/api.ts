@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Key constants and default configuration
 import { getBumpkinLevel } from '../utils/bumpkinLevel';
 

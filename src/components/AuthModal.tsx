@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { User } from '@supabase/supabase-js';
 import React, { useState } from 'react';
 import { signUp, signInWithPassword, signInWithOtp, signOut } from '../services/authService';
@@ -140,7 +139,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, user, currentLan
           {user ? (
             <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              {t('authStatusConnected', currentLang, { email: user.email })}
+              {t('authStatusConnected', currentLang, { email: user.email as string })}
             </span>
           ) : (
             <span className="text-amber-300/80 font-medium flex items-center gap-1.5">

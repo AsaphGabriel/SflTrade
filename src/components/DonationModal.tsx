@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { t } from '../i18n';
 
@@ -20,7 +19,7 @@ export default function DonationModal({ isOpen, onClose, currentLang = 'en' }: D
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    const handleKeyDown = (e: React.KeyboardEvent | React.MouseEvent) => {
+    const handleKeyDown = (e: any) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);

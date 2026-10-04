@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { User } from '@supabase/supabase-js';
 import React, { useState, useMemo } from 'react';
 import { t } from '../i18n';
@@ -67,47 +66,7 @@ export function getItemCategory(name: string) {
 }
 
 // Ícones / Emojis por Item
-export function getItemEmoji(name: string) {
-  if (!name) return '📦';
-  const n = name.toLowerCase();
-  if (n.includes('sunflower')) return '🌻';
-  if (n.includes('potato')) return '🥔';
-  if (n.includes('pumpkin')) return '🎃';
-  if (n.includes('carrot')) return '🥕';
-  if (n.includes('cabbage')) return '🥬';
-  if (n.includes('beetroot')) return '🧅';
-  if (n.includes('cauliflower')) return '🥦';
-  if (n.includes('parsnip')) return '🥕';
-  if (n.includes('wheat')) return '🌾';
-  if (n.includes('kale')) return '🥬';
-  if (n.includes('apple')) return '🍎';
-  if (n.includes('blueberry')) return '🫐';
-  if (n.includes('orange')) return '🍊';
-  if (n.includes('eggplant')) return '🍆';
-  if (n.includes('corn')) return '🌽';
-  if (n.includes('banana')) return '🍌';
-  if (n.includes('grape')) return '🍇';
-  if (n.includes('rice')) return '🌾';
-  if (n.includes('tomato')) return '🍅';
-  if (n.includes('lemon')) return '🍋';
-  if (n.includes('wood')) return '🪵';
-  if (n.includes('stone')) return '🪨';
-  if (n.includes('iron')) return '⚙️';
-  if (n.includes('gold')) return '🪙';
-  if (n.includes('egg')) return '🥚';
-  if (n.includes('honey')) return '🍯';
-  if (n.includes('leather')) return '🛡️';
-  if (n.includes('wool')) return '🧶';
-  if (n.includes('milk')) return '🥛';
-  if (n.includes('feather')) return '🪶';
-  if (n.includes('emblem')) return '🛡️';
-  if (n.includes('seed')) return '🌱';
-  if (n.includes('axe')) return '🪓';
-  if (n.includes('pickaxe')) return '⛏️';
-  if (n.includes('pass')) return '👑';
-  if (n.includes('gem')) return '💎';
-  return '📦';
-}
+
 
 const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" }: { label: string; value: string | number; subValue?: React.ReactNode; icon: string; colorClass?: string }) => (
   <div className="bg-slate-900/90 rounded-xl p-3.5 border border-slate-700/60 shadow-md flex flex-col justify-between hover:border-slate-600 transition">
@@ -345,8 +304,7 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
           category,
           isNft,
           boostText,
-          nftImage,
-          emoji: getItemEmoji(canonicalName)
+          nftImage
         });
       }
     });
@@ -434,7 +392,7 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
               {user ? (
                 <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  {t('authStatusConnected', currentLang, { email: user.email })}
+                  {t('authStatusConnected', currentLang, { email: user.email as string })}
                 </span>
               ) : (
                 <span className="text-slate-400 flex items-center gap-1.5">
@@ -448,7 +406,7 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
           <div className="flex items-center gap-2 w-full md:w-auto">
             {user && (
               <button
-                onClick={() => syncCloud(user, true)}
+                onClick={() => syncCloud(user as any, true)}
                 disabled={isSyncing}
                 className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-1"
               >

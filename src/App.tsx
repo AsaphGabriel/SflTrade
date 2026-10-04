@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import useMarketData from './hooks/useMarketData';
 import Header from './components/Header';
@@ -8,7 +7,8 @@ import TransactionModal from './components/TransactionModal';
 import AuthModal from './components/AuthModal';
 import BottomNav from './components/BottomNav';
 import FarmDashboard from './components/FarmDashboard';
-import MarketMoversCards, { MarketMoverItem } from './components/MarketMoversCards';
+import MarketMoversCards from './components/MarketMoversCards';
+import { MoverItem } from './utils/marketMath';
 import PriceChartModal from './components/PriceChartModal';
 import DonationModal from './components/DonationModal';
 
@@ -19,8 +19,8 @@ const App = () => {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [modalResource, setModalResource] = useState('');
-  const [modalResourceMeta, setModalResourceMeta] = useState<MarketMoverItem | null>(null);
-  const [selectedChartResource, setSelectedChartResource] = useState<MarketMoverItem | null>(null);
+  const [modalResourceMeta, setModalResourceMeta] = useState<MoverItem | null>(null);
+  const [selectedChartResource, setSelectedChartResource] = useState<MoverItem | null>(null);
   
   const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
   const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
@@ -114,13 +114,13 @@ const App = () => {
 
   const openBuy = (recurso: string = '', meta: { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number; name?: string; resource?: string } | null = null) => {
     setModalResource(recurso);
-    setModalResourceMeta(meta as MarketMoverItem);
+    setModalResourceMeta(meta as MoverItem);
     setIsBuyModalOpen(true);
   };
 
   const openSell = (recurso: string = '', meta: { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number; name?: string; resource?: string } | null = null) => {
     setModalResource(recurso);
-    setModalResourceMeta(meta as MarketMoverItem);
+    setModalResourceMeta(meta as MoverItem);
     setIsSellModalOpen(true);
   };
 
@@ -159,7 +159,7 @@ const App = () => {
           onRefresh={refreshData}
           onOpenBuy={() => openBuy()}
           onOpenSell={() => openSell()}
-          onSearchFarm={searchFarm}
+          onSearchFarm={searchFarm as any}
           updatedTimeText={updatedTimeText}
           savedFarmId={farmId}
           user={user}
@@ -175,7 +175,7 @@ const App = () => {
                 transactions={transactions}
                 currentLang={currentLang} 
                 selectedCurrency={selectedCurrency}
-                onUpdateCustomAvgPrice={updateCustomAvgPrice}
+                onUpdateCustomAvgPrice={updateCustomAvgPrice as any}
                 onUpdateTransactionPrice={updateTransactionPrice}
                 onOpenSell={openSell} 
               />
@@ -185,7 +185,7 @@ const App = () => {
                 currentLang={currentLang}
                 activeCategory={activeMoversCategory}
                 onCategoryChange={handleMoversCategoryChange}
-                onSelectResource={(res: string, meta: { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number; name?: string; resource?: string } | null) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res)}
+                onSelectResource={(res: string, meta: { unitPrice?: number; qty?: number; nft_id?: string | number; boost_text?: string; isNft?: boolean; floor?: number; name?: string; resource?: string } | null) => setSelectedChartResource(meta ? { ...meta, name: meta.name || meta.resource || res, resource: meta.resource || meta.name || res } : res as any)}
               />
               <ResourceGrid 
                 data={marketData} 
@@ -216,9 +216,9 @@ const App = () => {
               setApiKey={setApiKey}
               onSaveProfile={handleSaveProfile}
               profileMsg={profileMsg}
-              searchFarm={searchFarm}
+              searchFarm={searchFarm as any}
               user={user}
-              syncCloud={syncCloud}
+              syncCloud={syncCloud as any}
               isSyncing={isSyncing}
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
               onNavigateTab={setActiveTab}
@@ -240,9 +240,9 @@ const App = () => {
               setApiKey={setApiKey}
               onSaveProfile={handleSaveProfile}
               profileMsg={profileMsg}
-              searchFarm={searchFarm}
+              searchFarm={searchFarm as any}
               user={user}
-              syncCloud={syncCloud}
+              syncCloud={syncCloud as any}
               isSyncing={isSyncing}
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
               onNavigateTab={setActiveTab}
@@ -288,7 +288,7 @@ const App = () => {
           onClose={() => setIsAuthModalOpen(false)}
           user={user}
           currentLang={currentLang}
-          onAuthChange={(updatedUser: { id: string; email?: string } | null) => setUser(updatedUser)}
+          onAuthChange={(updatedUser: { id: string; email?: string } | null) => setUser(updatedUser as any)}
           onSyncCloud={syncCloud}
           isSyncing={isSyncing}
         />
