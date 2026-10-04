@@ -1,3 +1,4 @@
+import Icon from "./Icon";
 import React, { useState, useEffect } from 'react';
 import { t } from '../i18n';
 import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
@@ -379,7 +380,8 @@ const PositionDetailsModal: React.FC<PositionDetailsModalProps> = ({
             <div className="flex justify-between items-center">
              <div>
               <div className="flex items-center gap-1.5">
-               <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
+               <span className={`flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
+                <Icon name={isBuy ? 'buy' : 'sell'} className="w-2.5 h-2.5" />
                 {isBuy ? (currentLang === 'pt' ? 'Compra' : 'Buy') : (currentLang === 'pt' ? 'Venda' : 'Sell')}
                </span>
                <span className="text-slate-200 font-bold">{formatarPreco(tx.qty)} un</span>

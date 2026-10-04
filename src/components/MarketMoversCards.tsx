@@ -1,3 +1,4 @@
+import Icon from "./Icon";
 import React, { useState, useEffect } from 'react';
 import { fetchMarketMovers, fetchNftMarketMovers } from '../services/historyService';
 import { MoverItem, MarketMoversResult } from '../utils/marketMath';
@@ -69,7 +70,7 @@ const MoverListCard: React.FC<MoverListCardProps> = ({
    <div>
     <div className="flex items-center justify-between border-b border-slate-700/50 pb-2.5 mb-3">
      <div className="flex items-center gap-2">
-      
+      <Icon name={isGainers ? 'buy' : 'sell'} className={`w-4 h-4 ${colorText}`} />
       <h3 className={`text-sm font-bold ${colorText} tracking-wide`}>
        {title}
       </h3>
@@ -138,8 +139,8 @@ const MoverListCard: React.FC<MoverListCardProps> = ({
           }`}>
            {item.changePct > 0 ? '▲ +' : (item.changePct < 0 ? '▼ ' : '')}{item.changePct}%
           </span>
-          <span className="text-xs text-slate-500 group-hover:text-amber-400 transition hidden sm:inline">
-           
+          <span className="text-xs text-slate-500 group-hover:text-amber-400 transition hidden sm:inline flex items-center">
+           <Icon name="chart" className="w-3 h-3" />
           </span>
          </div>
         </div>
@@ -246,7 +247,7 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
      <div>
       <div className="flex items-center gap-2">
-       
+       <Icon name="chart" className="w-5 h-5 text-amber-400" />
        <h2 className="text-base md:text-lg font-bold text-slate-100">
         {t('moversTitle', currentLang)}
        </h2>

@@ -1,3 +1,4 @@
+import Icon from "./Icon";
 import { User } from '@supabase/supabase-js';
 import React, { useState } from 'react';
 import { t } from '../i18n';
@@ -148,7 +149,7 @@ const Header: React.FC<HeaderProps> = ({
 
      {/* Seletor de Idioma */}
      <div className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
-      <span className="text-xs"></span>
+      <Icon name="globe" className="w-4 h-4 text-slate-400" />
       <select 
        value={currentLang} 
        onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onLangChange?.(e.target.value)} 
@@ -161,7 +162,7 @@ const Header: React.FC<HeaderProps> = ({
 
      {/* Seletor de Ilha */}
      <div className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
-      <span className="text-xs"></span>
+      <Icon name={selectedIsland === 'volcano' ? 'volcano' : selectedIsland === 'petal' ? 'flower' : selectedIsland === 'desert' ? 'sun' : selectedIsland === 'ascension' ? 'cloud' : 'island'} className="w-4 h-4 text-amber-400" />
       <select 
        value={selectedIsland} 
        onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onIslandChange?.(e.target.value)} 
@@ -199,9 +200,11 @@ const Header: React.FC<HeaderProps> = ({
      {/* Botões de Ação */}
      <div className="flex flex-wrap items-center gap-1.5 ml-auto lg:ml-0">
       <button onClick={() => onOpenBuy?.('')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
+       <Icon name="buy" className="w-4 h-4 text-emerald-100" />
        {t('btnBuy', currentLang)}
       </button>
       <button onClick={() => onOpenSell?.('')} className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
+       <Icon name="sell" className="w-4 h-4 text-rose-100" />
        {t('btnSell', currentLang)}
       </button>
       <button onClick={onRefresh} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-3 rounded-xl text-xs transition cursor-pointer">

@@ -26,8 +26,8 @@ serve(async (req) => {
     // Get the API key from the incoming request (it comes from the client)
     const apiKey = req.headers.get('x-api-key') || ''
     
-    // Validate target URL (only allow sunflower-land API)
-    if (!targetUrl.startsWith('https://api.sunflower-land.com/')) {
+    // Validate target URL (only allow sunflower-land API and sfl.world aggregator)
+    if (!targetUrl.startsWith('https://api.sunflower-land.com/') && !targetUrl.startsWith('https://sfl.world/')) {
       return new Response(JSON.stringify({ error: 'Invalid target URL' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

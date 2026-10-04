@@ -1,3 +1,4 @@
+import Icon from "./Icon";
 import { NftItem } from "../services/historyService";
 
 import React, { useState } from 'react';
@@ -356,8 +357,9 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
                               e.stopPropagation();
                               if (onOpenBuy) onOpenBuy(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
-                            className="btn-buy-card"
+                            className="btn-buy-card flex items-center justify-center gap-1"
                           >
+                            <Icon name="buy" className="w-3 h-3 text-emerald-300" />
                             {t('cardBuy', currentLang)}
                           </button>
                           <button
@@ -365,8 +367,9 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
                               e.stopPropagation();
                               if (onOpenSell) onOpenSell(nft.displayName || nft.name, { isNft: true, nft_id: nft.id, unitPrice: nft.floor, boost_text: nft.boost_text });
                             }}
-                            className="btn-sell-card"
+                            className="btn-sell-card flex items-center justify-center gap-1"
                           >
+                            <Icon name="sell" className="w-3 h-3 text-rose-300" />
                             {t('cardSell', currentLang)}
                           </button>
                         </div>
@@ -433,8 +436,9 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
                             e.stopPropagation();
                             if (onOpenBuy) onOpenBuy(item);
                           }}
-                          className="btn-buy-card"
+                          className="btn-buy-card flex items-center justify-center gap-1"
                         >
+                          <Icon name="buy" className="w-3 h-3 text-emerald-300" />
                           {t('cardBuy', currentLang)}
                         </button>
                         <button
@@ -442,8 +446,9 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
                             e.stopPropagation();
                             if (onOpenSell) onOpenSell(item);
                           }}
-                          className="btn-sell-card"
+                          className="btn-sell-card flex items-center justify-center gap-1"
                         >
+                          <Icon name="sell" className="w-3 h-3 text-rose-300" />
                           {t('cardSell', currentLang)}
                         </button>
                       </div>
