@@ -80,7 +80,7 @@ export const PriceChartSVG: React.FC<PriceChartSVGProps> = ({
 
   return (
     <div className="relative w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-56 sm:h-72 overflow-visible">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto max-h-[60vh] overflow-visible">
         <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
         <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
         <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />

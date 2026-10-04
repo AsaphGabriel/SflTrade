@@ -103,7 +103,17 @@ if (isMounted) {
     .map((d) => Number(d?.price_sfl ?? d?.avg_price_sfl ?? d?.price_usd ?? d?.price ?? 0))
     .filter((p) => !isNaN(p) && isFinite(p) && p > 0);
 
-  const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
+  let livePrice = 0;
+  if (isToken) {
+    const fiatMult = (flowerPrice && flowerPriceUsd) ? (flowerPrice / flowerPriceUsd) : 1;
+    livePrice = flowerPriceUsd ? flowerPriceUsd * fiatMult : 0;
+  } else if (isNftObj) {
+    livePrice = targetFloor;
+  } else {
+    livePrice = currentPriceRef;
+  }
+
+  const latestPrice = livePrice > 0 ? livePrice : (prices.length > 0 ? prices[prices.length - 1] : 0);
   const firstPrice = prices.length > 0 ? prices[0] : 0;
   const avgPeriodPrice = prices.length > 0
     ? prices.reduce((acc, curr) => acc + curr, 0) / prices.length
@@ -131,9 +141,9 @@ if (isMounted) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center px-4 pt-4 pb-28 z-[60] animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl flex flex-col max-h-full min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center px-2 sm:px-4 pt-4 pb-24 sm:pb-28 z-[60] animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full shadow-2xl flex flex-col max-h-full min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
         
         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
@@ -213,9 +223,9 @@ if (isMounted) {
           </div>
         </div>
 
-        <div className="relative bg-slate-950/70 rounded-2xl p-2 border border-slate-800 flex flex-col items-center">
+        <div className="relative bg-slate-950/70 rounded-2xl p-2 sm:p-4 border border-slate-800 flex flex-col items-center">
           {loading ? (
-            <div className="h-56 sm:h-72 flex items-center justify-center text-xs text-amber-400 animate-pulse">
+            <div className="w-full aspect-[8/3] min-h-[200px] flex items-center justify-center text-xs text-amber-400 animate-pulse">
               ... {currentLang === 'pt' ? 'Carregando histórico...' : 'Loading history...'}
             </div>
           ) : (

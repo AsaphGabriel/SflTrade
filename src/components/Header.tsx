@@ -5,294 +5,294 @@ import PriceChartModal from './PriceChartModal';
 
 
 export interface HeaderProps {
-  currentLang?: string;
-  setCurrentLang?: (lang: string) => void;
-  user?: User | null;
-  onOpenAuthModal?: () => void;
-  onOpenDonationModal?: () => void;
-  flowerPrice?: number;
-  flowerPriceUsd?: number;
-  effectiveTax?: number;
-  selectedIsland?: string;
-  onIslandChange?: (val: string) => void;
-  isVip?: boolean;
-  onVipToggle?: (val: boolean) => void;
-  isShrine?: boolean;
-  onShrineToggle?: (val: boolean) => void;
-  onLangChange?: (val: string) => void;
-  selectedCurrency?: string;
-  onCurrencyChange?: (val: string) => void;
-  onRefresh?: () => void;
-  onOpenBuy?: (name?: string) => void;
-  onOpenSell?: (name?: string) => void;
-  onSearchFarm?: (query?: string, apiKeyOverride?: string, forceRefresh?: boolean) => void | Promise<void>;
-  updatedTimeText?: string;
-  savedFarmId?: string;
-  onOpenDonation?: () => void;
+ currentLang?: string;
+ setCurrentLang?: (lang: string) => void;
+ user?: User | null;
+ onOpenAuthModal?: () => void;
+ onOpenDonationModal?: () => void;
+ flowerPrice?: number;
+ flowerPriceUsd?: number;
+ effectiveTax?: number;
+ selectedIsland?: string;
+ onIslandChange?: (val: string) => void;
+ isVip?: boolean;
+ onVipToggle?: (val: boolean) => void;
+ isShrine?: boolean;
+ onShrineToggle?: (val: boolean) => void;
+ onLangChange?: (val: string) => void;
+ selectedCurrency?: string;
+ onCurrencyChange?: (val: string) => void;
+ onRefresh?: () => void;
+ onOpenBuy?: (name?: string) => void;
+ onOpenSell?: (name?: string) => void;
+ onSearchFarm?: (query?: string, apiKeyOverride?: string, forceRefresh?: boolean) => void | Promise<void>;
+ updatedTimeText?: string;
+ savedFarmId?: string;
+ onOpenDonation?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
-  flowerPrice,
-  flowerPriceUsd,
-  effectiveTax,
-  selectedIsland,
-  onIslandChange,
-  isVip,
-  onVipToggle,
-  isShrine,
-  onShrineToggle,
-  currentLang,
-  onLangChange,
-  selectedCurrency,
-  onCurrencyChange,
-  onRefresh,
-  onOpenBuy,
-  onOpenSell,
-  onSearchFarm,
-  updatedTimeText = "• Updated just now",
-  savedFarmId,
-  user,
-  onOpenAuthModal,
-  onOpenDonation
+ flowerPrice,
+ flowerPriceUsd,
+ effectiveTax,
+ selectedIsland,
+ onIslandChange,
+ isVip,
+ onVipToggle,
+ isShrine,
+ onShrineToggle,
+ currentLang,
+ onLangChange,
+ selectedCurrency,
+ onCurrencyChange,
+ onRefresh,
+ onOpenBuy,
+ onOpenSell,
+ onSearchFarm,
+ updatedTimeText = "• Updated just now",
+ savedFarmId,
+ user,
+ onOpenAuthModal,
+ onOpenDonation
 }) => {
-  const [farmSearch, setFarmSearch] = useState('');
-  const [convQty, setConvQty] = useState('');
-  const [showTokenChart, setShowTokenChart] = useState(false);
+ const [farmSearch, setFarmSearch] = useState('');
+ const [convQty, setConvQty] = useState('');
+ const [showTokenChart, setShowTokenChart] = useState(false);
 
-  // Dispara a busca quando o usuário aperta Enter ou clica na lupa
-  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (onSearchFarm && farmSearch.trim() !== '') {
-      onSearchFarm?.(farmSearch.trim());
-    }
-  };
+ // Dispara a busca quando o usuário aperta Enter ou clica na lupa
+ const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  if (onSearchFarm && farmSearch.trim() !== '') {
+   onSearchFarm?.(farmSearch.trim());
+  }
+ };
 
-  // Calcula o valor do conversor rápido
-    const converterResultado = (parseFloat(convQty || "0") * (flowerPrice || 0)).toFixed(4);
-  
-  // Símbolo da moeda selecionada
-  const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
-    const sym = symbolMap[selectedCurrency as keyof typeof symbolMap] || '$';
+ // Calcula o valor do conversor rápido
+  const converterResultado = (parseFloat(convQty || "0") * (flowerPrice || 0)).toFixed(4);
+ 
+ // Símbolo da moeda selecionada
+ const symbolMap = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
+  const sym = symbolMap[selectedCurrency as keyof typeof symbolMap] || '$';
 
-  return (
-    <>
-      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-amber-400 flex items-center gap-2">
-              <img 
-                src="https://sfl.world/img/source/Sunflower.png" 
-                alt="Sunflower" 
-                className="w-6 h-6 object-contain align-middle"
-              />
-              SFL Tracker
-            </h1>
-            
-            {/* Barra de Pesquisa de Farm ID */}
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-1 bg-cardbg px-2 py-1 rounded-xl border border-slate-700">
-              <input 
-                type="text" 
-                value={farmSearch}
-                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFarmSearch(e.target.value)}
-                placeholder={savedFarmId || "Farm ID / Nick"}
-                className="w-24 bg-transparent text-xs text-white focus:outline-none placeholder-slate-500"
-              />
-              <button type="submit" className="text-amber-400 hover:text-amber-300" aria-label="Buscar">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-            </form>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2 mt-0.5">
-            <p className="text-xs text-slate-400">{t('subTitle', currentLang)}</p>
-            <span className="text-[11px] text-slate-500 font-mono italic">
-              {updatedTimeText}
-            </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400 font-semibold" title="Versao da aplicacao">
-              v{__APP_VERSION__}
-            </span>
-            {onOpenDonation && (
-              <button
-                onClick={onOpenDonation}
-                className="text-[11px] font-medium text-amber-400/90 hover:text-amber-300 underline underline-offset-2 transition ml-1 cursor-pointer"
-              >
-                {t('donatePrompt', currentLang)}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Controles do Header */}
-        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-          
-          {/* Status de Autenticação / Botão de Login Cloud */}
-          <button
-            onClick={onOpenAuthModal}
-            className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 hover:border-amber-400/50 transition cursor-pointer text-xs font-semibold"
-            title={user ? `Conectado como ${user.email as string}` : 'Clique para entrar ou cadastrar'}
-          >
-            {user ? (
-              <span className="text-emerald-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="truncate max-w-[110px]">{user.email as string}</span>
-              </span>
-            ) : (
-              <span className="text-slate-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-500"></span>
-                <span>☁️ {currentLang === 'pt' ? 'Entrar' : 'Sign In'}</span>
-              </span>
-            )}
-          </button>
-
-          {/* Seletor de Idioma */}
-          <div className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
-            <span className="text-xs">🌐</span>
-            <select 
-              value={currentLang} 
-              onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onLangChange?.(e.target.value)} 
-              className="bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer"
-            >
-              <option value="en" className="bg-slate-900 text-white">EN</option>
-              <option value="pt" className="bg-slate-900 text-white">PT</option>
-            </select>
-          </div>
-
-          {/* Seletor de Ilha */}
-          <div className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
-            <span className="text-xs">🏝️</span>
-            <select 
-              value={selectedIsland} 
-              onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onIslandChange?.(e.target.value)} 
-              className="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer"
-            >
-              <option value="basic" className="bg-slate-900 text-slate-400">{t('islandBasic', currentLang)}</option>
-              <option value="petal" className="bg-slate-900 text-white">{t('islandPetal', currentLang)}</option>
-              <option value="desert" className="bg-slate-900 text-white">{t('islandDesert', currentLang)}</option>
-              <option value="volcano" className="bg-slate-900 text-white">{t('islandVolcano', currentLang)}</option>
-              <option value="ascension" className="bg-slate-900 text-slate-500" disabled>{t('islandAscension', currentLang)}</option>
-            </select>
-          </div>
-
-          {/* Checkboxes de Taxa */}
-          <label className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 cursor-pointer select-none hover:border-amber-500/50 transition">
-            <input 
-              type="checkbox" 
-              checked={isVip} 
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onVipToggle?.(e.target.checked)} 
-              className="accent-amber-400 rounded cursor-pointer"
-            />
-            <span className="text-xs font-bold text-amber-300 flex items-center gap-1">👑 <span>{t('labelVip', currentLang)}</span></span>
-          </label>
-
-          <label className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 cursor-pointer select-none hover:border-emerald-500/50 transition">
-            <input 
-              type="checkbox" 
-              checked={isShrine} 
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onShrineToggle?.(e.target.checked)} 
-              className="accent-emerald-400 rounded cursor-pointer"
-            />
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">⛩️ <span>{t('labelShrine', currentLang)}</span></span>
-          </label>
-
-          {/* Botões de Ação */}
-          <div className="flex flex-wrap items-center gap-1.5 ml-auto lg:ml-0">
-            <button onClick={() => onOpenBuy?.('')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
-              {t('btnBuy', currentLang)}
-            </button>
-            <button onClick={() => onOpenSell?.('')} className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
-              {t('btnSell', currentLang)}
-            </button>
-            <button onClick={onRefresh} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-3 rounded-xl text-xs transition cursor-pointer">
-              {t('btnRefresh', currentLang)}
-            </button>
-            {onOpenDonation && (
-              <button 
-                onClick={onOpenDonation} 
-                className="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 hover:border-amber-400 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer"
-                title={t('donateTooltip', currentLang)}
-              >
-                <svg className="w-3.5 h-3.5 text-amber-400 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                <span>{t('btnDonate', currentLang)}</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Cotação SFL & Conversor Rápido */}
-      <div className="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-          <div className="flex-1">
-            <div className="text-xs text-slate-400 uppercase font-semibold tracking-wider flex items-center gap-1.5">
-              <span>{t('sflQuoteTitle', currentLang)}</span>
-              <button
-                onClick={() => setShowTokenChart(true)}
-                title={currentLang === 'pt' ? 'Ver gráfico de histórico do $FLOWER' : 'View $FLOWER price chart'}
-                className="text-amber-400 hover:text-amber-300 text-xs transition bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700"
-              >
-                📊
-              </button>
-            </div>
-            <div className="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1 cursor-pointer" onClick={() => setShowTokenChart(true)}>
-              {sym} {(flowerPrice || 0).toFixed(4)} {(selectedCurrency || "USD").toUpperCase()}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* O SELETOR DE MOEDA VOLTOU! */}
-            <select 
-              value={selectedCurrency} 
-              onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onCurrencyChange?.(e.target.value)} 
-              className="bg-slate-900 border border-slate-700 text-white rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value="usd">USD ($)</option>
-              <option value="brl">BRL (R$)</option>
-              <option value="eur">EUR (€)</option>
-              <option value="sgd">SGD (S$)</option>
-              <option value="pol">POL</option>
-            </select>
-            
-            <div className="text-right text-xs text-slate-400 ml-2">
-              <span>{t('activeTaxLabel', currentLang)}</span> 
-              <span className={`font-bold text-sm block md:inline font-mono ${selectedIsland === 'basic' ? 'text-slate-400' : 'text-amber-400'}`}>
-                {selectedIsland === 'basic' ? ' N/A' : ` ${((effectiveTax || 0) * 100).toFixed(1)}%`}
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Quick Converter */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="text-xs text-slate-400 whitespace-nowrap">$FLOWER Qty:</label>
-          <input 
-            type="number" 
-            value={convQty}
-            onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setConvQty(e.target.value)}
-            placeholder="0" 
-            className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400"
-          />
-          <span className="text-xs text-slate-400">→</span>
-          <span className="text-xs font-mono text-amber-400">{sym} {converterResultado}</span>
-        </div>
-      </div>
-
-      {/* Modal de Gráfico do Token $FLOWER */}
-      {showTokenChart && (
-        <PriceChartModal
-          isToken={true}
-          flowerPriceUsd={flowerPriceUsd}
-          flowerPrice={flowerPrice}
-          selectedCurrency={selectedCurrency}
-          currentLang={currentLang}
-          onClose={() => setShowTokenChart(false)}
-        />
+ return (
+  <>
+   <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
+    <div>
+     <div className="flex items-center gap-2">
+      <h1 className="text-2xl font-bold text-amber-400 flex items-center gap-2">
+       <img 
+        src="https://sfl.world/img/source/Sunflower.png" 
+        alt="Sunflower" 
+        className="w-6 h-6 object-contain align-middle"
+       />
+       SFL Tracker
+      </h1>
+      
+      {/* Barra de Pesquisa de Farm ID */}
+      <form onSubmit={handleSearchSubmit} className="flex items-center gap-1 bg-cardbg px-2 py-1 rounded-xl border border-slate-700">
+       <input 
+        type="text" 
+        value={farmSearch}
+        onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFarmSearch(e.target.value)}
+        placeholder={savedFarmId || "Farm ID / Nick"}
+        className="w-24 bg-transparent text-xs text-white focus:outline-none placeholder-slate-500"
+       />
+       <button type="submit" className="text-amber-400 hover:text-amber-300" aria-label="Buscar">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+       </button>
+      </form>
+     </div>
+     
+     <div className="flex flex-wrap items-center gap-2 mt-0.5">
+      <p className="text-xs text-slate-400">{t('subTitle', currentLang)}</p>
+      <span className="text-[11px] text-slate-500 font-mono italic">
+       {updatedTimeText}
+      </span>
+      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400 font-semibold" title="Versao da aplicacao">
+       v{__APP_VERSION__}
+      </span>
+      {onOpenDonation && (
+       <button
+        onClick={onOpenDonation}
+        className="text-[11px] font-medium text-amber-400/90 hover:text-amber-300 underline underline-offset-2 transition ml-1 cursor-pointer"
+       >
+        {t('donatePrompt', currentLang)}
+       </button>
       )}
-    </>
-  );
+     </div>
+    </div>
+
+    {/* Controles do Header */}
+    <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+     
+     {/* Status de Autenticação / Botão de Login Cloud */}
+     <button
+      onClick={onOpenAuthModal}
+      className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 hover:border-amber-400/50 transition cursor-pointer text-xs font-semibold"
+      title={user ? `Conectado como ${user.email as string}` : 'Clique para entrar ou cadastrar'}
+     >
+      {user ? (
+       <span className="text-emerald-400 flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span className="truncate max-w-[110px]">{user.email as string}</span>
+       </span>
+      ) : (
+       <span className="text-slate-300 flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+        <span> {currentLang === 'pt' ? 'Entrar' : 'Sign In'}</span>
+       </span>
+      )}
+     </button>
+
+     {/* Seletor de Idioma */}
+     <div className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
+      <span className="text-xs"></span>
+      <select 
+       value={currentLang} 
+       onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onLangChange?.(e.target.value)} 
+       className="bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer"
+      >
+       <option value="en" className="bg-slate-900 text-white">EN</option>
+       <option value="pt" className="bg-slate-900 text-white">PT</option>
+      </select>
+     </div>
+
+     {/* Seletor de Ilha */}
+     <div className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700">
+      <span className="text-xs"></span>
+      <select 
+       value={selectedIsland} 
+       onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onIslandChange?.(e.target.value)} 
+       className="bg-transparent text-amber-400 font-bold text-xs focus:outline-none cursor-pointer"
+      >
+       <option value="basic" className="bg-slate-900 text-slate-400">{t('islandBasic', currentLang)}</option>
+       <option value="petal" className="bg-slate-900 text-white">{t('islandPetal', currentLang)}</option>
+       <option value="desert" className="bg-slate-900 text-white">{t('islandDesert', currentLang)}</option>
+       <option value="volcano" className="bg-slate-900 text-white">{t('islandVolcano', currentLang)}</option>
+       <option value="ascension" className="bg-slate-900 text-slate-500" disabled>{t('islandAscension', currentLang)}</option>
+      </select>
+     </div>
+
+     {/* Checkboxes de Taxa */}
+     <label className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 cursor-pointer select-none hover:border-amber-500/50 transition">
+      <input 
+       type="checkbox" 
+       checked={isVip} 
+       onChange={(e: React.ChangeEvent<HTMLInputElement>) => onVipToggle?.(e.target.checked)} 
+       className="accent-amber-400 rounded cursor-pointer"
+      />
+      <span className="text-xs font-bold text-amber-300 flex items-center gap-1"> <span>{t('labelVip', currentLang)}</span></span>
+     </label>
+
+     <label className="flex items-center gap-1.5 bg-cardbg px-2.5 py-2 rounded-xl border border-slate-700 cursor-pointer select-none hover:border-emerald-500/50 transition">
+      <input 
+       type="checkbox" 
+       checked={isShrine} 
+       onChange={(e: React.ChangeEvent<HTMLInputElement>) => onShrineToggle?.(e.target.checked)} 
+       className="accent-emerald-400 rounded cursor-pointer"
+      />
+      <span className="text-xs font-bold text-emerald-400 flex items-center gap-1"> <span>{t('labelShrine', currentLang)}</span></span>
+     </label>
+
+     {/* Botões de Ação */}
+     <div className="flex flex-wrap items-center gap-1.5 ml-auto lg:ml-0">
+      <button onClick={() => onOpenBuy?.('')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-emerald-900/20">
+       {t('btnBuy', currentLang)}
+      </button>
+      <button onClick={() => onOpenSell?.('')} className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-rose-900/20">
+       {t('btnSell', currentLang)}
+      </button>
+      <button onClick={onRefresh} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-3 rounded-xl text-xs transition cursor-pointer">
+       {t('btnRefresh', currentLang)}
+      </button>
+      {onOpenDonation && (
+       <button 
+        onClick={onOpenDonation} 
+        className="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 hover:border-amber-400 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+        title={t('donateTooltip', currentLang)}
+       >
+        <svg className="w-3.5 h-3.5 text-amber-400 fill-current" viewBox="0 0 24 24">
+         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        <span>{t('btnDonate', currentLang)}</span>
+       </button>
+      )}
+     </div>
+    </div>
+   </header>
+
+   {/* Cotação SFL & Conversor Rápido */}
+   <div className="bg-cardbg rounded-2xl p-4 mb-6 shadow-lg border border-slate-800">
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+     <div className="flex-1">
+      <div className="text-xs text-slate-400 uppercase font-semibold tracking-wider flex items-center gap-1.5">
+       <span>{t('sflQuoteTitle', currentLang)}</span>
+       <button
+        onClick={() => setShowTokenChart(true)}
+        title={currentLang === 'pt' ? 'Ver gráfico de histórico do $FLOWER' : 'View $FLOWER price chart'}
+        className="text-amber-400 hover:text-amber-300 text-xs transition bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700"
+       >
+        
+       </button>
+      </div>
+      <div className="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1 cursor-pointer" onClick={() => setShowTokenChart(true)}>
+       {sym} {(flowerPrice || 0).toFixed(4)} {(selectedCurrency || "USD").toUpperCase()}
+      </div>
+     </div>
+     
+     <div className="flex items-center gap-2">
+      {/* O SELETOR DE MOEDA VOLTOU! */}
+      <select 
+       value={selectedCurrency} 
+       onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onCurrencyChange?.(e.target.value)} 
+       className="bg-slate-900 border border-slate-700 text-white rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-amber-400 cursor-pointer"
+      >
+       <option value="usd">USD ($)</option>
+       <option value="brl">BRL (R$)</option>
+       <option value="eur">EUR (€)</option>
+       <option value="sgd">SGD (S$)</option>
+       <option value="pol">POL</option>
+      </select>
+      
+      <div className="text-right text-xs text-slate-400 ml-2">
+       <span>{t('activeTaxLabel', currentLang)}</span> 
+       <span className={`font-bold text-sm block md:inline font-mono ${selectedIsland === 'basic' ? 'text-slate-400' : 'text-amber-400'}`}>
+        {selectedIsland === 'basic' ? ' N/A' : ` ${((effectiveTax || 0) * 100).toFixed(1)}%`}
+       </span>
+      </div>
+     </div>
+    </div>
+    
+    {/* Quick Converter */}
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+     <label className="text-xs text-slate-400 whitespace-nowrap">$FLOWER Qty:</label>
+     <input 
+      type="number" 
+      value={convQty}
+      onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setConvQty(e.target.value)}
+      placeholder="0" 
+      className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-400"
+     />
+     <span className="text-xs text-slate-400">→</span>
+     <span className="text-xs font-mono text-amber-400">{sym} {converterResultado}</span>
+    </div>
+   </div>
+
+   {/* Modal de Gráfico do Token $FLOWER */}
+   {showTokenChart && (
+    <PriceChartModal
+     isToken={true}
+     flowerPriceUsd={flowerPriceUsd}
+     flowerPrice={flowerPrice}
+     selectedCurrency={selectedCurrency}
+     currentLang={currentLang}
+     onClose={() => setShowTokenChart(false)}
+    />
+   )}
+  </>
+ );
 };
 
 export default Header;
