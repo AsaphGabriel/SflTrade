@@ -80,7 +80,7 @@ export const PriceChartSVG: React.FC<PriceChartSVGProps> = ({
 
   return (
     <div className="relative w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-52 overflow-visible">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-64 overflow-visible">
         <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
         <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
         <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#334155" strokeDasharray="3 3" opacity="0.4" />
@@ -104,16 +104,13 @@ export const PriceChartSVG: React.FC<PriceChartSVGProps> = ({
           if (isNaN(cx) || !isFinite(cx) || isNaN(cy) || !isFinite(cy)) return null;
 
           return (
-            <circle
-              key={i}
-              cx={cx}
-              cy={cy}
-              r="4.5"
-              className="fill-emerald-400 hover:r-6.5 hover:fill-amber-400 transition-all cursor-pointer"
+            <g key={i}
               onMouseEnter={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
               onMouseLeave={() => setHoveredPoint(null)}
-              onTouchStart={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}
-            />
+              onTouchStart={() => setHoveredPoint({ ...d, x: cx, y: cy, val })}>
+              <circle cx={cx} cy={cy} r="16" className="fill-transparent stroke-transparent cursor-pointer" />
+              <circle cx={cx} cy={cy} r={hoveredPoint?.x === cx ? "6.5" : "4.5"} className={hoveredPoint?.x === cx ? "fill-amber-400" : "fill-emerald-400"} />
+            </g>
           );
         })}
       </svg>

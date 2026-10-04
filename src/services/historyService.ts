@@ -620,9 +620,9 @@ export async function fetchMarketMovers(currentMarketData: Record<string, number
         });
 
         Object.entries(byRes).forEach(([resId, rows]) => {
-          const pastRows = rows.filter(r => (r.day || '') <= targetDay);
-          if (pastRows.length > 0) {
-            const closest = pastRows[pastRows.length - 1];
+          const futureRows = rows.filter(r => (r.day || '') >= targetDay);
+          if (futureRows.length > 0) {
+            const closest = futureRows[0];
             baselineMap[resId] = Number(closest.avg_price_sfl);
             const rowAge = nowMs - new Date(closest.day!).getTime();
             if (rowAge > (nowMs - oldestFoundMs)) oldestFoundMs = nowMs - rowAge;
@@ -842,7 +842,7 @@ export async function fetchNftMarketMovers(currentNftList: any[] = [], timeframe
   const nowMs = Date.now();
   const minAgeMs = timeframe === '24h' ? 12 * 60 * 60 * 1000 : 3.5 * 24 * 60 * 60 * 1000;
   
-  let baselineMap: Record<number, number> = {};
+  let baselineMap: Record<string, number> = {};
   let oldestFoundMs = nowMs;
 
   try {
@@ -852,21 +852,21 @@ export async function fetchNftMarketMovers(currentNftList: any[] = [], timeframe
       
       const { data: rawHistory, error: rawError } = await supabase
         .from('nft_price_history')
-        .select('nft_id, floor_sfl, timestamp')
+        .select('name, collection, floor_sfl, timestamp')
         .gte('timestamp', windowStart)
         .lte('timestamp', windowEnd)
         .order('timestamp', { ascending: true })
         .limit(3000);
 
       if (!rawError && Array.isArray(rawHistory) && rawHistory.length > 0) {
-        const byId: Record<number, typeof rawHistory> = {};
+        const byName: Record<string, typeof rawHistory> = {};
         rawHistory.forEach((r) => {
-          if (!byId[r.nft_id]) byId[r.nft_id] = [];
-          byId[r.nft_id].push(r);
+          const key = `${r.collection || ''}_${r.name || ''}`;
+          if (!byName[key]) byName[key] = [];
+          byName[key].push(r);
         });
 
-        Object.entries(byId).forEach(([idStr, rows]) => {
-          const nftId = Number(idStr);
+        Object.entries(byName).forEach(([nftName, rows]) => {
           let closest = rows[0];
           let minDiff = Math.abs(new Date(closest.timestamp).getTime() - targetTimeMs);
           for (const row of rows) {
@@ -878,7 +878,7 @@ export async function fetchNftMarketMovers(currentNftList: any[] = [], timeframe
           }
           const closestAge = nowMs - new Date(closest.timestamp).getTime();
           if (closest && closest.floor_sfl > 0 && closestAge >= minAgeMs) {
-            baselineMap[nftId] = Number(closest.floor_sfl);
+            baselineMap[nftName] = Number(closest.floor_sfl);
             if (closestAge > (nowMs - oldestFoundMs)) oldestFoundMs = nowMs - closestAge;
           }
         });
@@ -890,25 +890,24 @@ export async function fetchNftMarketMovers(currentNftList: any[] = [], timeframe
 
       const { data: dailyMetrics, error: dailyError } = await supabase
         .from('v_nft_daily_metrics')
-        .select('nft_id, day, avg_floor_sfl')
+        .select('name, collection, day, avg_floor_sfl')
         .gte('day', startDay)
         .lte('day', endDay)
         .order('day', { ascending: true });
 
       if (!dailyError && Array.isArray(dailyMetrics) && dailyMetrics.length > 0) {
-        const byId: Record<number, typeof dailyMetrics> = {};
+        const byName: Record<string, typeof dailyMetrics> = {};
         dailyMetrics.forEach((r) => {
-          const nid = r.nft_id || 0;
-          if (!byId[nid]) byId[nid] = [];
-          byId[nid].push(r);
+          const key = `${r.collection || ''}_${r.name || ''}`;
+          if (!byName[key]) byName[key] = [];
+          byName[key].push(r);
         });
 
-        Object.entries(byId).forEach(([idStr, rows]) => {
-          const nftId = Number(idStr);
-          const pastRows = rows.filter(r => (r.day || '') <= targetDay);
-          if (pastRows.length > 0) {
-            const closest = pastRows[pastRows.length - 1];
-            baselineMap[nftId] = Number(closest.avg_floor_sfl);
+        Object.entries(byName).forEach(([nftName, rows]) => {
+          const futureRows = rows.filter(r => (r.day || '') >= targetDay);
+          if (futureRows.length > 0) {
+            const closest = futureRows[0];
+            baselineMap[nftName] = Number(closest.avg_floor_sfl);
             const rowAge = nowMs - new Date(closest.day!).getTime();
             if (rowAge > (nowMs - oldestFoundMs)) oldestFoundMs = nowMs - rowAge;
           }
@@ -923,10 +922,14 @@ export async function fetchNftMarketMovers(currentNftList: any[] = [], timeframe
   
   currentNftList.forEach((nft) => {
     const currentPrice = Number(nft.floor || nft.currentPrice || 0);
+    const rawName = String(nft.name || '');
     const nftId = Number(nft.nft_id || nft.id || 0);
-    if (!currentPrice || currentPrice <= 0 || !nftId) return;
+    const col = String(nft.collection || '');
+    const key = `${col}_${rawName}`;
     
-    const basePrice = baselineMap[nftId];
+    if (!currentPrice || currentPrice <= 0 || !rawName) return;
+    
+    const basePrice = baselineMap[key];
     if (basePrice && basePrice > 0) {
       const changePct = computeChangePct(currentPrice, basePrice);
       if (changePct !== null) {

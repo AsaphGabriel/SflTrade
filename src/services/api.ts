@@ -382,15 +382,20 @@ export async function fetchNftMarketData(forceRefresh: boolean = false) {
 
     const byName: Record<string, unknown> = {};
     const byId: Record<string, unknown> = {};
-    allBoosts.forEach((nft: { name?: string; id?: string | number; [key: string]: unknown }) => {
-      if (nft.name) {
-        byName[nft.name] = nft;
-        if (nft.displayName && nft.displayName !== nft.name) {
-          byName[String(nft.displayName)] = nft;
+    allBoosts.forEach((nft: { name?: string; id?: string | number; displayName?: string; [key: string]: unknown }) => {
+      if (nft.displayName) {
+        byName[nft.displayName] = nft;
+        if (nft.displayName !== nft.name && nft.name && !byName[nft.name]) {
+           // Só mapeia o name original se não existir conflito direto, mas prefere displayName
+           // No caso do Parsnip, 'Parsnip' ficará pro collectible (que seta byName['Parsnip'])
+           // e 'Parsnip (Wearable)' ficará pro wearable.
+           byName[nft.name] = nft;
         }
+      } else if (nft.name) {
+        byName[nft.name] = nft;
       }
       if (nft.id !== undefined) {
-        byId[nft.id] = nft;
+        byId[`${nft.collection || 'unknown'}_${nft.id}`] = nft;
       }
     });
 

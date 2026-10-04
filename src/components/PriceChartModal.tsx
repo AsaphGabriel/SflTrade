@@ -148,7 +148,7 @@ if (isMounted) {
         </div>
 
         <div className="flex flex-col items-center gap-2">
-          <div className="flex bg-slate-800 p-1 rounded-xl w-full sm:w-auto">
+          <div className="grid grid-cols-4 bg-slate-800 p-1 rounded-xl w-full gap-1">
             {[
               { id: '24h', label: '24h' },
               { id: '7D', label: '7 Dias' },
