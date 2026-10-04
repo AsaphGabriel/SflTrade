@@ -44,19 +44,16 @@ export async function fetchWithFallback(url: string, options: RequestInit & { ti
   const { headers = {}, timeout = 4500 } = options;
 
   const strategies = [
-    // 1. Cloudflare Worker Personalizado (Mais estável e sem erros de CORS no console)
+    // 1. Supabase Edge Function (Proxy Seguro Privado)
     async () => {
-      const workerUrl = `https://sfltrade.asaphgabrielsousa.workers.dev/?url=${encodeURIComponent(url)}`;
+      const edgeUrl = `https://atiumxglieipioqmnrbd.supabase.co/functions/v1/proxy-sfl-api?url=${encodeURIComponent(url)}`;
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
       try {
-        const response = await fetch(workerUrl, { headers, signal: controller.signal });
+        const response = await fetch(edgeUrl, { headers, signal: controller.signal });
         clearTimeout(id);
-        if (!response.ok) throw new Error(`Worker HTTP ${response.status}`);
-        const text = await response.text();
-        const match = text.match(/<pre>([\s\S]*?)<\/pre>/);
-        if (match) return JSON.parse(match[1]);
-        return JSON.parse(text);
+        if (!response.ok) throw new Error(`Edge Function HTTP ${response.status}`);
+        return await response.json();
       } catch (err) {
         clearTimeout(id);
         throw err;
