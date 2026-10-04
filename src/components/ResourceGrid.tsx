@@ -323,7 +323,7 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
 
                         className="market-card item-card cursor-pointer hover:border-amber-400 flex flex-col justify-between w-full min-w-0"
                         
-                        onClick={() => setSelectedChartResource({ name: nft.displayName || nft.name, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
+                        onClick={() => setSelectedChartResource({ name: nft.name, displayName: nft.displayName || nft.name, collection: nft.collection, nft_id: nft.id, isNft: true, floor: nft.floor, boost_text: nft.boost_text })}
                         title={currentLang === 'pt' ? 'Clique para ver gráfico de Floor Price e médias móveis' : 'Click to view Floor Price and moving average chart'}
                       >
                         <div className="w-full min-w-0 flex flex-col items-center">

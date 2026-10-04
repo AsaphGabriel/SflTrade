@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sfl-tracker-v1.9.5';
+const CACHE_NAME = 'sfl-tracker-v1.2.7';
 const ASSETS_TO_CACHE = [
   '/SflTrade/',
   '/SflTrade/index.html',

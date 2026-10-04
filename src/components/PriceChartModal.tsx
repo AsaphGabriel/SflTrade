@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { fetchResourceHistory, fetchTokenHistory, fetchNftHistory } from '../services/historyService';
 import { t } from '../i18n';
 import { PriceChartSVG, ChartPoint } from './charts/PriceChartSVG';
+import Icon from './Icon';
 
 export interface PriceChartModalProps {
-  resourceId?: string | { id?: string | number; name?: string; floor?: number; boost_text?: string; isNft?: boolean; [key: string]: unknown; };
+  resourceId?: string | { id?: string | number; name?: string; floor?: number; boost_text?: string; isNft?: boolean; collection?: string; timeframe?: string; [key: string]: unknown; };
   isToken?: boolean;
   flowerPriceUsd?: number;
   flowerPrice?: number;
@@ -22,7 +23,12 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
   currentLang = 'en', 
   onClose 
 }) => {
-  const [timeframe, setTimeframe] = useState('30D');
+  const VALID_TIMEFRAMES = ['24h', '7D', '30D', '90D'];
+  // Herda o periodo selecionado nos cards de movers para manter paridade do ponto inicial
+  const initialTimeframe = (typeof resourceId === 'object' && resourceId !== null && typeof resourceId.timeframe === 'string' && VALID_TIMEFRAMES.includes(resourceId.timeframe))
+    ? resourceId.timeframe
+    : '30D';
+  const [timeframe, setTimeframe] = useState(initialTimeframe);
   const [history, setHistory] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,8 +44,10 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
     : (isToken ? '$FLOWER Token' : (typeof resourceId === 'string' ? resourceId : (resourceId?.resource || resourceId?.name || '')));
   const targetNftId = isNftObj ? (resourceId.nft_id ?? resourceId.id) : null;
   const targetBoost = isNftObj ? resourceId.boost_text : null;
-  const targetFloor = isNftObj ? Number(resourceId.floor ?? resourceId.currentPrice ?? 0) : 0;
-  const currentPriceRef = typeof resourceId === 'object' && resourceId !== null ? Number(resourceId.currentPrice || resourceId.price || 0) : 0;
+  const targetRawName = isNftObj ? String(resourceId.name || resourceId.displayName || '') : '';
+  const targetCollection = isNftObj ? String(resourceId.collection || '') : '';
+  const targetFloor = isNftObj ? Number(resourceId.floor ?? resourceId.currentPrice ?? resourceId.currentPriceSfl ?? 0) : 0;
+  const currentPriceRef = typeof resourceId === 'object' && resourceId !== null ? Number(resourceId.currentPrice || resourceId.currentPriceSfl || resourceId.price || 0) : 0;
 
   const titleName = targetName;
   const symbolMap: Record<string, string> = { usd: '$', brl: 'R$', eur: '€', sgd: 'S$', pol: 'POL' };
@@ -56,7 +64,7 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
         if (isToken) {
           data = await fetchTokenHistory(timeframe, flowerPriceUsd as any) as any;
         } else if (isNftObj && targetNftId !== null) {
-          data = await fetchNftHistory(targetNftId as string | number, timeframe, targetFloor as any, targetName as string) as any;
+          data = await fetchNftHistory(targetNftId as string | number, timeframe, targetFloor as any, targetRawName, targetCollection) as any;
         } else if (targetName) {
           data = await fetchResourceHistory(targetName as string, timeframe, currentPriceRef as any) as any;
         }
@@ -85,7 +93,7 @@ if (isMounted) {
     }
     loadData();
     return () => { isMounted = false; };
-  }, [timeframe, isToken, targetName, targetNftId, targetFloor, flowerPriceUsd, currentPriceRef, isNftObj]);
+  }, [timeframe, isToken, targetName, targetRawName, targetCollection, targetNftId, targetFloor, flowerPriceUsd, currentPriceRef, isNftObj]);
 
   const displayData = history;
 
@@ -123,12 +131,13 @@ if (isMounted) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center p-4 z-50 animate-fadeIn overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4 my-auto max-h-[90dvh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center px-4 pt-4 pb-28 z-[60] animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl flex flex-col max-h-full min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
         
         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl"></span>
+            <Icon name="info" className="w-5 h-5 text-amber-400" />
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-amber-400">
@@ -172,7 +181,7 @@ if (isMounted) {
 
         {isAccumulatingHistory && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 text-center text-xs text-amber-300 flex items-center justify-center gap-1.5 font-medium">
-            <span>(i)</span>
+            <Icon name="info" className="w-4 h-4" />
             <span>
               {currentLang === 'pt' 
                 ? 'Coletando histórico do período. Dados acumulados a partir do banco global.' 
@@ -206,7 +215,7 @@ if (isMounted) {
 
         <div className="relative bg-slate-950/70 rounded-2xl p-2 border border-slate-800 flex flex-col items-center">
           {loading ? (
-            <div className="h-72 flex items-center justify-center text-xs text-amber-400 animate-pulse">
+            <div className="h-56 sm:h-72 flex items-center justify-center text-xs text-amber-400 animate-pulse">
               ... {currentLang === 'pt' ? 'Carregando histórico...' : 'Loading history...'}
             </div>
           ) : (
@@ -223,12 +232,16 @@ if (isMounted) {
           )}
         </div>
 
-        <button
-          onClick={onClose}
-          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition border border-slate-700"
-        >
-          {t('btnCancel', currentLang)}
-        </button>
+        </div>
+
+        <div className="shrink-0 p-3 border-t border-slate-800 bg-slate-900">
+          <button
+            onClick={onClose}
+            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl text-xs transition border border-slate-700"
+          >
+            {t('btnCancel', currentLang)}
+          </button>
+        </div>
       </div>
     </div>
   );

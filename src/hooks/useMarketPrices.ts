@@ -1,8 +1,9 @@
 import { User } from '@supabase/supabase-js';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { t } from '../i18n';
-import { fetchWithFallback, fetchNftMarketData } from '../services/api';
-import { recordDailySnapshot, recordNftSnapshot } from '../services/historyService';
+import { fetchWithFallback, fetchNftMarketData, buildNftIndex } from '../services/api';
+import type { NftItem } from '../services/historyService';
+import { recordDailySnapshot, recordNftSnapshot, fetchLatestNftSnapshotFromDb, nftTripleKey } from '../services/historyService';
 import { saveSettingsRemote } from '../services/syncService';
 
 const DADOS_PRECOS_INICIAIS = {
@@ -33,7 +34,7 @@ export default function useMarketPrices(user?: User | null) {
   const [selectedCurrency, setSelectedCurrency] = useState(localStorage.getItem('sfl_currency') || 'usd');
 
   const [marketData, setMarketData] = useState(DADOS_PRECOS_INICIAIS);
-  const [nftMarketData, setNftMarketData] = useState({ list: [], byName: {}, byId: {} });
+  const [nftMarketData, setNftMarketData] = useState<{ list: NftItem[]; byName: Record<string, NftItem>; byId: Record<string, NftItem>; byKey: Record<string, NftItem> }>({ list: [], byName: {}, byId: {}, byKey: {} });
   const [currencyRates, setCurrencyRates] = useState({ usd: 0.0679, brl: 0.4419, eur: 0.0754, sgd: 0.1117, pol: 1.194 });
   const [updatedTimeText, setUpdatedTimeText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -172,10 +173,29 @@ export default function useMarketPrices(user?: User | null) {
 
     try {
       const nftRes = await fetchNftMarketData();
-      if (nftRes && Array.isArray(nftRes.list)) {
-        setNftMarketData(nftRes);
+      const apiList: NftItem[] = nftRes && Array.isArray(nftRes.list) ? nftRes.list : [];
+
+      // Complementa com o banco global (chave tripla collection|id|name): cobre falha/incompletude da API
+      let dbList: NftItem[] = [];
+      try {
+        dbList = await fetchLatestNftSnapshotFromDb();
+      } catch (dbErr: unknown) {
+        console.warn('[MarketData] Erro ao ler NFTs do banco global:', dbErr);
+      }
+
+      const merged = new Map<string, NftItem>();
+      dbList.forEach((n) => merged.set(nftTripleKey(n.collection, n.id, n.name), n));
+      apiList.forEach((n) => {
+        const key = nftTripleKey(n.collection, n.id, n.name);
+        merged.set(key, { ...(merged.get(key) as NftItem), ...n });
+      });
+
+      const list = Array.from(merged.values());
+      if (list.length > 0) {
+        const index = buildNftIndex(list);
+        setNftMarketData({ list, ...index });
         setTimeout(() => {
-          recordNftSnapshot(fetchedUsd, nftRes.list);
+          recordNftSnapshot(fetchedUsd, list);
         }, 100);
       }
     } catch (err: unknown) {

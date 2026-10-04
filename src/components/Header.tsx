@@ -111,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({
               {updatedTimeText}
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400 font-semibold" title="Versao da aplicacao">
-              v1.9.4
+              v{__APP_VERSION__}
             </span>
             {onOpenDonation && (
               <button

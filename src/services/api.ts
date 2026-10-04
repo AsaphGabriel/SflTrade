@@ -1,3 +1,4 @@
+import type { NftItem } from './historyService';
 // Key constants and default configuration
 import { getBumpkinLevel } from '../utils/bumpkinLevel';
 
@@ -328,6 +329,28 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
 }
 
 /**
+ * Indexa a lista de NFTs por nome, por (colecao_id) e pela chave tripla (colecao|id|nome).
+ */
+export function buildNftIndex(list: NftItem[]) {
+  const byName: Record<string, NftItem> = {};
+  const byId: Record<string, NftItem> = {};
+  const byKey: Record<string, NftItem> = {};
+  list.forEach((nft: NftItem) => {
+    if (nft.displayName) {
+      byName[nft.displayName] = nft;
+      if (nft.displayName !== nft.name && nft.name && !byName[nft.name]) byName[nft.name] = nft;
+    } else if (nft.name) {
+      byName[nft.name] = nft;
+    }
+    if (nft.id !== undefined) {
+      byId[`${nft.collection || 'unknown'}_${nft.id}`] = nft;
+      byKey[`${String(nft.collection || 'collectibles').toLowerCase()}|${Number(nft.id) || 0}|${String(nft.name || '').trim().toLowerCase()}`] = nft;
+    }
+  });
+  return { byName, byId, byKey };
+}
+
+/**
  * Busca cotações de NFTs (Floor e Last Sale) filtrando apenas itens com buff (have_boost === 1).
  * Garante que `floor` e `lastSalePrice` são sempre números válidos.
  */
@@ -380,29 +403,13 @@ export async function fetchNftMarketData(forceRefresh: boolean = false) {
 
     const allBoosts = [...boostCollectibles, ...boostWearables];
 
-    const byName: Record<string, unknown> = {};
-    const byId: Record<string, unknown> = {};
-    allBoosts.forEach((nft: { name?: string; id?: string | number; displayName?: string; [key: string]: unknown }) => {
-      if (nft.displayName) {
-        byName[nft.displayName] = nft;
-        if (nft.displayName !== nft.name && nft.name && !byName[nft.name]) {
-           // Só mapeia o name original se não existir conflito direto, mas prefere displayName
-           // No caso do Parsnip, 'Parsnip' ficará pro collectible (que seta byName['Parsnip'])
-           // e 'Parsnip (Wearable)' ficará pro wearable.
-           byName[nft.name] = nft;
-        }
-      } else if (nft.name) {
-        byName[nft.name] = nft;
-      }
-      if (nft.id !== undefined) {
-        byId[`${nft.collection || 'unknown'}_${nft.id}`] = nft;
-      }
-    });
+    const { byName, byId, byKey } = buildNftIndex(allBoosts as unknown as NftItem[]);
 
     const result = {
       list: allBoosts,
       byName,
       byId,
+      byKey,
       updatedAt: data.updatedAt || Date.now()
     };
 

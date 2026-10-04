@@ -221,6 +221,11 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
   
   const { topGainers = [], topLosers = [], actualTimeframeLabel } = moversData;
 
+  // Propaga o periodo ativo ao grafico para que o ponto inicial coincida com o preco-base do card
+  const handleSelectResource = (resourceName: string, meta: MoverItem | null) => {
+    if (onSelectResource) onSelectResource(resourceName, meta ? { ...meta, timeframe } : meta);
+  };
+
   const renderRankBadge = (index: number) => {
     const colors = [
       'bg-amber-400 text-slate-900 font-extrabold', // #1 Ouro
@@ -313,7 +318,7 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
           loading={loading}
           type="gainers"
           currentLang={currentLang}
-          onSelectResource={onSelectResource}
+          onSelectResource={handleSelectResource}
           renderRankBadge={renderRankBadge}
         />
 
@@ -326,7 +331,7 @@ const MarketMoversCards: React.FC<MarketMoversCardsProps> = ({
           loading={loading}
           type="losers"
           currentLang={currentLang}
-          onSelectResource={onSelectResource}
+          onSelectResource={handleSelectResource}
           renderRankBadge={renderRankBadge}
         />
       </div>

@@ -8,6 +8,7 @@ export interface MoverItem {
   collection?: string;
   image?: string;
   boost_text?: string;
+  timeframe?: string;
 }
 
 export interface MarketMoversResult {
