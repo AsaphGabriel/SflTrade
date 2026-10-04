@@ -29,9 +29,7 @@ export default function useMarketData() {
     effectiveTax, refreshData,
     flowerPrice, flowerPriceUsd
   } = useMarketPrices(user);
-
-  // @ts-ignore
-  const { farmData, setFarmData, searchFarm } = useFarmProfile((land: Record<string, unknown>) => {
+  const { farmData, searchFarm } = useFarmProfile((land: Record<string, unknown>) => {
     if (land.type) updateIsland(String(land.type).toLowerCase());
     if (land.vip !== undefined) updateVip(Boolean(land.vip));
     if (land.shrine !== undefined) updateShrine(Boolean(land.shrine));
@@ -77,8 +75,7 @@ export default function useMarketData() {
     });
 
     const usdRate = currencyRates.usd || 0.087;
-    // @ts-ignore
-    const selectedRate = currencyRates[selectedCurrency] || usdRate;
+    const selectedRate = currencyRates[selectedCurrency as keyof typeof currencyRates] || usdRate;
     const currencyRatio = usdRate > 0 ? (selectedRate / usdRate) : 1;
 
     return Object.keys(estoque)
@@ -103,18 +100,14 @@ export default function useMarketData() {
         const precoMedioUsd = precoMedio * cotacaoMediaFlowerUsd;
         const custoTotal = item.qty * precoMedio;
         const custoTotalUsd = custoTotal * cotacaoMediaFlowerUsd;
-
-        // @ts-ignore
-        const isNftItem = Boolean(item.isNft || (item.nome.toLowerCase() !== 'parsnip' && nftMarketData?.byName?.[item.nome]));
+        const isNftItem = Boolean(item.isNft || (item.nome.toLowerCase() !== 'parsnip' && (nftMarketData?.byName as Record<string, any>)?.[item.nome]));
         let precoP2P = 0;
 
         if (isNftItem) {
-          // @ts-ignore
-          const nftEntry = nftMarketData?.byName?.[item.nome] || nftMarketData?.byName?.[item.nome.toLowerCase()];
+          const nftEntry = (nftMarketData?.byName as Record<string, any>)?.[item.nome] || (nftMarketData?.byName as Record<string, any>)?.[item.nome.toLowerCase()];
           precoP2P = Number(nftEntry?.floor || 0);
         } else {
-          // @ts-ignore
-          precoP2P = marketData[item.nome] || marketData[Object.keys(marketData).find((k: string) => k.toLowerCase() === item.nome.toLowerCase())] || 0;
+          precoP2P = (marketData as Record<string, any>)[item.nome] || (marketData as Record<string, any>)[Object.keys(marketData).find((k: string) => k.toLowerCase() === item.nome.toLowerCase()) as string] || 0;
         }
 
         const applicableTax = isNftItem ? 0.10 : effectiveTax;
@@ -135,8 +128,7 @@ export default function useMarketData() {
         const lucroPercentualMoeda = custoTotalMoeda > 0 ? (lucroAbsolutoMoeda / custoTotalMoeda) * 100 : 0;
 
         const nftMeta = isNftItem
-          // @ts-ignore
-          ? (nftMarketData?.byName?.[item.nome] || nftMarketData?.byName?.[item.nome.toLowerCase()])
+          ? ((nftMarketData?.byName as Record<string, any>)?.[item.nome] || (nftMarketData?.byName as Record<string, any>)?.[item.nome.toLowerCase()])
           : null;
         const boostText = item.boost_text || nftMeta?.boost_text || '';
         const nftId = item.nft_id || nftMeta?.id || null;
@@ -199,7 +191,6 @@ export default function useMarketData() {
 
     if (user) {
       setTimeout(() => {
-        // @ts-ignore
         saveTransactionRemote(user.id, txObj);
       }, 100);
     }
@@ -213,8 +204,7 @@ export default function useMarketData() {
       if (!tx) return false;
 
       const newTotalUsd = tx.totalPrice * Number(newCotacaoUsd);
-      // @ts-ignore
-      const success = await updateTransactionInCloud(user.id, txId, Number(newCotacaoUsd), newTotalUsd);
+      const success = await updateTransactionInCloud(user.id, txId as string, Number(newCotacaoUsd), newTotalUsd);
       
       if (success) {
         setTransactions((prev: Transaction[]) => {

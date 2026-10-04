@@ -9,8 +9,7 @@ export default function useAuthSync(onSettingsSynced?: (settings: Record<string,
   const [isSyncing, setIsSyncing] = useState(false);
   const [transactions, setTransactions] = useState(() => {
     try {
-      // @ts-ignore
-      return JSON.parse(localStorage.getItem('sfl_transactions')) || [];
+      return JSON.parse(localStorage.getItem('sfl_transactions') || '[]') || [];
     } catch (e: unknown) {
       return [];
     }
@@ -38,8 +37,7 @@ export default function useAuthSync(onSettingsSynced?: (settings: Record<string,
     setIsSyncing(true);
 
     try {
-      // @ts-ignore
-      const currentLocalTxs = JSON.parse(localStorage.getItem('sfl_transactions')) || [];
+      const currentLocalTxs = JSON.parse(localStorage.getItem('sfl_transactions') || '[]') || [];
       await syncLocalToSupabase(targetUser.id, {
         localTransactions: currentLocalTxs,
         localSettings: {
@@ -97,8 +95,7 @@ export default function useAuthSync(onSettingsSynced?: (settings: Record<string,
         const { getSession } = await import('../services/authService');
         const session = await getSession();
         const currentUser = session?.user || null;
-        // @ts-ignore
-        setUser(currentUser);
+        setUser(currentUser as User | null);
         if (currentUser && !initialSyncDone.current) {
           initialSyncDone.current = true;
           if (syncCloudRef.current) await syncCloudRef.current(currentUser, false);
@@ -108,11 +105,9 @@ export default function useAuthSync(onSettingsSynced?: (settings: Record<string,
       }
     };
     initAuth();
-
-    // @ts-ignore
-    subscription = onAuthStateChange(async (event: string, session: { user: User } | null) => {
+    subscription = onAuthStateChange(async (_event: string, session: any) => {
       const currentUser = session?.user || null;
-      setUser(currentUser);
+      setUser(currentUser as any);
 
       if (currentUser && !initialSyncDone.current) {
         initialSyncDone.current = true;

@@ -288,15 +288,13 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
   }
 
   let result = null;
-  // @ts-ignore
-  let source = null;
-
+  
   // 2. Tentar Endpoint Oficial Autenticado se houver chave sfl.*
   if (apiKey && apiKey.trim().startsWith('sfl.')) {
     try {
       const rawOfficial = await fetchOfficialFarmData(farmId, apiKey);
       result = normalizeFarmResponse(rawOfficial, 'official');
-      source = 'official';
+      
     } catch (err) {
       console.warn('[DualAPI] Erro no endpoint Oficial Autenticado, aplicando fallback público:', (err as Error).message);
     }
@@ -308,7 +306,7 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
       const rawPublic = await fetchPublicLandData(farmId);
       if (rawPublic && rawPublic.land) {
         result = normalizeFarmResponse(rawPublic, 'public');
-        source = 'public';
+        
       }
     } catch (err) {
       console.warn('[DualAPI] Erro no endpoint Público:', (err as Error).message);

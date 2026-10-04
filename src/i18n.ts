@@ -305,7 +305,6 @@ export const translations: Record<string, Record<string, string>> = {
 };
 
 export function t(key: string, lang: string = 'en', params: Record<string, string | number> = {}) {
-  // @ts-ignore
   let text = translations[lang]?.[key] || translations['en']?.[key] || key;
   Object.keys(params).forEach((p: string) => {
     text = text.replace(`{${p}}`, String(params[p]));

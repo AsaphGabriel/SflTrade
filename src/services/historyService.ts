@@ -737,8 +737,6 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
         .eq('nft_id', Number(nftId as any))
         .gte('timestamp', startDate.toISOString())
         .order('timestamp', { ascending: true });
-        
-      // @ts-ignore
       if (nftName) query = (query as any).eq('name', nftName);
 
       const { data, error } = await withTimeout<any>(query as any);
@@ -767,8 +765,6 @@ export async function fetchNftHistory(nftId: string | number, timeframe: string 
         .eq('nft_id', Number(nftId as any))
         .gte('day', dateStr)
         .order('day', { ascending: true });
-        
-      // @ts-ignore
       if (nftName) query = (query as any).eq('name', nftName);
 
       const { data, error } = await withTimeout<any>(query as any);

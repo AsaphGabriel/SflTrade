@@ -90,8 +90,7 @@ export async function syncLocalToSupabase(userId: string, { localTransactions = 
     // 1. Sincronizar Settings
     if (localSettings && Object.keys(localSettings).length > 0) {
       const islandTaxMap = { basic: 0, desert: 20, volcano: 15, petal: 50 };
-      // @ts-ignore
-      const islandTax = islandTaxMap[localSettings.selectedIsland] ?? 15.0;
+      const islandTax = islandTaxMap[localSettings.selectedIsland as keyof typeof islandTaxMap] ?? 15.0;
 
       const { error: setErr } = await supabase.from('user_settings').upsert({
         user_id: userId,
@@ -276,8 +275,7 @@ export async function saveSettingsRemote(userId: string, settings: Record<string
 
   try {
     const islandTaxMap = { basic: 0, desert: 20, volcano: 15, petal: 50 };
-    // @ts-ignore
-    const islandTax = islandTaxMap[settings.selectedIsland] ?? 15.0;
+    const islandTax = islandTaxMap[settings.selectedIsland as keyof typeof islandTaxMap] ?? 15.0;
 
     const row = {
       user_id: userId,

@@ -17,7 +17,7 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
   resourceId, 
   isToken = false, 
   flowerPriceUsd = 0.05, 
-   
+  flowerPrice = 0.05, 
   selectedCurrency = 'usd', 
   currentLang = 'en', 
   onClose 
@@ -61,8 +61,21 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
           data = await fetchResourceHistory(targetName as string, timeframe, currentPriceRef as any) as any;
         }
 
-        if (isMounted) {
-          setHistory(data);
+if (isMounted) {
+          const fiatMultiplier = (isToken && flowerPrice && flowerPriceUsd) ? (flowerPrice / flowerPriceUsd) : 1;
+          const mappedData = data.map(d => {
+            if (isToken) {
+              return {
+                 ...d,
+                 price_usd: d.price_usd ? d.price_usd * fiatMultiplier : d.price_usd,
+                 price: d.price ? d.price * fiatMultiplier : d.price,
+                 avg_price_sfl: d.avg_price_sfl ? d.avg_price_sfl * fiatMultiplier : d.avg_price_sfl,
+                 price_sfl: d.price_sfl ? d.price_sfl * fiatMultiplier : d.price_sfl
+              };
+            }
+            return d;
+          });
+          setHistory(mappedData);
           setLoading(false);
         }
       } catch (err) {
@@ -115,7 +128,7 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
         
         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">📊</span>
+            <span className="text-xl"></span>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-amber-400">
@@ -159,7 +172,7 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
 
         {isAccumulatingHistory && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 text-center text-xs text-amber-300 flex items-center justify-center gap-1.5 font-medium">
-            <span>ℹ️</span>
+            <span>(i)</span>
             <span>
               {currentLang === 'pt' 
                 ? 'Coletando histórico do período. Dados acumulados a partir do banco global.' 
@@ -194,7 +207,7 @@ const PriceChartModal: React.FC<PriceChartModalProps> = ({
         <div className="relative bg-slate-950/70 rounded-2xl p-2 border border-slate-800 flex flex-col items-center">
           {loading ? (
             <div className="h-52 flex items-center justify-center text-xs text-amber-400 animate-pulse">
-              ⚡ {currentLang === 'pt' ? 'Carregando histórico...' : 'Loading history...'}
+              ... {currentLang === 'pt' ? 'Carregando histórico...' : 'Loading history...'}
             </div>
           ) : (
             <PriceChartSVG 
