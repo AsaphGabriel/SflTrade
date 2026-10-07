@@ -57,19 +57,23 @@ export const PriceChartSVG: React.FC<PriceChartSVGProps> = ({
   const generatePath = (valKey: keyof ChartPoint) => {
     if (data.length <= 1) return '';
     try {
-      const points = data
-        .map((d, i) => {
-          if (!d) return null;
-          const rawVal = d[valKey] ?? d.floor_sfl ?? d.avg_floor_sfl ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
-          const val = Number(rawVal);
-          if (isNaN(val) || !isFinite(val)) return null;
-          const x = getX(i, data.length);
-          const y = getY(val);
-          if (isNaN(x) || !isFinite(x) || isNaN(y) || !isFinite(y)) return null;
-          return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-        })
-        .filter(Boolean);
-      return points.join(' ');
+      const validCoords: { x: number; y: number }[] = [];
+      data.forEach((d, i) => {
+        if (!d) return;
+        const rawVal = d[valKey] ?? d.floor_sfl ?? d.avg_floor_sfl ?? d.price_sfl ?? d.avg_price_sfl ?? d.price_usd ?? 0;
+        const val = Number(rawVal);
+        if (isNaN(val) || !isFinite(val) || val <= 0) return;
+        const x = getX(i, data.length);
+        const y = getY(val);
+        if (!isNaN(x) && isFinite(x) && !isNaN(y) && isFinite(y)) {
+          validCoords.push({ x, y });
+        }
+      });
+
+      if (validCoords.length === 0) return '';
+      return validCoords
+        .map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
+        .join(' ');
     } catch (err) {
       console.warn('[PriceChartSVG] Erro ao gerar path SVG:', err);
       return '';

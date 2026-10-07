@@ -71,7 +71,7 @@ export function getItemCategory(name: string) {
 // Ícones / Emojis por Item
 
 
-const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" }: { label: string; value: string | number; subValue?: React.ReactNode; icon: string; colorClass?: string }) => (
+const StatCard = ({ label, value, subValue, icon, colorClass = "text-amber-400" }: { label: string; value: string | number; subValue?: React.ReactNode; icon: React.ReactNode; colorClass?: string }) => (
  <div className="bg-slate-900/90 rounded-xl p-3.5 border border-slate-700/60 shadow-md flex flex-col justify-between hover:border-slate-600 transition">
   <div className="flex items-center justify-between gap-1">
    <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">{label}</span>
@@ -623,14 +623,14 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
      </div>
 
      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-      <StatCard label={t('level', currentLang)} value={farmData.land.level || 0} icon="" />
-      <StatCard label={t('balance', currentLang)} value={`${formatNum(inventoryAnalysis.sflBalance)} FLOWER`} subValue={`~${formatCurrency(inventoryAnalysis.sflBalanceFiat)}`} icon="" colorClass="text-emerald-400" />
-      <StatCard label={t('coins', currentLang)} value={formatNum((farmData.land.coins || 0))} icon="" />
-      <StatCard label={t('gem', currentLang)} value={formatNum((farmData.land.gem || 0))} icon="" colorClass="text-cyan-400" />
-      <StatCard label={t('marks', currentLang)} value={formatNum((farmData.land.marks || 0))} icon="" colorClass="text-purple-400" />
-      <StatCard label={t('charm', currentLang)} value={farmData.land.charm || 0} icon="" colorClass="text-rose-400" />
-      <StatCard label={t('cheer', currentLang)} value={farmData.land.cheer || 0} icon="" colorClass="text-amber-300" />
-      <StatCard label={t('taxResource', currentLang)} value={`${((farmData.land.taxResource || 0) * 100).toFixed(1)}%`} icon="" colorClass="text-amber-400" />
+      <StatCard label={t('level', currentLang)} value={farmData.land.level || 0} icon={<Icon name="user" className="w-4 h-4 text-slate-400" />} />
+      <StatCard label={t('balance', currentLang)} value={`${formatNum(inventoryAnalysis.sflBalance)} FLOWER`} subValue={`~${formatCurrency(inventoryAnalysis.sflBalanceFiat)}`} icon={<Icon name="wallet" className="w-4 h-4 text-emerald-400" />} colorClass="text-emerald-400" />
+      <StatCard label={t('coins', currentLang)} value={formatNum((farmData.land.coins || 0))} icon={<Icon name="coins" className="w-4 h-4 text-amber-400" />} />
+      <StatCard label={t('gem', currentLang)} value={formatNum((farmData.land.gem || 0))} icon={<Icon name="gem" className="w-4 h-4 text-cyan-400" />} colorClass="text-cyan-400" />
+      <StatCard label={t('marks', currentLang)} value={formatNum((farmData.land.marks || 0))} icon={<Icon name="marks" className="w-4 h-4 text-purple-400" />} colorClass="text-purple-400" />
+      <StatCard label={t('charm', currentLang)} value={farmData.land.charm || 0} icon={<Icon name="charm" className="w-4 h-4 text-rose-400" />} colorClass="text-rose-400" />
+      <StatCard label={t('cheer', currentLang)} value={farmData.land.cheer || 0} icon={<Icon name="cheer" className="w-4 h-4 text-amber-300" />} colorClass="text-amber-300" />
+      <StatCard label={t('taxResource', currentLang)} value={`${((farmData.land.taxResource || 0) * 100).toFixed(1)}%`} icon={<Icon name="percent" className="w-4 h-4 text-amber-400" />} colorClass="text-amber-400" />
      </div>
     </div>
    )}

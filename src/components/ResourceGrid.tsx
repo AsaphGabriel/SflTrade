@@ -110,6 +110,8 @@ export interface ResourceGridProps {
   onCategoryFilterChange?: ((cat: string) => void) | null;
   searchTerm?: string | null;
   onSearchTermChange?: ((term: string) => void) | null;
+  selectedCurrency?: string;
+  flowerPrice?: number;
 }
 
 const ResourceGrid: React.FC<ResourceGridProps> = ({
@@ -121,7 +123,9 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
   categoryFilter = null,
   onCategoryFilterChange = null,
   searchTerm: externalSearchTerm = null,
-  onSearchTermChange = null
+  onSearchTermChange = null,
+  selectedCurrency,
+  flowerPrice
 }) => {
   // ── Categoria ───────────────────────────────────────────────────────────────
   const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
@@ -481,6 +485,8 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({
           resourceId={selectedChartResource}
           currentLang={currentLang}
           onClose={() => setSelectedChartResource(null)}
+          selectedCurrency={selectedCurrency}
+          flowerPrice={flowerPrice}
         />
       )}
     </section>

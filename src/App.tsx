@@ -197,6 +197,8 @@ const App = () => {
         onSearchTermChange={setMarketSearchTerm}
         onOpenBuy={openBuy} 
         onOpenSell={openSell} 
+        selectedCurrency={selectedCurrency}
+        flowerPrice={flowerPrice}
        />
       </div>
      )}

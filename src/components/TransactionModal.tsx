@@ -203,9 +203,30 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
       return;
     }
 
+    const parsedQty = parseFloat(quantity) || 0;
+    const parsedUnitPrice = parseFloat(unitPrice) || 0;
+
+    if (parsedQty <= 0) {
+      alert(currentLang === 'pt' ? 'A quantidade deve ser maior que zero.' : 'Quantity must be greater than zero.');
+      return;
+    }
+    if (parsedUnitPrice < 0) {
+      alert(currentLang === 'pt' ? 'O preço unitário não pode ser negativo.' : 'Unit price cannot be negative.');
+      return;
+    }
+
     const nftItem = nftMarketData?.byName?.[recursoFinal] || nftMarketData?.byName?.[recursoFinal.toLowerCase()] ||
       Object.values(nftMarketData?.byName || {}).find((n: NftItem) => n.name?.toLowerCase() === recursoFinal.toLowerCase() || n.displayName?.toLowerCase() === recursoFinal.toLowerCase());
     const itemEstoque = (portfolioData || []).find((p: PortfolioItem) => p && p.nome && p.nome.toLowerCase() === recursoFinal.toLowerCase());
+    
+    if (type === 'sell') {
+      const currentStock = itemEstoque?.qty || 0;
+      if (parsedQty > currentStock) {
+        alert(currentLang === 'pt' ? `Venda a descoberto bloqueada: Quantidade (${parsedQty}) excede o estoque (${currentStock}).` : `Short selling blocked: Quantity (${parsedQty}) exceeds stock (${currentStock}).`);
+        return;
+      }
+    }
+
     const isNft = Boolean(initialResourceMeta?.isNft || nftItem || itemEstoque?.isNft);
     const nftId = initialResourceMeta?.nft_id || nftItem?.id || itemEstoque?.nft_id || null;
     const boostText = initialResourceMeta?.boost_text || nftItem?.boost_text || itemEstoque?.boost_text || '';
@@ -217,8 +238,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
       isNft,
       nft_id: nftId,
       boost_text: boostText,
-      qty: parseFloat(quantity) || 0,
-      unitPrice: parseFloat(unitPrice) || 0,
+      qty: parsedQty,
+      unitPrice: parsedUnitPrice,
       totalPrice: parseFloat(totalPrice) || 0
     });
 

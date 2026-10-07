@@ -392,10 +392,11 @@ const PositionDetailsModal: React.FC<PositionDetailsModalProps> = ({
                {onUpdateTransactionPrice && tx.id && (
                 <button 
                  onClick={() => handleEditTx(tx.id, cotacaoTx)}
-                 className="text-amber-500 hover:text-amber-400 underline decoration-dotted opacity-80 hover:opacity-100 transition px-1"
+                 className="text-amber-400 hover:text-amber-300 transition px-1 inline-flex items-center gap-1 font-semibold text-[10px]"
                  title={currentLang === 'pt' ? 'Editar preço de compra' : 'Edit purchase price'}
                 >
-                 
+                 <Icon name="config" className="w-3 h-3 text-amber-400" />
+                 <span>{currentLang === 'pt' ? 'Editar' : 'Edit'}</span>
                 </button>
                )}
               </div>

@@ -120,7 +120,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, user, currentLan
     {/* Cabeçalho do Modal */}
     <div className="flex items-center justify-between px-5 py-3.5 bg-slate-800/80 border-b border-slate-700">
      <div className="flex items-center space-x-2">
-      <span className="text-lg"></span>
+      
       <h3 className="font-bold text-amber-400 text-base">
        {t('authTitle', currentLang)}
       </h3>
@@ -172,7 +172,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, user, currentLan
           <span className="animate-spin text-xs"></span>
          ) : (
           <>
-           <span></span>
+           
            <span>{currentLang === 'pt' ? 'Sincronizar Agora' : 'Sync Now'}</span>
           </>
          )}
@@ -187,7 +187,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, user, currentLan
           <span className="animate-spin text-xs"></span>
          ) : (
           <>
-           <span></span>
+           
            <span>{t('btnLogout', currentLang)}</span>
           </>
          )}

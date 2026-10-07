@@ -235,9 +235,10 @@ const Header: React.FC<HeaderProps> = ({
        <button
         onClick={() => setShowTokenChart(true)}
         title={currentLang === 'pt' ? 'Ver gráfico de histórico do $FLOWER' : 'View $FLOWER price chart'}
-        className="text-amber-400 hover:text-amber-300 text-xs transition bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700"
+        className="text-amber-400 hover:text-amber-300 text-xs transition bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 inline-flex items-center"
+        aria-label="Ver gráfico"
        >
-        
+        <Icon name="chart" className="w-3.5 h-3.5 text-amber-400" />
        </button>
       </div>
       <div className="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1 cursor-pointer" onClick={() => setShowTokenChart(true)}>
