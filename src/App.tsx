@@ -23,7 +23,7 @@ const App = () => {
  const [selectedChartResource, setSelectedChartResource] = useState<MoverItem | null>(null);
  
  const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
- const [apiKey, setApiKey] = useState(sessionStorage.getItem('sfl_api_key') || '');
+ const [apiKey, setApiKey] = useState(sessionStorage.getItem('sfl_api_key') || localStorage.getItem('sfl_api_key') || '');
  
  const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
 

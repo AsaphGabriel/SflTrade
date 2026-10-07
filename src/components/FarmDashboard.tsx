@@ -231,8 +231,8 @@ const FarmDashboard: React.FC<FarmDashboardProps> = ({
 
  // Processamento do Inventário e Valoração Financeira com Deduplicação Canônica
  const inventoryAnalysis = useMemo(() => {
-   const rawInventory = farmData?.inventory || {};
-   const rawWardrobe = farmData?.wardrobe || {};
+   const rawInventory = (farmData?.inventory || (farmData?.land as { inventory?: Record<string, string | number> })?.inventory) || {};
+   const rawWardrobe = (farmData?.wardrobe || (farmData?.land as { wardrobe?: Record<string, number> })?.wardrobe) || {};
    const aggregated = new Map();
    const nftList = ((nftMarketData as { list?: NftItem[] })?.list || []) as NftItem[];
 

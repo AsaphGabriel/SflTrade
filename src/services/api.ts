@@ -44,7 +44,22 @@ export async function fetchWithFallback(url: string, options: RequestInit & { ti
   const { headers = {}, timeout = 4500 } = options;
 
   const strategies = [
-    // 1. Cloudflare Worker Dedicado (Proxy Primário Homologado)
+    // 1. Supabase Edge Function (Proxy Dedicado Privado e Seguro com repasse de x-api-key)
+    async () => {
+      const edgeUrl = `https://atiumxglieipioqmnrbd.supabase.co/functions/v1/proxy-sfl-api?url=${encodeURIComponent(url)}`;
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(edgeUrl, { headers, signal: controller.signal });
+        clearTimeout(id);
+        if (!response.ok) throw new Error(`Edge Function HTTP ${response.status}`);
+        return await response.json();
+      } catch (err) {
+        clearTimeout(id);
+        throw err;
+      }
+    },
+    // 2. Cloudflare Worker Dedicado (Proxy Homologado Secundário)
     async () => {
       const workerUrl = `https://sfltrade.asaphgabrielsousa.workers.dev/?url=${encodeURIComponent(url)}`;
       const controller = new AbortController();
@@ -59,7 +74,7 @@ export async function fetchWithFallback(url: string, options: RequestInit & { ti
         throw err;
       }
     },
-    // 2. Conexão Direta ao Endpoint
+    // 3. Conexão Direta ao Endpoint
     async () => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
@@ -73,7 +88,7 @@ export async function fetchWithFallback(url: string, options: RequestInit & { ti
         throw err;
       }
     },
-    // 3. Fallback Público CorsProxy (Apenas se NÃO houver chave sensível)
+    // 4. Fallback Público CorsProxy (Apenas se NÃO houver chave sensível)
     async () => {
       const hasSensitiveKey = Boolean(
         (headers as Record<string, string>)['x-api-key'] || 
@@ -240,6 +255,8 @@ export function normalizeFarmResponse(rawData: { bumpkin?: { experience?: number
 
     return {
       source: 'official',
+      inventory: fullInventory,
+      wardrobe: f.wardrobe || {},
       land: {
         id: f.id,
         type: (typeof f.island === 'string' ? f.island : f.island?.type) || f.island || 'volcano',
@@ -284,20 +301,26 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
   if (!forceRefresh) {
     const cached = getCachedData(cacheKey);
     if (cached && !cached.isExpired) {
-      return { ...cached.data, isFromCache: true };
+      // Se o usuário passou apiKey mas o cache em disco é de fonte pública (sem inventário), ignorar o cache e buscar a oficial!
+      const hasApiKey = Boolean(apiKey && apiKey.trim().startsWith('sfl.'));
+      const isPublicCache = cached.data?.source === 'public' || (!cached.data?.inventory && !cached.data?.land?.inventory);
+      if (!(hasApiKey && isPublicCache)) {
+        return { ...cached.data, isFromCache: true };
+      }
     }
   }
 
-  let result = null;
+  let result: Record<string, unknown> | null = null;
+  let officialErrorMsg: string | null = null;
   
   // 2. Tentar Endpoint Oficial Autenticado se houver chave sfl.*
   if (apiKey && apiKey.trim().startsWith('sfl.')) {
     try {
       const rawOfficial = await fetchOfficialFarmData(farmId, apiKey);
-      result = normalizeFarmResponse(rawOfficial, 'official');
-      
+      result = normalizeFarmResponse(rawOfficial, 'official') as Record<string, unknown>;
     } catch (err) {
       console.warn('[DualAPI] Erro no endpoint Oficial Autenticado, aplicando fallback público:', (err as Error).message);
+      officialErrorMsg = (err as Error).message;
     }
   }
 
@@ -306,8 +329,10 @@ export async function fetchFarmDataSmart({ farmId, apiKey = '', forceRefresh = f
     try {
       const rawPublic = await fetchPublicLandData(farmId);
       if (rawPublic && rawPublic.land) {
-        result = normalizeFarmResponse(rawPublic, 'public');
-        
+        result = normalizeFarmResponse(rawPublic, 'public') as Record<string, unknown>;
+        if (officialErrorMsg && result) {
+          result.officialError = officialErrorMsg;
+        }
       }
     } catch (err) {
       console.warn('[DualAPI] Erro no endpoint Público:', (err as Error).message);
