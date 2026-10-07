@@ -55,11 +55,11 @@ export default function DonationModal({ isOpen, onClose, currentLang = 'en' }: D
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn"
+      className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 sm:p-4 z-[60] animate-fadeIn"
       onClick={onClose}
     >
       <div 
-        className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4 my-auto relative max-h-[92vh] overflow-y-auto"
+        className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 max-w-md w-full shadow-2xl space-y-4 my-auto relative max-h-[92vh] overflow-y-auto"
         onClick={(e: React.KeyboardEvent | React.MouseEvent) => e.stopPropagation()}
       >
         {/* Cabecalho */}
@@ -106,7 +106,7 @@ export default function DonationModal({ isOpen, onClose, currentLang = 'en' }: D
               loading="lazy"
             />
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">
+          <span className="text-[11px] text-slate-400 font-medium text-center">
             Scan via Metamask, Rabby, Ronin ou Coinbase Wallet
           </span>
         </div>
@@ -116,16 +116,18 @@ export default function DonationModal({ isOpen, onClose, currentLang = 'en' }: D
           <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             {t('donateAddressLabel', currentLang)}
           </label>
-          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
-            <input
-              type="text"
-              readOnly
-              value={WALLET_ADDRESS}
-              className="bg-transparent text-xs font-mono text-amber-300 flex-1 outline-none select-all truncate"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <input
+                type="text"
+                readOnly
+                value={WALLET_ADDRESS}
+                className="w-full min-w-0 bg-transparent text-xs font-mono text-amber-300 outline-none select-all truncate text-center sm:text-left py-1"
+              />
+            </div>
             <button
               onClick={handleCopy}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-sm ${
+              className={`px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 shadow-sm w-full sm:w-auto ${
                 copied
                   ? 'bg-emerald-600 text-white'
                   : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
