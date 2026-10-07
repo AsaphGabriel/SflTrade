@@ -8,7 +8,7 @@ export default function useFarmProfile(onFarmLoaded?: (land: Record<string, unkn
   const searchFarm = useCallback(async (query: string | number, apiKeyOverride?: string | null, forceRefresh: boolean = false) => {
     if (!query) return;
     let landId = query;
-    const apiKeyToUse = apiKeyOverride ?? localStorage.getItem('sfl_api_key') ?? '';
+    const apiKeyToUse = apiKeyOverride ?? sessionStorage.getItem('sfl_api_key') ?? '';
 
     if (/[a-zA-Z]/.test(String(query))) {
       const resolvedId = await resolveFarmIdFromUsername(query);

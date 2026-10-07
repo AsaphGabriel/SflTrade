@@ -172,12 +172,17 @@ export default function useMarketData() {
     const cotacaoEntrada = nuevaTransacao.cotacao_entrada_usd ?? currencyRates.usd ?? 0.087;
     const totalPriceUsd = (nuevaTransacao.totalPrice || (nuevaTransacao.qty * nuevaTransacao.unitPrice)) * cotacaoEntrada;
 
+    // Gera UUIDv4 padrão RFC 4122 suportado nativamente por todos os browsers modernos
+    const clientUuid = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0');
+
     const txObj = {
       ...nuevaTransacao,
       cotacao_entrada_usd: cotacaoEntrada,
       token_price_usd_at_purchase: cotacaoEntrada,
       total_price_usd: totalPriceUsd,
-      id: Date.now(),
+      id: clientUuid,
       timestamp: new Date().toISOString()
     };
 

@@ -44,40 +44,43 @@ export async function fetchWithFallback(url: string, options: RequestInit & { ti
   const { headers = {}, timeout = 4500 } = options;
 
   const strategies = [
-    // 1. Supabase Edge Function (Proxy Seguro Privado)
+    // 1. Cloudflare Worker Dedicado (Proxy Primário Homologado)
     async () => {
-      const edgeUrl = `https://atiumxglieipioqmnrbd.supabase.co/functions/v1/proxy-sfl-api?url=${encodeURIComponent(url)}`;
+      const workerUrl = `https://sfltrade.asaphgabrielsousa.workers.dev/?url=${encodeURIComponent(url)}`;
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
       try {
-        const response = await fetch(edgeUrl, { headers, signal: controller.signal });
+        const response = await fetch(workerUrl, { headers, signal: controller.signal });
         clearTimeout(id);
-        if (!response.ok) throw new Error(`Edge Function HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`Worker HTTP ${response.status}`);
         return await response.json();
       } catch (err) {
         clearTimeout(id);
         throw err;
       }
     },
-    // 2. Conexão Direta ao Endpoint (Pode gerar erro de CORS no console localmente)
+    // 2. Conexão Direta ao Endpoint
     async () => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
       try {
         const response = await fetch(url, { headers, signal: controller.signal });
         clearTimeout(id);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`Direct HTTP ${response.status}`);
         return await response.json();
       } catch (err) {
         clearTimeout(id);
         throw err;
       }
     },
-    // 3. CorsProxy.io Fallback
+    // 3. Fallback Público CorsProxy (Apenas se NÃO houver chave sensível)
     async () => {
-      const hasSensitiveKey = Boolean((headers as Record<string, string>)['x-api-key'] || (headers as Record<string, string>)['Authorization']);
+      const hasSensitiveKey = Boolean(
+        (headers as Record<string, string>)['x-api-key'] || 
+        (headers as Record<string, string>)['Authorization']
+      );
       if (hasSensitiveKey) {
-        throw new Error('Proxy público bloqueado por segurança para requisições com API Key.');
+        throw new Error('Proxy público bloqueado por segurança para requisições autenticadas.');
       }
       const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
       const controller = new AbortController();

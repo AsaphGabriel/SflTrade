@@ -28,10 +28,15 @@ export async function signInWithPassword({ email, password }: { email: string; p
  * Login via Magic Link / OTP por e-mail
  */
 export async function signInWithOtp({ email }: { email: string }) {
+  // Constrói o redirecionamento preservando a rota base (/SflTrade/) no GitHub Pages
+  const basePath = (import.meta as any).env?.BASE_URL || '/';
+  const cleanBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+  const redirectUrl = `${window.location.origin}${cleanBase}`;
+
   const { data, error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: redirectUrl,
     },
   });
   if (error) throw error;

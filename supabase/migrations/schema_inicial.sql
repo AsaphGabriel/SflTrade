@@ -47,15 +47,21 @@ CREATE POLICY "Allow public read access on resource_price_history"
     TO anon, authenticated
     USING (true);
 
-CREATE POLICY "Allow public insert on token_price_history"
+CREATE POLICY "Allow service_role insert on token_price_history"
     ON public.token_price_history FOR INSERT
-    TO anon, authenticated
+    TO service_role
     WITH CHECK (true);
 
-CREATE POLICY "Allow public insert on resource_price_history"
+CREATE POLICY "Allow service_role insert on resource_price_history"
     ON public.resource_price_history FOR INSERT
-    TO anon, authenticated
+    TO service_role
     WITH CHECK (true);
+
+ALTER TABLE public.token_price_history FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.resource_price_history FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_portfolios FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_settings FORCE ROW LEVEL SECURITY;
 
 -- FUNÇÃO DE LIMPEZA E EXPURGO AUTOMÁTICO (> 90 DIAS)
 CREATE OR REPLACE FUNCTION public.clean_old_price_history()

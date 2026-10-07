@@ -69,10 +69,15 @@ export default {
       const targetUrl = new URL(urlStr);
 
       // 🔐 TRAVA DE SEGURANÇA: Permite sfl.world e api.sunflower-land.com
-      if (!targetUrl.hostname.endsWith("sfl.world") && !targetUrl.hostname.endsWith("sunflower-land.com")) {
+      const h = targetUrl.hostname.toLowerCase();
+      const isAllowed = 
+        h === "sfl.world" || h.endsWith(".sfl.world") ||
+        h === "sunflower-land.com" || h.endsWith(".sunflower-land.com");
+
+      if (!isAllowed) {
         return new Response("Acesso negado: domínio não permitido.", { 
           status: 403,
-          headers: { "Access-Control-Allow-Origin": "*" }
+          headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" }
         });
       }
 

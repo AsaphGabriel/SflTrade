@@ -23,7 +23,7 @@ const App = () => {
  const [selectedChartResource, setSelectedChartResource] = useState<MoverItem | null>(null);
  
  const [farmId, setFarmId] = useState(localStorage.getItem('sfl_farm_id') || '');
- const [apiKey, setApiKey] = useState(localStorage.getItem('sfl_api_key') || '');
+ const [apiKey, setApiKey] = useState(sessionStorage.getItem('sfl_api_key') || '');
  
  const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
 
@@ -104,7 +104,7 @@ const App = () => {
   }
 
   localStorage.setItem('sfl_farm_id', farmId);
-  localStorage.setItem('sfl_api_key', keyStr);
+  sessionStorage.setItem('sfl_api_key', keyStr);
   
   setProfileMsg({ text: ' Salvo com sucesso!', type: 'success' });
   setTimeout(() => setProfileMsg({ text: '', type: '' }), 3000);

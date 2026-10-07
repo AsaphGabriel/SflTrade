@@ -201,25 +201,26 @@ export async function syncLocalToSupabase(userId: string, { localTransactions = 
 /**
  * Persiste uma nova transação individual diretamente no Supabase quando logado
  */
-export async function saveTransactionRemote(userId: string, transaction: Record<string, unknown>) {
+export async function saveTransactionRemote(userId: string, transaction: Record<string, any>) {
   if (!userId || !transaction) return;
 
   try {
     const row = {
+      id: String(transaction.id), // Persiste o UUID correspondente gerado no cliente
       user_id: userId,
-      resource_id: String((transaction as { recurso?: string }).recurso || (transaction as { resource_id?: string }).resource_id),
-      type: ((transaction as { tipo?: string }).tipo || (transaction as { type?: string }).type || 'BUY').toUpperCase(),
-      quantity: Number((transaction as { qty?: number }).qty || (transaction as { quantity?: number }).quantity || 0),
-      price_sfl: Number((transaction as { unitPrice?: number }).unitPrice || (transaction as { price_sfl?: number }).price_sfl || 0),
-      token_price_usd_at_purchase: Number((transaction as { cotacao_entrada_usd?: number }).cotacao_entrada_usd || (transaction as { token_price_usd_at_purchase?: number }).token_price_usd_at_purchase || 0),
-      total_sfl: Number((transaction as { totalPrice?: number }).totalPrice || (transaction as { total_sfl?: number }).total_sfl || 0),
-      total_usd: Number((transaction as { total_price_usd?: number }).total_price_usd || (transaction as { total_usd?: number }).total_usd || (((transaction as { totalPrice?: number }).totalPrice || 0) * ((transaction as { cotacao_entrada_usd?: number }).cotacao_entrada_usd || 0.087))),
-      created_at: String((transaction as { timestamp?: string | number }).timestamp || (transaction as { created_at?: string }).created_at || new Date().toISOString())
+      resource_id: String(transaction.recurso || transaction.resource_id),
+      type: String(transaction.tipo || transaction.type || 'BUY').toUpperCase(),
+      quantity: Number(transaction.qty || transaction.quantity || 0),
+      price_sfl: Number(transaction.unitPrice || transaction.price_sfl || 0),
+      token_price_usd_at_purchase: Number(transaction.cotacao_entrada_usd || transaction.token_price_usd_at_purchase || 0),
+      total_sfl: Number(transaction.totalPrice || transaction.total_sfl || 0),
+      total_usd: Number(transaction.total_price_usd || transaction.total_usd || 0),
+      created_at: String(transaction.timestamp || transaction.created_at || new Date().toISOString())
     };
 
     const { error } = await supabase
       .from('user_transactions')
-      .insert([row]);
+      .upsert([row], { onConflict: 'id' });
 
     if (error) {
       if (isPermissionOrForbiddenError(error)) {

@@ -417,7 +417,8 @@ export function aggregateHistoryByInterval(rawData: any[] = [], timeframe: strin
       }
 
       if (prec && succ) {
-        const ratio = (bucketMidMs - prec.t) / (succ.t - prec.t);
+        const timeDiff = succ.t - prec.t;
+        const ratio = timeDiff > 0 ? (bucketMidMs - prec.t) / timeDiff : 0;
         avgVal = prec.p + ratio * (succ.p - prec.p);
       } else if (prec) {
         avgVal = prec.p;
@@ -544,16 +545,17 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
   // Se timeframe for 24h ou 7D, prioriza a tabela bruta resource_price_history com timestamps precisos
   if (days <= 7) {
     try {
-      const { data, error } = await withTimeout<any>(
+      const data = await fetchAllRows<any>((from, to) => 
         supabase
           .from('resource_price_history')
           .select('*')
           .eq('resource_id', resourceId as string)
           .gte('timestamp', startDate.toISOString())
           .order('timestamp', { ascending: true })
+          .range(from, to)
       );
 
-      if (!error && Array.isArray(data) && data.length > 0) {
+      if (data && data.length > 0) {
         rawPoints = data.map((d: any) => ({
           timestamp: d.timestamp,
           price_sfl: Number(d.price_sfl),
@@ -568,16 +570,17 @@ export async function fetchResourceHistory(resourceId: string | number, timefram
   // Se não encontrou dados brutos ou timeframe for 30D/90D, busca na View agregada v_resource_daily_metrics
   if (rawPoints.length === 0) {
     try {
-      const { data, error } = await withTimeout<any>(
+      const data = await fetchAllRows<any>((from, to) => 
         supabase
           .from('v_resource_daily_metrics')
           .select('*')
           .eq('resource_id', resourceId as string)
           .gte('day', dateStr)
           .order('day', { ascending: true })
+          .range(from, to)
       );
 
-      if (!error && Array.isArray(data) && data.length > 0) {
+      if (data && data.length > 0) {
         rawPoints = data.map((d: any) => ({
           timestamp: d.day,
           price_sfl: Number(d.avg_price_sfl),
