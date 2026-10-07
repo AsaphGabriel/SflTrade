@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PriceChartModal from './PriceChartModal';
+import { getItemImageUrl, handleImageError } from '../utils/imageFallback';
 
 
 export interface HeaderProps {
@@ -82,9 +83,10 @@ const Header: React.FC<HeaderProps> = ({
      <div className="flex items-center gap-2">
       <h1 className="text-2xl font-bold text-amber-400 flex items-center gap-2">
        <img 
-        src="https://sfl.world/img/source/Sunflower.png" 
+        src={getItemImageUrl('Sunflower')} 
         alt="Sunflower" 
         className="w-6 h-6 object-contain align-middle"
+        onError={handleImageError}
        />
        SFL Tracker
       </h1>

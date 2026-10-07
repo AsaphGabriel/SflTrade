@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchMarketMovers, fetchNftMarketMovers } from '../services/historyService';
 import { MoverItem, MarketMoversResult } from '../utils/marketMath';
 import { t } from '../i18n';
-import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
+import { handleImageError, getItemImageUrl } from '../utils/imageFallback';
 
 
 
@@ -19,8 +19,7 @@ export interface MarketMoversCardsProps {
 }
 
 function getItemIcon(itemName: string) {
- if (!itemName) return FALLBACK_SVG;
- return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
+ return getItemImageUrl(itemName);
 }
 
 function formatarPreco(valor?: number | string | null) {

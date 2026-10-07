@@ -2,7 +2,7 @@ import { User } from '@supabase/supabase-js';
 import React, { useState, useMemo } from 'react';
 import { t } from '../i18n';
 import { getBumpkinXPDetails } from '../utils/bumpkinLevel';
-import { handleImageError } from '../utils/imageFallback';
+import { handleImageError, getItemImageUrl } from '../utils/imageFallback';
 import Icon from './Icon';
 import { nftTripleKey } from '../services/historyService';
 import type { NftItem } from '../services/historyService';
@@ -122,7 +122,7 @@ const InventoryItemCard = ({ item, formatNum }: { item: InventoryItem; formatNum
  >
   <div className="flex items-start justify-between gap-1">
    <img
-    src={item.nftImage || `https://sfl.world/img/source/${encodeURIComponent(item.name)}.png`}
+    src={item.nftImage || getItemImageUrl(item.name)}
     alt={item.name}
     className="w-7 h-7 object-contain drop-shadow image-rendering-pixelated group-hover:scale-110 transition-transform"
     onError={handleImageError}

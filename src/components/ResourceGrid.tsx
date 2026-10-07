@@ -4,7 +4,7 @@ import { NftItem } from "../services/historyService";
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PriceChartModal from './PriceChartModal';
-import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
+import { handleImageError, getItemImageUrl } from '../utils/imageFallback';
 
 // Definição das Categorias e Itens
 const CATEGORIAS_MERCADO = [
@@ -59,8 +59,7 @@ const CATEGORIAS_MERCADO = [
 ];
 
 function getItemIcon(itemName: string) {
-  if (!itemName) return FALLBACK_SVG;
-  return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
+  return getItemImageUrl(itemName);
 }
 
 

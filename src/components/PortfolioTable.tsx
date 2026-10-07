@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { t } from '../i18n';
 import PositionDetailsModal from './PositionDetailsModal';
-import { handleImageError, FALLBACK_SVG } from '../utils/imageFallback';
+import { handleImageError, getItemImageUrl } from '../utils/imageFallback';
 
 function getItemIcon(itemName: string) {
- if (!itemName) return FALLBACK_SVG;
- return `https://sfl.world/img/source/${encodeURIComponent(itemName)}.png`;
+ return getItemImageUrl(itemName);
 }
 
 function formatarPreco(valor: number | string | undefined | null) {
