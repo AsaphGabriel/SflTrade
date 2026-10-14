@@ -5,6 +5,7 @@ import { fetchWithFallback, fetchNftMarketData, buildNftIndex } from '../service
 import type { NftItem } from '../services/historyService';
 import { recordDailySnapshot, recordNftSnapshot, fetchLatestNftSnapshotFromDb, nftTripleKey } from '../services/historyService';
 import { saveSettingsRemote } from '../services/syncService';
+import { calculateEffectiveTax } from '../utils/marketMath';
 
 const DADOS_PRECOS_INICIAIS = {
   "Sunflower":0.0003666, "Potato":0.0004439, "Pumpkin":0.0010799, "Carrot":0.002097, 
@@ -114,12 +115,7 @@ export default function useMarketPrices(user?: User | null) {
   }, []);
 
   const effectiveTax = useMemo(() => {
-    if (selectedIsland === 'basic') return 0;
-    const taxasBase = { petal: 0.50, desert: 0.20, volcano: 0.15 };
-    let taxa = taxasBase[selectedIsland as keyof typeof taxasBase] || 0.15;
-    if (isVip) taxa = taxa / 2;
-    if (isShrine) taxa = Math.max(0, taxa - 0.025);
-    return taxa;
+    return calculateEffectiveTax(selectedIsland, isVip, isShrine);
   }, [selectedIsland, isVip, isShrine]);
 
   useEffect(() => { localStorage.setItem('sfl_lang', currentLang); }, [currentLang]);

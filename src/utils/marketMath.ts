@@ -99,3 +99,69 @@ export function getActualTimeframeLabel(requestedTimeframe: string, foundAgeMs: 
   
   return requestedTimeframe;
 }
+
+/**
+ * Calculates effective island tax rate considering VIP discount and Shrine discount.
+ * Base rates: petal = 50%, desert = 20%, volcano = 15%, basic = 0%, default = 15%.
+ * VIP cuts the rate in half.
+ * Shrine reduces the rate by 2.5% (-0.025).
+ * Guaranteed non-negative (clamped to 0).
+ */
+export function calculateEffectiveTax(island: string, isVip: boolean = false, isShrine: boolean = false): number {
+  if (island === 'basic') return 0;
+  
+  const taxasBase: Record<string, number> = {
+    petal: 0.50,
+    desert: 0.20,
+    volcano: 0.15
+  };
+  
+  let taxa = taxasBase[island] ?? 0.15;
+  if (isVip) taxa = taxa / 2;
+  if (isShrine) taxa = Math.max(0, taxa - 0.025);
+  
+  return Number(taxa.toFixed(4));
+}
+
+/**
+ * Calculates percentage bid-ask spread: ((askPrice - bidPrice) / askPrice) * 100.
+ * Returns null if askPrice <= 0, bidPrice < 0, or if values are invalid.
+ */
+export function calculateSpreadPct(askPrice: number | null | undefined, bidPrice: number | null | undefined): number | null {
+  if (askPrice === undefined || askPrice === null || isNaN(askPrice) || !isFinite(askPrice)) return null;
+  if (bidPrice === undefined || bidPrice === null || isNaN(bidPrice) || !isFinite(bidPrice)) return null;
+  if (askPrice <= 0 || bidPrice < 0) return null;
+  
+  const spread = ((askPrice - bidPrice) / askPrice) * 100;
+  if (!isFinite(spread)) return null;
+  
+  return Number(spread.toFixed(2));
+}
+
+/**
+ * Converts SFL amount to target currency (USD, BRL, EUR, etc.) given the exchange rate.
+ * Uses deterministic 4-decimal precision for crypto/token values.
+ */
+export function convertSflToCurrency(sflAmount: number | null | undefined, rate: number | null | undefined): number {
+  if (!sflAmount || isNaN(sflAmount) || sflAmount < 0 || !rate || isNaN(rate) || rate < 0) return 0;
+  return Number((sflAmount * rate).toFixed(4));
+}
+
+/**
+ * Converts target currency amount to SFL given the exchange rate.
+ * Protects against division by zero.
+ */
+export function convertCurrencyToSfl(currencyAmount: number | null | undefined, rate: number | null | undefined): number {
+  if (!currencyAmount || isNaN(currencyAmount) || currencyAmount < 0 || !rate || isNaN(rate) || rate <= 0) return 0;
+  return Number((currencyAmount / rate).toFixed(4));
+}
+
+/**
+ * Computes net proceeds in SFL after deducting island tax rate.
+ */
+export function calculateNetProceeds(grossSfl: number | null | undefined, taxRate: number | null | undefined): number {
+  if (!grossSfl || isNaN(grossSfl) || grossSfl <= 0) return 0;
+  const safeTax = (taxRate !== undefined && taxRate !== null && !isNaN(taxRate) && taxRate >= 0 && taxRate <= 1) ? taxRate : 0;
+  return Number((grossSfl * (1 - safeTax)).toFixed(4));
+}
+
